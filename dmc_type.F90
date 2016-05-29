@@ -2,6 +2,7 @@
 
 module dmc_type 
 
+    implicit none
 type Matrix 
     Mat  x         
 end type Matrix 

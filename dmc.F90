@@ -1,5 +1,6 @@
 module dmc 
     use dmc_type
+    implicit none
     interface assignment(=)
         module procedure mat_copy
         module procedure mat_copyIm 
