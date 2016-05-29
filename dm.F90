@@ -17,6 +17,35 @@ module dm
 contains
 
 ! -----------------------------------------------------------------------
+! Initialize the distributed matrix environment 
+! -----------------------------------------------------------------------
+function dm_init() result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    PetscErrorCode  ::  ierr 
+    call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! Finalize the distributed matrix environment 
+! -----------------------------------------------------------------------
+function dm_finalize() result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    PetscErrorCode  ::  ierr 
+    call PetscFinalize(ierr)
+end function
+
+
+
+! -----------------------------------------------------------------------
 !Create a matrix with m*n size
 ! -----------------------------------------------------------------------
 function dm_create(m,n) result(A)
@@ -151,7 +180,6 @@ subroutine dm_copyIm(B,A)
 #include <petsc/finclude/petscmat.h>
     type(Matrix),            intent(out) ::  B
     type(MatrixIm),            intent(in)  ::  A
-    PetscErrorCode              ::  ierr
     B%x=A%x
 end subroutine
 

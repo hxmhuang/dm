@@ -10,9 +10,11 @@ program main
 #include <petsc/finclude/petscksp.h>
 
     type(Matrix)    ::  A,B    
-    PetscErrorCode  ::  ierr 
-    call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
     
+    integer         :: ierr
+
+    ierr=dm_init()
+
     A=dm_ones(4,3)
     B = A
 

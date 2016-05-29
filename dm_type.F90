@@ -3,17 +3,13 @@
 module dm_type 
 
     implicit none
-type Matrix 
-    Mat  x         
-end type Matrix 
+    type Matrix 
+        Mat  x         
+    end type Matrix 
 
-type MatrixIm 
-    Mat  x         
-end type MatrixIm 
-
-type MatrixEx 
-    Mat  x         
-end type MatrixEx 
+    type MatrixIm 
+        Mat  x         
+    end type MatrixIm 
 
 end module 
 
