@@ -18,12 +18,12 @@ main: ${OBJMAIN}  chkopts
 small:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main
+	-@${MPIEXEC} -n 4 ./main -m 3 -n 2
 
 middle:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main -log_view
+	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -debug -log_view
 
 
 #include ${PETSC_DIR}/lib/petsc/conf/test

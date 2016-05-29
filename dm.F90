@@ -29,6 +29,59 @@ function dm_init() result(ierr)
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
 end function
 
+! -----------------------------------------------------------------------
+! Get the rank number of the current process in the commmunicator 
+! -----------------------------------------------------------------------
+function dm_comm_rank() result(myrank)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+    integer         ::  myrank
+    PetscErrorCode  ::  ierr 
+	call MPI_Comm_rank(PETSC_COMM_WORLD,myrank,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! Get the size of processes in the commmunicator 
+! -----------------------------------------------------------------------
+function dm_comm_size() result(mysize)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+    integer         ::  mysize
+    PetscErrorCode  ::  ierr 
+	call MPI_Comm_rank(PETSC_COMM_WORLD,mysize,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! Get the input paramenters 
+! -----------------------------------------------------------------------
+function dm_get_int(str) result(input)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+    character(len=*)::  str
+    integer         ::  input 
+    PetscErrorCode  ::  ierr 
+    call PetscOptionsGetInt(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
+end function
+
+! -----------------------------------------------------------------------
+! Get the input paramenters 
+! -----------------------------------------------------------------------
+function dm_get_bool(str) result(input)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+    character(len=*)::  str
+    logical         ::  input 
+    PetscErrorCode  ::  ierr 
+    call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! Get the input paramenters 
+! -----------------------------------------------------------------------
+
 
 ! -----------------------------------------------------------------------
 ! Finalize the distributed matrix environment 

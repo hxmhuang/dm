@@ -9,13 +9,25 @@ program main
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscksp.h>
 
-    type(Matrix)    ::  A,B    
-    
+    type(Matrix)    :: A,B    
+    integer         :: myrank, mysize 
+    integer         :: m,n 
+    logical         :: debug 
     integer         :: ierr
 
     ierr=dm_init()
-
+    
+    myrank=dm_comm_rank()
+    
+    mysize=dm_comm_size()
+    
+    m=dm_get_int('-m')
+    n=dm_get_int('-n')
+    debug=dm_get_bool('-debug')
+    !print *,m,n,debug
+    
     A=dm_ones(4,3)
+    
     B = A
 
     ierr=dm_view(A)
