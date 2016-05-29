@@ -60,7 +60,7 @@ function dm_get_int(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
-    integer         ::  input 
+    PetscInt        ::  input 
     PetscErrorCode  ::  ierr 
     call PetscOptionsGetInt(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
 end function
@@ -72,7 +72,7 @@ function dm_get_bool(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
-    logical         ::  input 
+    PetscBool       ::  input 
     PetscErrorCode  ::  ierr 
     call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
 end function
@@ -81,6 +81,14 @@ end function
 ! -----------------------------------------------------------------------
 ! Get the input paramenters 
 ! -----------------------------------------------------------------------
+function dm_get_real(str) result(input)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+    character(len=*)::  str
+    PetscReal       ::  input 
+    PetscErrorCode  ::  ierr 
+    call PetscOptionsGetReal(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
+end function
 
 
 ! -----------------------------------------------------------------------

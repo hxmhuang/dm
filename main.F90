@@ -12,6 +12,7 @@ program main
     type(Matrix)    :: A,B    
     integer         :: myrank, mysize 
     integer         :: m,n 
+    real(kind=8)    :: ep
     logical         :: debug 
     integer         :: ierr
 
@@ -23,8 +24,9 @@ program main
     
     m=dm_get_int('-m')
     n=dm_get_int('-n')
+    ep=dm_get_real('-ep')
     debug=dm_get_bool('-debug')
-    !print *,m,n,debug
+    print *,m,n,ep,debug
     
     A=dm_ones(4,3)
     
