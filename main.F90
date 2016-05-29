@@ -1,6 +1,6 @@
 program main 
 
-    use dmc 
+    use dm 
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscviewer.h>

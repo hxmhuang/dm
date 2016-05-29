@@ -1,6 +1,6 @@
 #include <petsc/finclude/petscmatdef.h>
 
-module dmc_type 
+module dm_type 
 
     implicit none
 type Matrix 

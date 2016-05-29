@@ -1,5 +1,8 @@
-module dmc 
-    use dmc_type
+! -----------------------------------------------------------------------
+! Distributed Matrix Computing Library
+! -----------------------------------------------------------------------
+module dm 
+    use dm_type
     implicit none
     interface assignment(=)
         module procedure mat_copy
@@ -13,7 +16,9 @@ module dmc
 
 contains
 
-
+! -----------------------------------------------------------------------
+!Create a matrix with m*n size
+! -----------------------------------------------------------------------
 function mat_create(m,n) result(A)
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -32,7 +37,9 @@ function mat_create(m,n) result(A)
     call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
 end function 
 
-
+! -----------------------------------------------------------------------
+!Destroy a matrix to free the memory
+! -----------------------------------------------------------------------
 function mat_destroy(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -45,7 +52,9 @@ function mat_destroy(A) result(ierr)
     call MatDestroy(A%x,ierr)
 end function 
 
-
+! -----------------------------------------------------------------------
+!Destroy a implict matrix to free the memory
+! -----------------------------------------------------------------------
 function mat_destroyIm(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -58,7 +67,9 @@ function mat_destroyIm(A) result(ierr)
     call MatDestroy(A%x,ierr)
 end function 
 
-
+! -----------------------------------------------------------------------
+! Print a matrix on screen
+! -----------------------------------------------------------------------
 function mat_view(A) result(ierr) 
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -129,7 +140,7 @@ function mat_ones(m,n) result(A)
 end function
 
 ! -----------------------------------------------------------------------
-! B=A 
+! B=A. This function uses the implicit matrix A directly because A is not need to free. 
 ! -----------------------------------------------------------------------
 subroutine mat_copyIm(B,A)
     implicit none
@@ -141,9 +152,9 @@ subroutine mat_copyIm(B,A)
     type(Matrix),            intent(out) ::  B
     type(MatrixIm),            intent(in)  ::  A
     PetscErrorCode              ::  ierr
-    call MatDuplicate(A%x,MAT_COPY_VALUES,B%x,ierr)
-    ierr=mat_destroy(A)
+    B%x=A%x
 end subroutine
+
 
 subroutine mat_copy(B,A)
     implicit none

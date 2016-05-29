@@ -6,7 +6,7 @@ LOCDIR           = src/ksp/ksp/examples/tutorials/
 MANSEC           = KSP
 CLEANFILES       = main*.o *.mod 
 NP               = 1
-OBJ				 = dmc_type.o dmc.o 
+OBJ				 = dm_type.o dm.o 
 OBJMAIN			 = ${OBJ} main.o 
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
