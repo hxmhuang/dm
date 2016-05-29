@@ -13,14 +13,14 @@ program main
     PetscErrorCode  ::  ierr 
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
     
-    A=mat_ones(4,3)
+    A=dm_ones(4,3)
     B = A
 
-    ierr=mat_view(A)
-    ierr=mat_view(B)
+    ierr=dm_view(A)
+    ierr=dm_view(B)
 
-    ierr=mat_destroy(A)
-    ierr=mat_destroy(B)
+    ierr=dm_destroy(A)
+    ierr=dm_destroy(B)
 
     call PetscFinalize(ierr)
 end program

@@ -5,13 +5,13 @@ module dm
     use dm_type
     implicit none
     interface assignment(=)
-        module procedure mat_copy
-        module procedure mat_copyIm 
+        module procedure dm_copyEx
+        module procedure dm_copyIm 
     end interface
 
-    interface mat_destroy
-        module procedure mat_destroy 
-        module procedure mat_destroyIm 
+    interface dm_destroy
+        module procedure dm_destroyEx 
+        module procedure dm_destroyIm 
     end interface
 
 contains
@@ -19,7 +19,7 @@ contains
 ! -----------------------------------------------------------------------
 !Create a matrix with m*n size
 ! -----------------------------------------------------------------------
-function mat_create(m,n) result(A)
+function dm_create(m,n) result(A)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -40,7 +40,7 @@ end function
 ! -----------------------------------------------------------------------
 !Destroy a matrix to free the memory
 ! -----------------------------------------------------------------------
-function mat_destroy(A) result(ierr)
+function dm_destroyEx(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -55,7 +55,7 @@ end function
 ! -----------------------------------------------------------------------
 !Destroy a implict matrix to free the memory
 ! -----------------------------------------------------------------------
-function mat_destroyIm(A) result(ierr)
+function dm_destroyIm(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -70,7 +70,7 @@ end function
 ! -----------------------------------------------------------------------
 ! Print a matrix on screen
 ! -----------------------------------------------------------------------
-function mat_view(A) result(ierr) 
+function dm_view(A) result(ierr) 
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -88,7 +88,7 @@ end function
 ! -----------------------------------------------------------------------
 ! A=0 
 ! -----------------------------------------------------------------------
-function mat_zeros(m,n) result(A)
+function dm_zeros(m,n) result(A)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -99,12 +99,12 @@ function mat_zeros(m,n) result(A)
     PetscErrorCode              ::  ierr
 
     !call mat_create(A,m,n,ierr)
-    A=mat_create(m,n)
+    A=dm_create(m,n)
     call MatZeroEntries(A%x,ierr)
 end function
 
 
-function mat_ones(m,n) result(A)
+function dm_ones(m,n) result(A)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -119,7 +119,7 @@ function mat_ones(m,n) result(A)
     PetscScalar,allocatable     ::  row(:),results(:)
     integer                     ::  i,j
 
-    A=mat_create(m,n)
+    A=dm_create(m,n)
     call MatGetOwnershipRange(A%x,ista,iend,ierr)
     !print *,">ista=",ista,"iend=",iend,">ncol=",ncol
     allocate(idxn(n),row(n),results(n))
@@ -142,7 +142,7 @@ end function
 ! -----------------------------------------------------------------------
 ! B=A. This function uses the implicit matrix A directly because A is not need to free. 
 ! -----------------------------------------------------------------------
-subroutine mat_copyIm(B,A)
+subroutine dm_copyIm(B,A)
     implicit none
 
 #include <petsc/finclude/petscsys.h>
@@ -156,7 +156,7 @@ subroutine mat_copyIm(B,A)
 end subroutine
 
 
-subroutine mat_copy(B,A)
+subroutine dm_copyEx(B,A)
     implicit none
 
 #include <petsc/finclude/petscsys.h>
