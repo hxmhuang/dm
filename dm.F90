@@ -1,13 +1,14 @@
 ! -----------------------------------------------------------------------
-! Distributed Matrix Computing Library
+! Distributed Matrix Computing Interface 
 ! -----------------------------------------------------------------------
 module dm 
     use dm_type
+    use dm_mat
     implicit none
 
     interface assignment(=)
-        module procedure dm_copyEx
-        module procedure dm_copyIm 
+        module procedure dm_copy1
+        module procedure dm_copy2
     end interface
 
     interface operator (+)
@@ -17,10 +18,41 @@ module dm
         module procedure dm_add4
     end interface
 
+    interface operator (*)
+        module procedure dm_mult1
+        module procedure dm_mult2
+        module procedure dm_mult3
+        module procedure dm_mult4
+    end interface
+
+    interface operator (.eprod.)
+        module procedure dm_eprod1
+        module procedure dm_eprod2
+        module procedure dm_eprod3
+        module procedure dm_eprod4
+    end interface
+
+    interface operator (.hjoin.)
+        module procedure dm_hjoin1
+        module procedure dm_hjoin2
+        module procedure dm_hjoin3
+        module procedure dm_hjoin4
+    end interface
+
+    interface dm_rep
+        module procedure dm_rep1
+        module procedure dm_rep2
+    end interface
+
+    interface dm_sum
+        module procedure dm_sum1
+        module procedure dm_sum2
+    end interface
+
 
     interface dm_destroy
-        module procedure dm_destroyEx 
-        module procedure dm_destroyIm 
+        module procedure dm_destroy1 
+        module procedure dm_destroy2 
     end interface
 
 contains
@@ -81,9 +113,16 @@ function dm_get_bool(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
-    PetscBool       ::  input 
-    PetscErrorCode  ::  ierr 
-    call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,input,PETSC_NULL_BOOL,ierr)
+    logical         ::  input 
+    PetscBool       ::  flag 
+    PetscErrorCode  ::  ierr
+    call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,flag,PETSC_NULL_BOOL,ierr)
+    print *,"str=",str," flag=",flag 
+    if(flag .eqv. PETSC_TRUE) then
+        input=.true.
+    else
+        input=.false.
+    endif
 end function
 
 
@@ -114,10 +153,6 @@ function dm_finalize() result(ierr)
 end function
 
 
-
-! -----------------------------------------------------------------------
-!Create a matrix with m*n size
-! -----------------------------------------------------------------------
 function dm_create(m,n) result(A)
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -128,18 +163,13 @@ function dm_create(m,n) result(A)
     type(MatrixIm)              ::  A
     PetscErrorCode              ::  ierr
     ! generate matrix A with size m*n
-    call MatCreate(PETSC_COMM_WORLD,A%x,ierr);
-    call MatSetSizes(A%x,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
-    call MatSetFromOptions(A%x,ierr)
-    call MatSetUp(A%x,ierr)
-    call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
+    call mat_create(A%x,m,n,ierr)
 end function 
 
 ! -----------------------------------------------------------------------
 !Destroy a matrix to free the memory
 ! -----------------------------------------------------------------------
-function dm_destroyEx(A) result(ierr)
+function dm_destroy1(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -154,7 +184,7 @@ end function
 ! -----------------------------------------------------------------------
 !Destroy a implict matrix to free the memory
 ! -----------------------------------------------------------------------
-function dm_destroyIm(A) result(ierr)
+function dm_destroy2(A) result(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -192,20 +222,12 @@ function dm_zeros(m,n) result(A)
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     PetscInt,       intent(in)  ::  m,n 
-    type(MatrixIm)                ::  A
+    type(MatrixIm)              ::  A
     PetscErrorCode              ::  ierr
-	PetscLogEvent	            ::  ievent
-
-	call PetscLogEventRegister("dm_zeros",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
     
-    A=dm_create(m,n)
-    call MatZeroEntries(A%x,ierr)
-    
-    call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call PetscLogEventEnd(ievent,ierr)
+    call mat_zeros(A%x,m,n,ierr)
 end function
+
 
 
 function dm_ones(m,n) result(A)
@@ -215,36 +237,10 @@ function dm_ones(m,n) result(A)
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     PetscInt,       intent(in)  ::  m,n
+    type(MatrixIm)              ::  A
     PetscErrorCode              ::  ierr
-    type(MatrixIm)                ::  A
-
-    PetscInt                    ::  ista,iend
-    PetscInt,allocatable        ::  idxn(:)
-    PetscScalar,allocatable     ::  row(:),results(:)
-    integer                     ::  i,j
-	PetscLogEvent	            ::  ievent
-
-	call PetscLogEventRegister("dm_ones",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
     
-    A=dm_create(m,n)
-    call MatGetOwnershipRange(A%x,ista,iend,ierr)
-    !print *,">ista=",ista,"iend=",iend,">ncol=",ncol
-    allocate(idxn(n),row(n),results(n))
-
-    do i=ista,iend-1
-        do j=1,n
-            idxn(j)=j-1
-            row(j)=1.0
-        enddo
-        call MatSetValues(A%x,1,i,n,idxn,row,INSERT_VALUES,ierr)
-    enddo
-    call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
-
-    deallocate(idxn,row,results)
-    
-    call PetscLogEventEnd(ievent,ierr)
+    call mat_ones(A%x,m,n,ierr)
 end function
 
 
@@ -260,36 +256,10 @@ function dm_seqs(m,n) result(A)
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     PetscInt,       intent(in)  ::  m,n
+    type(MatrixIm)              ::  A
     PetscErrorCode              ::  ierr
-    type(MatrixIm)                ::  A
 
-    PetscInt                    ::  ista,iend
-    PetscInt,allocatable        ::  idxn(:)
-    PetscScalar,allocatable     ::  row(:),results(:)
-    integer                     ::  i,j
-	PetscLogEvent	            ::  ievent
-
-	call PetscLogEventRegister("dm_seq",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
-    
-    A=dm_create(m,n)
-    call MatGetOwnershipRange(A%x,ista,iend,ierr)
-    !print *,">ista=",ista,"iend=",iend,">ncol=",ncol
-    allocate(idxn(n),row(n),results(n))
-
-    do i=ista,iend-1
-        do j=1,n
-            idxn(j)=j-1
-			row(j)=i*n+j
-        enddo
-        call MatSetValues(A%x,1,i,n,idxn,row,INSERT_VALUES,ierr)
-    enddo
-    call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
-
-    deallocate(idxn,row,results)
-    
-    call PetscLogEventEnd(ievent,ierr)
+    call mat_seqs(A%x,m,n,ierr)
 end function
 
 
@@ -315,45 +285,8 @@ function dm_eyes(m,n) result(A)
 	PetscInt,       intent(in)	::	m,n	
 	type(MatrixIm)			    ::	A
 	PetscErrorCode	            ::	ierr
-	PetscInt					::	nmax, nmin 
-	PetscInt					::  ista,iend,xpos,ypos
-	PetscInt,allocatable		::	idxn(:)
-	PetscScalar,allocatable		::	row(:)
-	integer 					:: 	i,j,counter
-	PetscLogEvent	            ::  ievent
-
-	call PetscLogEventRegister("dm_eye",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
     
-    A=dm_create(m,n) 
-    nmin=min(m,n)
-	nmax=max(m,n)
- 	if(mod(nmax,nmin) /= 0) then
-		print *, "Error in dm_eye: the size of matrix A should be (NM)*M or M*(NM)"
-		stop	
-	endif
-	call MatGetOwnershipRange(A%x,ista,iend,ierr)
-	allocate(idxn(nmax/nmin),row(nmax/nmin))
-
-    do i=ista,iend-1
-    	xpos=mod(i,nmin)
-
-        counter=0	
-		do j=1,n
-    		ypos=mod(j-1,nmin)
-    		if(ypos==xpos) then
-                counter=counter+1
-    			row(counter)=1.0
-			    idxn(counter)=j-1
-    		    !print *,"i=",i,"j=",j,"xpos=",xpos,"ypos=",ypos,"idxn(",counter,")=",idxn(counter),"row(",j,")=",row(counter) 
-    		endif
-		enddo
-	   	call MatSetValues(A%x,1,i,counter,idxn,row,INSERT_VALUES,ierr)
-	enddo
-    call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
-	deallocate(idxn,row)
-    call PetscLogEventEnd(ievent,ierr)
+    call mat_eyes(A%x,m,n,ierr)
 end function 
 
 
@@ -361,7 +294,7 @@ end function
 ! -----------------------------------------------------------------------
 ! B=A. This function uses the implicit matrix A directly because A is not need to free. 
 ! -----------------------------------------------------------------------
-subroutine dm_copyIm(B,A)
+subroutine dm_copy1(B,A)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -369,14 +302,14 @@ subroutine dm_copyIm(B,A)
 #include <petsc/finclude/petscmat.h>
     type(MatrixIm),  intent(in)  ::  A
     type(Matrix),    intent(out) ::  B
-    PetscErrorCode               ::  ierr
+    !PetscErrorCode               ::  ierr
     !Free the space of B matrix 
     !call MatDestroy(B%x,ierr)
     B%x=A%x
 end subroutine
 
 
-subroutine dm_copyEx(B,A)
+subroutine dm_copy2(B,A)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -387,7 +320,7 @@ subroutine dm_copyEx(B,A)
     PetscErrorCode              ::  ierr
     !Free the space of B matrix 
     !call MatDestroy(B%x,ierr)
-    call MatDuplicate(A%x,MAT_COPY_VALUES,B%x,ierr)
+    call mat_copy(A%x,B%x,ierr)
 end subroutine
 
 
@@ -395,31 +328,6 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A+B
 ! -----------------------------------------------------------------------
-subroutine mat_add(A,B,C,ierr) 
-	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	Mat,	       intent(in)	::  A 
-	Mat,	       intent(in)	::  B 
-	Mat,           intent(out)  ::	C
-	PetscErrorCode,intent(out)  ::	ierr
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
-    PetscScalar                 ::  alpha	
-    call MatGetSize(A,nrow1,ncol1,ierr)
-	call MatGetSize(B,nrow2,ncol2,ierr)
-	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
-		print *, "Error: matrix A and matrix B should have the same size"
-		stop	
-	endif
-    
-    alpha=1.0
-    call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
-	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
-end subroutine 
-
-
 function dm_add1(A,B) result(C)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -480,6 +388,262 @@ function dm_add4(A,B) result(C)
 end function 
 
 
+! -----------------------------------------------------------------------
+! C=[A B] 
+! -----------------------------------------------------------------------
+function dm_hjoin1(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_hjoin(A%x,B%x,C%x,ierr)
+end function 
+
+
+function dm_hjoin2(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_hjoin(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+    ierr=dm_destroy(B)
+end function 
+
+
+function dm_hjoin3(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_hjoin(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+end function 
+
+
+function dm_hjoin4(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_hjoin(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(B)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C=A*B
+! -----------------------------------------------------------------------
+function dm_mult1(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_mult(A%x,B%x,C%x,ierr)
+end function 
+
+
+function dm_mult2(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_mult(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+    ierr=dm_destroy(B)
+end function 
+
+
+function dm_mult3(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_mult(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+end function 
+
+
+function dm_mult4(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_mult(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(B)
+end function 
+
+
+! -----------------------------------------------------------------------
+! B=A1.*A2
+! -----------------------------------------------------------------------
+function dm_eprod1(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_eprod(A%x,B%x,C%x,ierr)
+end function 
+
+
+function dm_eprod2(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_eprod(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+    ierr=dm_destroy(B)
+end function 
+
+
+function dm_eprod3(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_eprod(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(A)
+end function 
+
+
+function dm_eprod4(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_eprod(A%x,B%x,C%x,ierr)
+    ierr=dm_destroy(B)
+end function 
+
+
+! -----------------------------------------------------------------------
+! B=repmat(A,m,n)
+! -----------------------------------------------------------------------
+function dm_rep1(A,m,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	integer,	    intent(in)	::  m,n 
+	type(MatrixIm)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_rep(A%x,m,n,B%x,ierr)
+    ierr=dm_destroy(A)
+end function 
+
+
+function dm_rep2(A,m,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  m,n 
+	type(MatrixIm)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_rep(A%x,m,n,B%x,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! Sum of elements along with the row or column.
+! Suppose A=[1,2,3]
+!           [4,5,6],
+! then mat_sum(A,1,B) will make B=[5,7,9],
+!      mat_sum(A,2,B) will make B=[6 ]
+!                                 [15]
+! -----------------------------------------------------------------------
+function dm_sum1(A,ndim) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  ndim 
+	type(MatrixIm)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_sum(A%x,ndim,B%x,ierr)
+end function 
+
+
+function dm_sum2(A,ndim) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	integer,	    intent(in)	::  ndim 
+	type(MatrixIm)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_sum(A%x,ndim,B%x,ierr)
+    ierr=dm_destroy(A)
+end function 
 
 
 
