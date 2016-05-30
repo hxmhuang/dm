@@ -27,6 +27,19 @@ subroutine mat_create(A,m,n,ierr)
 end subroutine
 
 
+subroutine mat_destroy(A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	! destroy matrix A
+	call MatDestroy(A,ierr)
+end subroutine
+
+
 ! -----------------------------------------------------------------------
 ! A=0 
 ! -----------------------------------------------------------------------
@@ -579,18 +592,367 @@ subroutine mat_sum(A,ndim,B,ierr)
 end subroutine
 
 
-
-
-subroutine mat_destroy(A,ierr)
+! -----------------------------------------------------------------------
+! Compute Y = a*X + Y.
+! -----------------------------------------------------------------------
+subroutine mat_axpy(Y,a,X,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-	Mat,			intent(in)	::	A
-	PetscErrorCode,	intent(out)	::	ierr
-	! destroy matrix A
-	call MatDestroy(A,ierr)
+	Mat,			intent(in)	    ::  X 
+	PetscScalar,    intent(in)	    ::	a
+	Mat,			intent(inout)   ::	Y	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_axpy",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+    call MatAXPY(Y,a,X,DIFFERENT_NONZERO_PATTERN,ierr)
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
+
+
+! -----------------------------------------------------------------------
+! Compute Y = a*Y + X.
+! -----------------------------------------------------------------------
+subroutine mat_aypx(Y,a,X,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	    ::  X 
+	PetscScalar,    intent(in)	    ::	a
+	Mat,			intent(inout)   ::	Y	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_aypx",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call MatAYPX(Y,a,X,DIFFERENT_NONZERO_PATTERN,ierr)
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! B = A^T.
+! -----------------------------------------------------------------------
+subroutine mat_trans(A,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	    ::  A 
+	Mat,			intent(out)     ::	B	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_trans",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call MatTranspose(A,MAT_INITIAL_MATRIX,B,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! B = X*Y^T
+! -----------------------------------------------------------------------
+subroutine mat_xyt(X,Y,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	    ::  X,Y 
+	Mat,			intent(out)     ::	B	
+	Mat 			                ::	W	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_xyt",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    !call MatMatTransposeMult(X,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,B,ierr) 	
+    call mat_trans(Y,W,ierr)
+    call mat_mult(X,W,B,ierr)
+    call mat_destroy(W,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! B = X^T*Y
+! -----------------------------------------------------------------------
+subroutine mat_xty(X,Y,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	    ::  X,Y 
+	Mat,			intent(out)     ::	B	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_xty",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call MatTransposeMatMult(X,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,B,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! X = a*X
+! -----------------------------------------------------------------------
+subroutine mat_scale(X,a,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(inout)	::  X 
+	PetscScalar,    intent(in)     ::	a	
+	PetscErrorCode,	intent(out)	    ::	ierr
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_scale",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call MatScale(X,a,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! B=fun(A,opt) 
+! opt options: exp,log,sin,cos,tan
+! -----------------------------------------------------------------------
+subroutine mat_math(A,opt,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_math_type.h"
+	Mat,			intent(in)	::  A
+	Integer,        intent(in)  ::  opt
+	Mat,			intent(out)	::	B
+	PetscErrorCode,	intent(out)	::	ierr
+    
+	PetscInt					::	nrow,ncol
+	PetscInt					::	col,m
+	PetscInt,allocatable        ::	idxn(:),idxtmp(:)
+	PetscScalar,allocatable     ::	row(:),rowtmp(:)
+	PetscInt					::  ista,iend
+	integer						::	i,j
+    PetscScalar                 ::  newval 
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_math",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call MatGetSize(A,nrow,ncol,ierr)
+
+    call mat_create(B,nrow,ncol,ierr)
+    
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+	    
+    do i=ista,iend-1
+        call MatGetRow(A,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+        m=col
+        call MatRestoreRow(A,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+        
+        allocate(idxn(m),idxtmp(m),row(m),rowtmp(m))
+
+        call MatGetRow(A,i,col,idxtmp,rowtmp,ierr)
+        m=col
+        idxn=idxtmp
+        do j=1,m
+            select case(opt)
+                case (MAT_MATH_EXP)
+                    row=exp(rowtmp)
+                case (MAT_MATH_SQRT)
+                    !row=sqrt(rowtmp)
+                    row=sqrt(rowtmp)
+					!row=PetscSqrtScalar(rowtmp,ierr)
+                    !row=PetscSqrtReal(rowtmp,ierr)
+                case (MAT_MATH_LOG)
+                    row=log(rowtmp)
+                case (MAT_MATH_SIN)
+                    row=sin(rowtmp)
+                case (MAT_MATH_COS)
+                    row=cos(rowtmp)
+                case (MAT_MATH_TAN)
+                    row=tan(rowtmp)
+                case default
+                    row=0.0    
+            end select
+        enddo
+        do j=1,m
+            !Maybe there is a potenial bug here. When rowtmp < 1E-16, exp(rowtmp) will be NaN. 
+            !To avoid this, we have to set row=0.0 at his situation.
+            if(isnan(row(j))) row(j)=0.0
+    	    !print *,"------rowtmp(",j,")=",rowtmp(j),"row(",j,")=",row(j)
+        enddo
+        
+        call MatRestoreRow(A,i,col,idxtmp,rowtmp,ierr)
+    	
+        !print *,">i=",i,"idxn=",idxn,"row=",row
+    	call MatSetValues(B,1,i,m,idxn,row,INSERT_VALUES,ierr)
+        deallocate(idxn,idxtmp,row,rowtmp)
+	enddo
+
+	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! Solve Ax=b 
+! -----------------------------------------------------------------------
+subroutine mat_solve(A,b,x,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscksp.h>
+#include <petsc/finclude/petscpc.h>
+	Mat,			intent(in)	::	A
+	Mat,			intent(in)	::	b
+	Mat,			intent(out)	::	x
+	PetscErrorCode,	intent(out)	::	ierr
+    
+    Vec                         ::  vec_b
+    Vec                         ::  vec_x
+    KSP                         ::  ksp
+    PC                          ::  pc
+    PetscReal                   ::  tol
+    PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_solve",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    !PetscInt                    ::  its
+	
+    call mat_mat2vec(b,vec_b,ierr)
+    call VecDuplicate(vec_b,vec_x,ierr)
+
+    
+    call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+    
+    call KSPSetOperators(ksp,A,A,ierr)
+    call KSPGetPC(ksp,pc,ierr)
+    !call PCSetType(pc,PCJACOBI,ierr)
+    tol = 1.0e-10
+    call KSPSetTolerances(ksp,tol,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL,PETSC_DEFAULT_INTEGER,ierr)
+    call KSPSetFromOptions(ksp,ierr)
+    call KSPSolve(ksp,vec_b,vec_x,ierr)
+    !call KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD,ierr)
+    !call KSPGetIterationNumber(ksp,its,ierr)
+    !print *, ">Iterations number=",its 
+    
+    call mat_vec2mat(vec_x,x,ierr) 
+    call KSPDestroy(ksp,ierr)
+    call VecDestroy(vec_b,ierr)
+    call VecDestroy(vec_x,ierr)
+
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+
+! -----------------------------------------------------------------------
+! convert one m*1 matrix into a vector 
+! -----------------------------------------------------------------------
+subroutine mat_mat2vec(A,v,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,    intent(in)      :: A 
+    Vec,    intent(out)     :: v
+    PetscErrorCode      	::ierr
+
+	PetscInt	            	::  nrow,ncol	
+	PetscInt					::  ista,iend
+	PetscInt					::  ni
+	PetscInt,allocatable		::  idx(:) 
+	PetscScalar,allocatable		::  y(:) 
+	integer 					:: 	i
+   
+    call MatGetSize(A,nrow,ncol,ierr)
+    if(ncol /=1) then
+        print *, "Error in mat_mat2vec: the column of A should be 1"
+    endif
+
+    call VecCreate(PETSC_COMM_WORLD,v,ierr)
+    call VecSetSizes(v,PETSC_DECIDE,nrow,ierr)
+    call VecSetFromOptions(v,ierr)
+
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    ni=iend-ista
+
+    !print *, "1=ista=",ista,"iend=",iend,"ni=",ni,"==idx=",idx
+    allocate(idx(ni),y(ni))
+    do i=ista,iend-1
+        idx(i-ista+1)=i 
+    enddo
+    !print *, "2=ista=",ista,"iend=",iend,"ni=",ni,"==idx=",idx
+
+    call MatGetValues(A,ni,idx,1,0,y,ierr)
+    call VecSetValues(v,ni,idx,y,INSERT_VALUES,ierr)  
+    call VecAssemblyBegin(v,ierr)
+    call VecAssemblyEnd(v,ierr)
+
+    deallocate(idx,y)
+
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! convert one m*1 vector into a matrix 
+! -----------------------------------------------------------------------
+subroutine mat_vec2mat(v,A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Vec,    intent(in)          ::  v
+    Mat,    intent(out)         ::  A 
+	PetscErrorCode              ::  ierr
+
+	PetscInt	            	::  nrow	
+	PetscInt					::  ista,iend
+	PetscInt					::  ni
+	PetscInt,allocatable		::  ix(:) 
+	PetscScalar,allocatable		::  y(:) 
+	integer 					:: 	i
+     
+    call VecGetSize(v,nrow,ierr)
+    call mat_create(A,nrow,1,ierr)
+
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    ni=iend-ista
+
+    allocate(ix(ni),y(ni))
+	
+	do i=ista,iend-1
+        ix(i-ista+1)=i 
+    enddo
+    call VecGetValues(v,ni,ix,y,ierr)  
+    call MatSetValues(A,ni,ix,1,0,y,INSERT_VALUES,ierr)
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+
+	deallocate(ix,y)
+
+end subroutine
+
 
 end module
