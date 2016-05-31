@@ -18,17 +18,18 @@ main: ${OBJMAIN}  chkopts
 small:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -ep 3.1 -debug -mat_composite_merge 
+	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -ep 3.1 -debug -mat_composite_merge -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type sor
 
 middle:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -ep 3.1 -log_view -mat_composite_merge
+	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -ep 3.1 -log_view -mat_composite_merg -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type sor
 
 big:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 16 ./main -m 300 -n 300 -ep 3.1 -log_view -mat_composite_merge
+	-@${MPIEXEC} -n 16 ./main -m 300 -n 300 -ep 3.1 -log_view -mat_composite_merge -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type sor
+
 
 
 #include ${PETSC_DIR}/lib/petsc/conf/test

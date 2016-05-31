@@ -100,6 +100,14 @@ module dm
         module procedure dm_sqrt1
         module procedure dm_sqrt2
     end interface
+ 
+	interface dm_solve 
+        module procedure dm_solve1
+        module procedure dm_solve2
+        module procedure dm_solve3
+        module procedure dm_solve4
+    end interface
+
 
     
     interface dm_destroy
@@ -1141,7 +1149,7 @@ end function
 ! -----------------------------------------------------------------------
 ! Solve Ax=b 
 ! -----------------------------------------------------------------------
-function dm_solve(A,b) result(x)
+function dm_solve1(A,b) result(x)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1154,9 +1162,59 @@ function dm_solve(A,b) result(x)
 	PetscErrorCode      		::	ierr
     
     call mat_solve(A%x,b%x,x%x,ierr)
-
-
 end function 
+
+function dm_solve2(A,b) result(x)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_math_type.h"
+	type(MatrixIm),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)  ::	b
+	type(MatrixIm)            	::	x
+	PetscErrorCode      		::	ierr
+    
+    call mat_solve(A%x,b%x,x%x,ierr)
+    ierr=dm_destroy(A)
+    ierr=dm_destroy(b)
+end function 
+
+function dm_solve3(A,b) result(x)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_math_type.h"
+	type(MatrixIm),	intent(in)	::  A 
+	type(Matrix),	intent(in)  ::	b
+	type(MatrixIm)            	::	x
+	PetscErrorCode      		::	ierr
+    
+    call mat_solve(A%x,b%x,x%x,ierr)
+    ierr=dm_destroy(A)
+end function 
+
+function dm_solve4(A,b) result(x)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_math_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)  ::	b
+	type(MatrixIm)            	::	x
+	PetscErrorCode      		::	ierr
+    
+    call mat_solve(A%x,b%x,x%x,ierr)
+    ierr=dm_destroy(b)
+end function 
+
+
+
 
 
 
