@@ -243,7 +243,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A+B
 ! -----------------------------------------------------------------------
-subroutine mat_add(A,B,C,ierr)
+subroutine bk_mat_add(A,B,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -283,7 +283,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A+B
 ! -----------------------------------------------------------------------
-subroutine bk_mat_add(A,B,C,ierr) 
+subroutine mat_add(A,B,C,ierr) 
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -303,6 +303,34 @@ subroutine bk_mat_add(A,B,C,ierr)
 	endif
     
     alpha=1.0
+    call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
+	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+end subroutine 
+
+
+! -----------------------------------------------------------------------
+! C=A-B
+! -----------------------------------------------------------------------
+subroutine mat_del(A,B,C,ierr) 
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,	       intent(in)	::  A 
+	Mat,	       intent(in)	::  B 
+	Mat,           intent(out)  ::	C
+	PetscErrorCode,intent(out)  ::	ierr
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+    PetscScalar                 ::  alpha	
+    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
+		print *, "Error: matrix A and matrix B should have the same size"
+		stop	
+	endif
+    
+    alpha=-1.0
     call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
 end subroutine 
@@ -952,6 +980,110 @@ subroutine mat_vec2mat(v,A,ierr)
 
 	deallocate(ix,y)
 
+end subroutine
+
+
+
+! -----------------------------------------------------------------------
+! Load a standard row-cloumn file into a matrix 
+! -----------------------------------------------------------------------
+subroutine mat_load(filename,A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    character(len=*),   intent(in)  ::  filename 
+	Mat,			    intent(out)	::	A
+	PetscErrorCode,	    intent(out)	::	ierr
+    
+    !PetscReal,allocatable       :: x(:,:)
+    PetscScalar,allocatable         :: x(:,:)
+ 	PetscScalar,allocatable         :: row(:) 
+	PetscInt,allocatable		    :: idxn(:)
+ 	PetscInt					    :: nrow,ncol
+ 	PetscInt					    :: ista,iend
+    integer                         :: i,j,fid
+    
+    fid=1000
+    open(fid,FILE=filename)
+    call get_rowcol(fid,nrow,ncol,ierr)
+    !print *, "nrow=",nrow, "ncol=",ncol
+    
+    call mat_create(A,nrow,ncol,ierr)
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    allocate(x(ncol,nrow),row(ncol),idxn(ncol))
+
+    do i=1,nrow
+       read(fid,*), x(:,i)
+    enddo
+    close(fid)
+
+    do i=ista,iend-1
+		do j=1,ncol
+			idxn(j)=j-1
+		enddo
+		call MatSetValues(A,1,i,ncol,idxn,x(:,i+1),INSERT_VALUES,ierr)
+	enddo
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+    deallocate(x,row)
+end subroutine
+
+
+subroutine get_rowcol(fid,nrow,ncol,ierr)
+    implicit none
+    integer, intent(in)     :: fid 
+    integer, intent(out)    :: nrow,ncol 
+    integer, intent(out)    :: ierr
+    character(len=1)        :: cdummy
+    character(len=1000)     :: string 
+    real(kind=8)            :: value
+    integer                 :: i,j
+    nrow=0
+    ncol=0
+    rewind(fid)
+
+    do
+        read(fid, * , iostat = ierr ) cdummy
+        if(ierr /= 0) exit
+        nrow = nrow + 1
+    end do
+    rewind(fid)
+
+    read(fid, '(a)' ) string 
+    !print *, "string=",string 
+
+    do i =1,1000 ! 
+        read(string,*, iostat=ierr ) (value, j=1,i)
+        !print *,"value=",value,"ierr=",ierr
+        if ( ierr /= 0 ) then
+        ncol = i - 1
+        exit
+        endif
+    enddo
+    rewind(fid)
+end subroutine 
+
+
+! -----------------------------------------------------------------------
+! A(m,n)=value 
+! -----------------------------------------------------------------------
+subroutine mat_setvalue(A,m,n,value,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscInt,	    intent(in)	::	m,n
+	PetscScalar,    intent(in)	::	value
+	PetscErrorCode,	intent(out)	::	ierr
+	
+    call MatSetValue(A,m,n,value,INSERT_VALUES,ierr)
+    
+    call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 end subroutine
 
 

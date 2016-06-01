@@ -16,6 +16,7 @@ program main
     real(kind=8)    :: ep,alpha
     logical         :: debug 
     integer         :: ierr
+    character(len=50):: filename
     debug=.false.
 
     ierr=dm_init()
@@ -124,6 +125,49 @@ program main
         if(myrank==0) print *, ">G=A+A+A"
         ierr=dm_view(G)
         if(myrank==0) print *, ">H=B+G"
+        ierr=dm_view(H)
+ 	endif
+    !TODO:There is a bug to free matrix A.
+    !A=A+A	
+    !if(debug) then
+    !    if(myrank==0) print *, ">A="
+    !    ierr=dm_view(a)
+ 	!endif
+    ierr=dm_destroy(A)
+  	ierr=dm_destroy(B)
+ 	ierr=dm_destroy(C)
+ 	ierr=dm_destroy(D)
+ 	ierr=dm_destroy(E)
+ 	ierr=dm_destroy(F)
+ 	ierr=dm_destroy(G)
+ 	ierr=dm_destroy(H)
+
+
+    if(myrank==0) print *, "==============Test dm_del==============="
+  	A=dm_eyes(m,m)
+    B=dm_ones(m,m)
+    C=A-B
+    D=dm_eyes(m,m)-dm_ones(m,m)
+    E=dm_eyes(m,m)-B
+    F=A-dm_ones(m,m)
+    G=A-A-A
+    H=B-G
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B="
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=A-B"
+        ierr=dm_view(C)
+        if(myrank==0) print *, ">D=dm_eyes(m,m)-dm_ones(m,m)"
+        ierr=dm_view(D)
+        if(myrank==0) print *, ">E=dm_eyes(m,m)-B"
+        ierr=dm_view(E)
+        if(myrank==0) print *, ">F=A-dm_ones(m,m)"
+        ierr=dm_view(F)
+        if(myrank==0) print *, ">G=A-A-A"
+        ierr=dm_view(G)
+        if(myrank==0) print *, ">H=B-G"
         ierr=dm_view(H)
  	endif
     !TODO:There is a bug to free matrix A.
@@ -492,6 +536,28 @@ program main
   	ierr=dm_destroy(A)
   	ierr=dm_destroy(B)
   	ierr=dm_destroy(C)
+
+
+    if(myrank==0) print *, "==============Test dm_load================"
+    filename="md001.00004"
+
+    A=dm_load(filename)
+    if(debug) then
+        if(myrank==0) print *, ">Load A from md001.00004="
+        ierr=dm_view(A)
+ 	endif
+  	ierr=dm_destroy(A)
+
+
+    if(myrank==0) print *, "=============Test dm_setvalue============="
+    A=dm_eyes(m,m)
+    alpha=8.0
+    ierr=dm_setvalue(A,1,1,alpha)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+ 	endif
+  	ierr=dm_destroy(A)
 
 
     call PetscFinalize(ierr)

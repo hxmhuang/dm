@@ -1,21 +1,23 @@
 ! -----------------------------------------------------------------------
-! Distributed Matrix Computing Interface 
+! Distributed Matrix Wrapper 
 ! -----------------------------------------------------------------------
 module dm 
     use dm_type
     use dm_mat
     implicit none
 
-    interface assignment(=)
-        module procedure dm_copy1
-        module procedure dm_copy2
-    end interface
-
     interface operator (+)
         module procedure dm_add1
         module procedure dm_add2
         module procedure dm_add3
         module procedure dm_add4
+    end interface
+
+    interface operator (-)
+        module procedure dm_del1
+        module procedure dm_del2
+        module procedure dm_del3
+        module procedure dm_del4
     end interface
 
     interface operator (*)
@@ -114,6 +116,12 @@ module dm
         module procedure dm_destroy1 
         module procedure dm_destroy2 
     end interface
+
+    interface assignment(=)
+        module procedure dm_copy1
+        module procedure dm_copy2
+    end interface
+
 
 contains
 
@@ -444,6 +452,70 @@ function dm_add4(A,B) result(C)
     call mat_add(A%x,B%x,C%x,ierr)
     call MatDestroy(B%x,ierr)
 end function 
+
+
+! -----------------------------------------------------------------------
+! C=A-B
+! -----------------------------------------------------------------------
+function dm_del1(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_del(A%x,B%x,C%x,ierr)
+end function 
+
+
+function dm_del2(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_del(A%x,B%x,C%x,ierr)
+    call MatDestroy(A%x,ierr)
+    call MatDestroy(B%x,ierr)
+end function 
+
+
+function dm_del3(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(MatrixIm),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_del(A%x,B%x,C%x,ierr)
+    call MatDestroy(A%x,ierr)
+end function 
+
+
+function dm_del4(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(MatrixIm),	intent(in)	::  B 
+	type(MatrixIm)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_del(A%x,B%x,C%x,ierr)
+    call MatDestroy(B%x,ierr)
+end function 
+
 
 
 ! -----------------------------------------------------------------------
@@ -1155,7 +1227,6 @@ function dm_solve1(A,b) result(x)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include "mat_math_type.h"
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)  ::	b
 	type(MatrixIm)            	::	x
@@ -1170,7 +1241,6 @@ function dm_solve2(A,b) result(x)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include "mat_math_type.h"
 	type(MatrixIm),	intent(in)	::  A 
 	type(MatrixIm),	intent(in)  ::	b
 	type(MatrixIm)            	::	x
@@ -1187,7 +1257,6 @@ function dm_solve3(A,b) result(x)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include "mat_math_type.h"
 	type(MatrixIm),	intent(in)	::  A 
 	type(Matrix),	intent(in)  ::	b
 	type(MatrixIm)            	::	x
@@ -1203,7 +1272,6 @@ function dm_solve4(A,b) result(x)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include "mat_math_type.h"
 	type(Matrix),	intent(in)	::  A 
 	type(MatrixIm),	intent(in)  ::	b
 	type(MatrixIm)            	::	x
@@ -1214,7 +1282,39 @@ function dm_solve4(A,b) result(x)
 end function 
 
 
+! -----------------------------------------------------------------------
+! Load a standard row-cloumn file into a matrix 
+! -----------------------------------------------------------------------
+function dm_load(filename) result(A)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    character(len=*),   intent(in)  ::  filename 
+	type(MatrixIm)	            	::  A 
+	PetscErrorCode      		    ::	ierr
+    
+    call mat_load(filename,A%x,ierr)
+end function 
 
+
+! -----------------------------------------------------------------------
+! A(m,n)=value 
+! -----------------------------------------------------------------------
+function dm_setvalue(A,m,n,value) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix)	            ::  A 
+	PetscInt,	    intent(in)	::	m,n
+	PetscScalar,    intent(in)	::	value
+	PetscErrorCode	        	::	ierr
+	
+    call mat_setvalue(A%x,m,n,value,ierr)
+end function 
 
 
 
