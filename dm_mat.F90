@@ -1240,7 +1240,8 @@ subroutine mat_getrow(A,m,B,ierr)
     endif
     call mat_trans(A,W,ierr)
     call mat_getcol(W,m,B,ierr)
-    
+    call mat_destroy(W,ierr)
+
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
