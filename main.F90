@@ -272,7 +272,7 @@ program main
  	ierr=dm_destroy(U)
 
 
-    if(myrank==0) print *, "==============Test dm_eprod==============="
+    if(myrank==0) print *, "==============Test dm_emult==============="
     A=dm_seqs(m,m)
     B=dm_eyes(m,m)
     C=A .em. B

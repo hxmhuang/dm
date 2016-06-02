@@ -438,7 +438,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A.*B
 ! -----------------------------------------------------------------------
-subroutine mat_eprod(A,B,C,ierr)
+subroutine mat_emult(A,B,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -455,7 +455,7 @@ subroutine mat_eprod(A,B,C,ierr)
     PetscInt                    ::  pos1,pos2,counter
 	integer						::	i
 	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_eprod",0, ievent, ierr)
+	call PetscLogEventRegister("mat_emult",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
     call MatGetSize(A,nrow1,ncol1,ierr)

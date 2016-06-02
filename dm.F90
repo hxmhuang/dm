@@ -37,10 +37,10 @@ module dm
     
     ! element multiple
     interface operator (.em.)
-        module procedure dm_eprod1
-        module procedure dm_eprod2
-        module procedure dm_eprod3
-        module procedure dm_eprod4
+        module procedure dm_emult1
+        module procedure dm_emult2
+        module procedure dm_emult3
+        module procedure dm_emult4
     end interface
     
     ! join horizontally
@@ -798,7 +798,7 @@ end function
 ! -----------------------------------------------------------------------
 ! B=A1.*A2
 ! -----------------------------------------------------------------------
-function dm_eprod1(A,B) result(C)
+function dm_emult1(A,B) result(C)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -808,11 +808,11 @@ function dm_eprod1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(MatrixIm)              ::	C
 	PetscErrorCode      		::	ierr
-    call mat_eprod(A%x,B%x,C%x,ierr)
+    call mat_emult(A%x,B%x,C%x,ierr)
 end function 
 
 
-function dm_eprod2(A,B) result(C)
+function dm_emult2(A,B) result(C)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -822,13 +822,13 @@ function dm_eprod2(A,B) result(C)
 	type(MatrixIm),	intent(in)	::  B 
 	type(MatrixIm)              ::	C
 	PetscErrorCode      		::	ierr
-    call mat_eprod(A%x,B%x,C%x,ierr)
+    call mat_emult(A%x,B%x,C%x,ierr)
     ierr=dm_destroy(A)
     ierr=dm_destroy(B)
 end function 
 
 
-function dm_eprod3(A,B) result(C)
+function dm_emult3(A,B) result(C)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -838,12 +838,12 @@ function dm_eprod3(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(MatrixIm)              ::	C
 	PetscErrorCode      		::	ierr
-    call mat_eprod(A%x,B%x,C%x,ierr)
+    call mat_emult(A%x,B%x,C%x,ierr)
     ierr=dm_destroy(A)
 end function 
 
 
-function dm_eprod4(A,B) result(C)
+function dm_emult4(A,B) result(C)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -853,7 +853,7 @@ function dm_eprod4(A,B) result(C)
 	type(MatrixIm),	intent(in)	::  B 
 	type(MatrixIm)              ::	C
 	PetscErrorCode      		::	ierr
-    call mat_eprod(A%x,B%x,C%x,ierr)
+    call mat_emult(A%x,B%x,C%x,ierr)
     ierr=dm_destroy(B)
 end function 
 
