@@ -8,7 +8,7 @@ program main
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscksp.h>
-
+	IS				:: is
     type(Matrix)    :: A,B,C,D,E,F,G,H 
     type(Matrix)    :: X,Y,Z,U,V,W 
     integer         :: myrank, mysize 
@@ -559,6 +559,34 @@ program main
  	endif
   	ierr=dm_destroy(A)
 
+    if(myrank==0) print *, "=============Test dm_submatrix============"
+    A=dm_seqs(2*m,2*n)
+    
+    B=dm_ones(2,1)
+    ierr=dm_setvalue(B,0,0,1)
+    ierr=dm_setvalue(B,1,0,2)
+    
+    C=dm_ones(3,1)
+    ierr=dm_setvalue(C,0,0,1)
+    ierr=dm_setvalue(C,1,0,2)
+    ierr=dm_setvalue(C,2,0,3)
+    	
+   	D=dm_submatrix(A,B,C)
+
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B="
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C="
+        ierr=dm_view(C)
+        if(myrank==0) print *, ">D=dm_submatrix(A,B,C)"
+        ierr=dm_view(D)
+ 	endif
+  	ierr=dm_destroy(A)
+  	ierr=dm_destroy(B)
+  	ierr=dm_destroy(C)
+  	ierr=dm_destroy(D)
 
     call PetscFinalize(ierr)
 end program

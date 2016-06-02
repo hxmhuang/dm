@@ -110,6 +110,12 @@ module dm
         module procedure dm_solve4
     end interface
 
+	interface dm_setvalue
+        module procedure dm_setvalue1
+        module procedure dm_setvalue2
+    end interface
+
+
 
     
     interface dm_destroy
@@ -1302,7 +1308,7 @@ end function
 ! -----------------------------------------------------------------------
 ! A(m,n)=value 
 ! -----------------------------------------------------------------------
-function dm_setvalue(A,m,n,value) result(ierr)
+function dm_setvalue1(A,m,n,value) result(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1316,7 +1322,36 @@ function dm_setvalue(A,m,n,value) result(ierr)
     call mat_setvalue(A%x,m,n,value,ierr)
 end function 
 
+function dm_setvalue2(A,m,n,value) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix)	            ::  A 
+	PetscInt,	    intent(in)	::	m,n
+	PetscInt,    	intent(in)	::	value
+	PetscErrorCode	        	::	ierr
+	
+    call mat_setvalue(A%x,m,n,real(value,kind=8),ierr)
+end function 
 
+
+! -----------------------------------------------------------------------
+! B=A(rows,cols). Get sub matrix.
+! -----------------------------------------------------------------------
+function dm_submatrix(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A,Rows,Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+end function 
 
 
 

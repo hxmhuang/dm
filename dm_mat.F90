@@ -1087,4 +1087,71 @@ subroutine mat_setvalue(A,m,n,value,ierr)
 end subroutine
 
 
+! -----------------------------------------------------------------------
+! B=A(rows,cols). Get sub matrix.
+! -----------------------------------------------------------------------
+subroutine mat_submatrix(A,Rows,Cols,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::	A,Rows,Cols
+	PetscErrorCode,	intent(out)	::	ierr
+	Mat,			intent(out)	:: 	B
+	IS							:: 	ISRows,ISCols
+	
+	call mat_mat2is(Rows,ISRows,ierr)
+	call mat_mat2is(Cols,ISCols,ierr)
+	call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
+
+	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! convert one m*1 matrix into a IS object. 
+! -----------------------------------------------------------------------
+subroutine mat_mat2is(A,is,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,    intent(in)      :: A 
+    IS,	    intent(out)     :: is 
+    PetscErrorCode      	::ierr
+
+	PetscInt	            	::  nrow,ncol	
+	PetscInt					::  ista,iend
+	PetscInt					::  ni
+	PetscInt,allocatable		::  idx(:) 
+	PetscScalar,allocatable		::  y(:) 
+	integer 					:: 	i
+   
+    call MatGetSize(A,nrow,ncol,ierr)
+    if(ncol /=1) then
+        print *, "Error in mat_mat2is: the column of A should be 1"
+    endif
+
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+	ni=iend-ista
+ 
+    allocate(idx(ni),y(ni))
+    do i=ista,iend-1
+        idx(i-ista+1)=i 
+    enddo
+   
+	call MatGetValues(A,ni,idx,1,0,y,ierr) 
+	
+	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y),PETSC_COPY_VALUES,is,ierr)
+		
+    deallocate(idx,y)
+end subroutine
+
+
+
 end module
