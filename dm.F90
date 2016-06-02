@@ -117,9 +117,27 @@ module dm
         module procedure dm_setvalue2
     end interface
 
+	interface dm_submatrix
+        module procedure dm_submatrix1
+        module procedure dm_submatrix2
+        module procedure dm_submatrix3
+        module procedure dm_submatrix4
+        module procedure dm_submatrix5
+        module procedure dm_submatrix6
+        module procedure dm_submatrix7
+        module procedure dm_submatrix8
+    end interface
 
+    interface dm_getcol
+        module procedure dm_getcol1 
+        module procedure dm_getcol2 
+    end interface
 
-    
+    interface dm_getrow
+        module procedure dm_getrow1
+        module procedure dm_getrow2
+    end interface
+
     interface dm_destroy
         module procedure dm_destroy1 
         module procedure dm_destroy2 
@@ -1342,13 +1360,15 @@ end function
 ! -----------------------------------------------------------------------
 ! B=A(rows,cols). Get sub matrix.
 ! -----------------------------------------------------------------------
-function dm_submatrix(A,Rows,Cols) result(B)
+function dm_submatrix1(A,Rows,Cols) result(B)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>    
-	type(Matrix),	intent(in)	::	A,Rows,Cols
+	type(Matrix),	intent(in)	::	A
+	type(Matrix),	intent(in)	::	Rows
+	type(Matrix),	intent(in)	::	Cols
 	type(MatrixIm)				::	B
 	PetscErrorCode				::	ierr
     
@@ -1356,10 +1376,136 @@ function dm_submatrix(A,Rows,Cols) result(B)
 end function 
 
 
+function dm_submatrix2(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+	type(Matrix),	intent(in)	::	Rows
+	type(Matrix),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(A%x,ierr)
+end function 
+
+
+function dm_submatrix3(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	type(MatrixIm),	intent(in)	::	Rows
+	type(Matrix),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(Rows%x,ierr)
+end function 
+
+
+function dm_submatrix4(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	type(Matrix),	intent(in)	::	Rows
+	type(MatrixIm),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(Cols%x,ierr)
+end function 
+
+
+function dm_submatrix5(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+	type(MatrixIm),	intent(in)	::	Rows
+	type(Matrix),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(A%x,ierr)
+    call mat_destroy(Rows%x,ierr)
+end function 
+
+
+function dm_submatrix6(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+	type(Matrix),	intent(in)	::	Rows
+	type(MatrixIm),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(A%x,ierr)
+    call mat_destroy(Cols%x,ierr)
+end function
+
+
+function dm_submatrix7(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	type(MatrixIm),	intent(in)	::	Rows
+	type(MatrixIm),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(Rows%x,ierr)
+    call mat_destroy(Cols%x,ierr)
+end function
+
+
+function dm_submatrix8(A,Rows,Cols) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+	type(MatrixIm),	intent(in)	::	Rows
+	type(MatrixIm),	intent(in)	::	Cols
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+    call mat_destroy(A%x,ierr)
+    call mat_destroy(Rows%x,ierr)
+    call mat_destroy(Cols%x,ierr)
+end function
+
+
+
+
 ! -----------------------------------------------------------------------
 ! B=A(:,i). Get a column from A.
 ! -----------------------------------------------------------------------
-function dm_getcol(A,n) result(B)
+function dm_getcol1(A,n) result(B)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1374,10 +1520,27 @@ function dm_getcol(A,n) result(B)
 end function 
 
 
+function dm_getcol2(A,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+    integer,        intent(in)  ::  n
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_getcol(A%x,n,B%x,ierr)
+    call mat_destroy(A%x,ierr)
+end function 
+
+
+
 ! -----------------------------------------------------------------------
 ! B=A(m,:). Get a row from A.
 ! -----------------------------------------------------------------------
-function dm_getrow(A,n) result(B)
+function dm_getrow1(A,n) result(B)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1389,6 +1552,22 @@ function dm_getrow(A,n) result(B)
 	PetscErrorCode				::	ierr
     
 	call mat_getrow(A%x,n,B%x,ierr)
+end function 
+
+
+function dm_getrow2(A,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(MatrixIm),	intent(in)	::	A
+    integer,        intent(in)  ::  n
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_getrow(A%x,n,B%x,ierr)
+    call mat_destroy(A%x,ierr)
 end function 
 
 
