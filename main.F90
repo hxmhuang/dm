@@ -563,12 +563,12 @@ program main
     ierr=dm_setvalue(A,2,2,8)
     
     B=dm_ones(2,1)
-    ierr=dm_setvalue(B,0,0,0)
-    ierr=dm_setvalue(B,1,0,2)
+    ierr=dm_setvalue(B,1,1,1)
+    ierr=dm_setvalue(B,2,1,2)
     
     C=dm_ones(2,1)
-    ierr=dm_setvalue(C,0,0,0)
-    ierr=dm_setvalue(C,1,0,2)
+    ierr=dm_setvalue(C,1,1,1)
+    ierr=dm_setvalue(C,2,1,2)
     	
    	D=dm_submatrix(A,B,C)
 
@@ -590,15 +590,15 @@ program main
 
     if(myrank==0) print *, "=============Test dm_getcol============"
     A=dm_seqs(m,n)
-    B=dm_getcol(A,0)
-    C=dm_getcol(A,1) 
+    B=dm_getcol(A,1)
+    C=dm_getcol(A,2) 
     	
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B=dm_getcol(A,0)"
+        if(myrank==0) print *, ">B=dm_getcol(A,1)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_getcol(A,1)"
+        if(myrank==0) print *, ">C=dm_getcol(A,3)"
         ierr=dm_view(C)
  	endif
   	ierr=dm_destroy(A)
@@ -608,15 +608,15 @@ program main
 
     if(myrank==0) print *, "=============Test dm_getrow============"
     A=dm_seqs(m,n)
-    B=dm_getrow(A,0)
-    C=dm_getrow(A,1) 
+    B=dm_getrow(A,2)
+    C=dm_getrow(A,3) 
     	
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B=dm_getrow(A,0)"
+        if(myrank==0) print *, ">B=dm_getrow(A,2)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_getrow(A,1)"
+        if(myrank==0) print *, ">C=dm_getrow(A,3)"
         ierr=dm_view(C)
  	endif
   	ierr=dm_destroy(A)

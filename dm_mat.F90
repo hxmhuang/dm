@@ -1068,7 +1068,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
-! A(m,n)=value 
+! A(m,n)=value. Note that the starting point of m and n is 1. 
 ! -----------------------------------------------------------------------
 subroutine mat_setvalue(A,m,n,value,ierr)
 	implicit none
@@ -1084,7 +1084,7 @@ subroutine mat_setvalue(A,m,n,value,ierr)
     call PetscLogEventRegister("mat_setvalue",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 
-    call MatSetValue(A,m,n,value,INSERT_VALUES,ierr)
+    call MatSetValue(A,m-1,n-1,value,INSERT_VALUES,ierr)
     
     call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -1157,7 +1157,7 @@ subroutine mat_mat2is(A,is,ierr)
    
 	call MatGetValues(A,ni,idx,1,0,y,ierr) 
 	
-	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y),PETSC_COPY_VALUES,is,ierr)
+	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y-1),PETSC_COPY_VALUES,is,ierr)
 		
     deallocate(idx,y)
 end subroutine
@@ -1189,7 +1189,7 @@ subroutine mat_getcol(A,n,B,ierr)
     call PetscLogEventBegin(ievent,ierr) 
   
     call MatGetSize(A,nrow,ncol,ierr)
-    if(n > ncol) then
+    if(n-1 > ncol) then
         print *, "Error in mat_getcol: the second paramenter should not greater than the column size of A"
         stop
     endif
@@ -1201,7 +1201,7 @@ subroutine mat_getcol(A,n,B,ierr)
     do i=ista,iend-1
         row(i-ista+1)=i 
     enddo
-    col=n
+    col=n-1
 
 	call ISCreateGeneral(PETSC_COMM_WORLD,ni,row,PETSC_COPY_VALUES,ISRows,ierr)
     call ISCreateGeneral(PETSC_COMM_WORLD,1,col,PETSC_COPY_VALUES,ISCols,ierr)
@@ -1234,7 +1234,7 @@ subroutine mat_getrow(A,m,B,ierr)
     call PetscLogEventBegin(ievent,ierr) 
    
     call MatGetSize(A,nrow,ncol,ierr)
-    if(m > nrow) then
+    if(m-1 > nrow) then
         print *, "Error in mat_getrow: the second paramenter should not greater than the row size of A"
         stop
     endif
@@ -1244,7 +1244,6 @@ subroutine mat_getrow(A,m,B,ierr)
 
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
-
 
 
 
