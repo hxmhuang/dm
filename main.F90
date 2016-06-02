@@ -8,9 +8,8 @@ program main
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscksp.h>
-	IS				:: is
     type(Matrix)    :: A,B,C,D,E,F,G,H 
-    type(Matrix)    :: X,Y,Z,U,V,W 
+    type(Matrix)    :: X,Y,Z,U 
     integer         :: myrank, mysize 
     integer         :: m,n 
     real(kind=8)    :: ep,alpha
@@ -88,7 +87,7 @@ program main
 
 
  	if(myrank==0) print *, "==============Test dm_copy==============="
- 	A=dm_ones(m,m)
+ 	A=dm_eyes(m,m)
     B=A
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -102,11 +101,11 @@ program main
 
     if(myrank==0) print *, "==============Test dm_add==============="
   	A=dm_eyes(m,m)
-    B=dm_ones(m,m)
+    B=dm_eyes(m,m)
     C=A+B
-    D=dm_eyes(m,m)+dm_ones(m,m)
+    D=dm_eyes(m,m)+dm_eyes(m,m)
     E=dm_eyes(m,m)+B
-    F=A+dm_ones(m,m)
+    F=A+dm_eyes(m,m)
     G=A+A+A
     H=B+G
     if(debug) then
@@ -116,11 +115,11 @@ program main
         ierr=dm_view(B)
         if(myrank==0) print *, ">C=A+B"
         ierr=dm_view(C)
-        if(myrank==0) print *, ">D=dm_eyes(m,m)+dm_ones(m,m)"
+        if(myrank==0) print *, ">D=dm_eyes(m,m)+dm_eyes(m,m)"
         ierr=dm_view(D)
         if(myrank==0) print *, ">E=dm_eyes(m,m)+B"
         ierr=dm_view(E)
-        if(myrank==0) print *, ">F=A+dm_ones(m,m)"
+        if(myrank==0) print *, ">F=A+dm_eyes(m,m)"
         ierr=dm_view(F)
         if(myrank==0) print *, ">G=A+A+A"
         ierr=dm_view(G)
@@ -144,12 +143,12 @@ program main
 
 
     if(myrank==0) print *, "==============Test dm_del==============="
-  	A=dm_eyes(m,m)
-    B=dm_ones(m,m)
+  	A=dm_zeros(m,m)
+    B=dm_eyes(m,m)
     C=A-B
-    D=dm_eyes(m,m)-dm_ones(m,m)
+    D=dm_eyes(m,m)-dm_eyes(m,m)
     E=dm_eyes(m,m)-B
-    F=A-dm_ones(m,m)
+    F=A-dm_eyes(m,m)
     G=A-A-A
     H=B-G
     if(debug) then
@@ -159,11 +158,11 @@ program main
         ierr=dm_view(B)
         if(myrank==0) print *, ">C=A-B"
         ierr=dm_view(C)
-        if(myrank==0) print *, ">D=dm_eyes(m,m)-dm_ones(m,m)"
+        if(myrank==0) print *, ">D=dm_eyes(m,m)-dm_eyes(m,m)"
         ierr=dm_view(D)
         if(myrank==0) print *, ">E=dm_eyes(m,m)-B"
         ierr=dm_view(E)
-        if(myrank==0) print *, ">F=A-dm_ones(m,m)"
+        if(myrank==0) print *, ">F=A-dm_eyes(m,m)"
         ierr=dm_view(F)
         if(myrank==0) print *, ">G=A-A-A"
         ierr=dm_view(G)
@@ -188,11 +187,11 @@ program main
 
     if(myrank==0) print *, "==============Test dm_hjoin==============="
   	A=dm_eyes(m,m)
-    B=dm_ones(m,m)
+    B=dm_eyes(m,m)
     C=A .hj. B
-    D=dm_eyes(m,m) .hj. dm_ones(m,m)
+    D=dm_eyes(m,m) .hj. dm_eyes(m,m)
     E=dm_eyes(m,m) .hj. B
-    F=A .hj. dm_ones(m,m)
+    F=A .hj. dm_eyes(m,m)
     G=A .hj. A .hj. A
     H=B .hj. G
     if(debug) then
@@ -202,11 +201,11 @@ program main
         ierr=dm_view(B)
         if(myrank==0) print *, ">C=A .hjoin. B"
         ierr=dm_view(C)
-        if(myrank==0) print *, ">D=dm_eyes(m,m) .hjoin. dm_ones(m,m)"
+        if(myrank==0) print *, ">D=dm_eyes(m,m) .hjoin. dm_eyes(m,m)"
         ierr=dm_view(D)
         if(myrank==0) print *, ">E=dm_eyes(m,m) .hjoin. B"
         ierr=dm_view(E)
-        if(myrank==0) print *, ">F=A .hjoin. dm_ones(m,m)"
+        if(myrank==0) print *, ">F=A .hjoin. dm_eyes(m,m)"
         ierr=dm_view(F)
         if(myrank==0) print *, ">G=A .hjoin. A .hjoin. A"
         ierr=dm_view(G)
@@ -224,12 +223,12 @@ program main
 
 
     if(myrank==0) print *, "==============Test dm_mult==============="
-    A=dm_ones(m,m)
+    A=dm_eyes(m,m)
     B=dm_eyes(m,m*2)
     C=A*B
     D=A*(dm_eyes(m,m*2))
-    E=dm_ones(m,m)*B
-    F=dm_ones(m,m)*dm_eyes(m,m*2) 
+    E=dm_eyes(m,m)*B
+    F=dm_eyes(m,m)*dm_eyes(m,m*2) 
     G=A*A
     X=A*2.0
     Y=2.0*A
@@ -245,9 +244,9 @@ program main
         ierr=dm_view(C)
         if(myrank==0) print *, ">D=A*dm_eyes(m,m*2)"
         ierr=dm_view(D)
-        if(myrank==0) print *, ">E=dm_ones(m,m)*B"
+        if(myrank==0) print *, ">E=dm_eyes(m,m)*B"
         ierr=dm_view(E)
-        if(myrank==0) print *, ">F=dm_ones(m,m)*dm_eyes(m,m*2)"
+        if(myrank==0) print *, ">F=dm_eyes(m,m)*dm_eyes(m,m*2)"
         ierr=dm_view(F)
         if(myrank==0) print *, ">G=A*A"
         ierr=dm_view(G)
@@ -349,18 +348,18 @@ program main
 
 
     if(myrank==0) print *, "==============Test dm_axpy=============="
-    A=dm_seqs(m,n)	
-    B=dm_ones(m,n) 
-    C=dm_ones(m,n) 
+    A=dm_seqs(m,m)	
+    B=dm_eyes(m,m) 
+    C=dm_eyes(m,m) 
     alpha=1.0    
     ierr=dm_axpy(B,alpha,A) 
-    ierr=dm_axpy(C,alpha,dm_seqs(m,n)) 
+    ierr=dm_axpy(C,alpha,dm_seqs(m,m)) 
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
         if(myrank==0) print *, ">B= dm_axpy(B,alpha,A)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,n))"
+        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,m))"
         ierr=dm_view(C)
  	endif
  	ierr=dm_destroy(A)
@@ -369,18 +368,18 @@ program main
 
 
     if(myrank==0) print *, "==============Test dm_aypx=============="
-    A=dm_seqs(m,n)	
-    B=dm_ones(m,n) 
-    C=dm_ones(m,n) 
+    A=dm_seqs(m,m)	
+    B=dm_eyes(m,m) 
+    C=dm_eyes(m,m) 
     alpha=2.0    
     ierr=dm_aypx(B,alpha,A) 
-    ierr=dm_aypx(C,alpha,dm_seqs(m,n)) 
+    ierr=dm_aypx(C,alpha,dm_seqs(m,m)) 
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
         if(myrank==0) print *, ">B= dm_axpy(B,alpha,A)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,n))"
+        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,m))"
         ierr=dm_view(C)
  	endif
  	ierr=dm_destroy(A)
@@ -560,16 +559,16 @@ program main
   	ierr=dm_destroy(A)
 
     if(myrank==0) print *, "=============Test dm_submatrix============"
-    A=dm_seqs(2*m,2*n)
+    A=dm_eyes(m,m)
+    ierr=dm_setvalue(A,2,2,8)
     
     B=dm_ones(2,1)
-    ierr=dm_setvalue(B,0,0,1)
+    ierr=dm_setvalue(B,0,0,0)
     ierr=dm_setvalue(B,1,0,2)
     
-    C=dm_ones(3,1)
-    ierr=dm_setvalue(C,0,0,1)
+    C=dm_ones(2,1)
+    ierr=dm_setvalue(C,0,0,0)
     ierr=dm_setvalue(C,1,0,2)
-    ierr=dm_setvalue(C,2,0,3)
     	
    	D=dm_submatrix(A,B,C)
 
@@ -587,6 +586,44 @@ program main
   	ierr=dm_destroy(B)
   	ierr=dm_destroy(C)
   	ierr=dm_destroy(D)
+
+
+    if(myrank==0) print *, "=============Test dm_getcol============"
+    A=dm_seqs(m,n)
+    B=dm_getcol(A,0)
+    C=dm_getcol(A,1) 
+    	
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B=dm_getcol(A,0)"
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=dm_getcol(A,1)"
+        ierr=dm_view(C)
+ 	endif
+  	ierr=dm_destroy(A)
+  	ierr=dm_destroy(B)
+  	ierr=dm_destroy(C)
+
+
+    if(myrank==0) print *, "=============Test dm_getrow============"
+    A=dm_seqs(m,n)
+    B=dm_getrow(A,0)
+    C=dm_getrow(A,1) 
+    	
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B=dm_getrow(A,0)"
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=dm_getrow(A,1)"
+        ierr=dm_view(C)
+ 	endif
+  	ierr=dm_destroy(A)
+  	ierr=dm_destroy(B)
+  	ierr=dm_destroy(C)
+
+
 
     call PetscFinalize(ierr)
 end program

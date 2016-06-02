@@ -58,8 +58,8 @@ subroutine mat_zeros(A,m,n,ierr)
 
     call mat_create(A,m,n,ierr)
     call MatZeroEntries(A,ierr)
-	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -777,7 +777,6 @@ subroutine mat_math(A,opt,B,ierr)
 	PetscScalar,allocatable     ::	row(:),rowtmp(:)
 	PetscInt					::  ista,iend
 	integer						::	i,j
-    PetscScalar                 ::  newval 
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_math",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
@@ -803,10 +802,7 @@ subroutine mat_math(A,opt,B,ierr)
                 case (MAT_MATH_EXP)
                     row=exp(rowtmp)
                 case (MAT_MATH_SQRT)
-                    !row=sqrt(rowtmp)
                     row=sqrt(rowtmp)
-					!row=PetscSqrtScalar(rowtmp,ierr)
-                    !row=PetscSqrtReal(rowtmp,ierr)
                 case (MAT_MATH_LOG)
                     row=log(rowtmp)
                 case (MAT_MATH_SIN)
@@ -916,6 +912,7 @@ subroutine mat_mat2vec(A,v,ierr)
     call MatGetSize(A,nrow,ncol,ierr)
     if(ncol /=1) then
         print *, "Error in mat_mat2vec: the column of A should be 1"
+        stop 
     endif
 
     call VecCreate(PETSC_COMM_WORLD,v,ierr)
@@ -1004,10 +1001,13 @@ subroutine mat_load(filename,A,ierr)
  	PetscInt					    :: nrow,ncol
  	PetscInt					    :: ista,iend
     integer                         :: i,j,fid
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_load",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
     
     fid=1000
     open(fid,FILE=filename)
-    call get_rowcol(fid,nrow,ncol,ierr)
+    call getfilerowcol(fid,nrow,ncol,ierr)
     !print *, "nrow=",nrow, "ncol=",ncol
     
     call mat_create(A,nrow,ncol,ierr)
@@ -1028,10 +1028,11 @@ subroutine mat_load(filename,A,ierr)
 	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     deallocate(x,row)
+    call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
 
-subroutine get_rowcol(fid,nrow,ncol,ierr)
+subroutine getfilerowcol(fid,nrow,ncol,ierr)
     implicit none
     integer, intent(in)     :: fid 
     integer, intent(out)    :: nrow,ncol 
@@ -1079,11 +1080,15 @@ subroutine mat_setvalue(A,m,n,value,ierr)
 	PetscInt,	    intent(in)	::	m,n
 	PetscScalar,    intent(in)	::	value
 	PetscErrorCode,	intent(out)	::	ierr
-	
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_setvalue",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+
     call MatSetValue(A,m,n,value,INSERT_VALUES,ierr)
     
     call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+    call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
 
@@ -1100,15 +1105,19 @@ subroutine mat_submatrix(A,Rows,Cols,B,ierr)
 	PetscErrorCode,	intent(out)	::	ierr
 	Mat,			intent(out)	:: 	B
 	IS							:: 	ISRows,ISCols
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_submatrix",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
 	
 	call mat_mat2is(Rows,ISRows,ierr)
 	call mat_mat2is(Cols,ISCols,ierr)
-	call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
-	call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
 
 	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+    call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
 
@@ -1135,6 +1144,7 @@ subroutine mat_mat2is(A,is,ierr)
     call MatGetSize(A,nrow,ncol,ierr)
     if(ncol /=1) then
         print *, "Error in mat_mat2is: the column of A should be 1"
+        stop
     endif
 
     call MatGetOwnershipRange(A,ista,iend,ierr)
@@ -1151,6 +1161,91 @@ subroutine mat_mat2is(A,is,ierr)
 		
     deallocate(idx,y)
 end subroutine
+
+
+! -----------------------------------------------------------------------
+! B=A(:,i). Get a column from A.
+! -----------------------------------------------------------------------
+subroutine mat_getcol(A,n,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,        intent(in)      ::  A 
+    PetscInt,	intent(in)      ::  n 
+    Mat,        intent(in)      ::  B 
+    PetscErrorCode      	    ::  ierr
+
+	PetscInt	            	::  nrow,ncol	
+	PetscInt					::  ista,iend
+	PetscInt					::  ni
+	PetscInt,allocatable		::  row(:) 
+	PetscInt                    ::  col 
+	integer 					:: 	i
+    IS                          ::  ISRows, ISCols 
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_getcol",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+  
+    call MatGetSize(A,nrow,ncol,ierr)
+    if(n > ncol) then
+        print *, "Error in mat_getcol: the second paramenter should not greater than the column size of A"
+        stop
+    endif
+    
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+	ni=iend-ista
+ 
+    allocate(row(ni))
+    do i=ista,iend-1
+        row(i-ista+1)=i 
+    enddo
+    col=n
+
+	call ISCreateGeneral(PETSC_COMM_WORLD,ni,row,PETSC_COPY_VALUES,ISRows,ierr)
+    call ISCreateGeneral(PETSC_COMM_WORLD,1,col,PETSC_COPY_VALUES,ISCols,ierr)
+	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
+    
+    deallocate(row)
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
+
+
+! -----------------------------------------------------------------------
+! B=A(m,:). Get a row from A.
+! -----------------------------------------------------------------------
+subroutine mat_getrow(A,m,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,        intent(in)      :: A 
+    PetscInt,	intent(in)      :: m 
+    Mat,        intent(in)      :: B 
+    Mat                         :: W 
+    PetscErrorCode      	    ::ierr
+
+	PetscInt	            	::  nrow,ncol	
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_getrow",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+   
+    call MatGetSize(A,nrow,ncol,ierr)
+    if(m > nrow) then
+        print *, "Error in mat_getrow: the second paramenter should not greater than the row size of A"
+        stop
+    endif
+    call mat_trans(A,W,ierr)
+    call mat_getcol(W,m,B,ierr)
+    
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
+
+
 
 
 

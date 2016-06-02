@@ -34,14 +34,16 @@ module dm
         module procedure dm_mult11
         module procedure dm_mult12
     end interface
-
+    
+    ! element multiple
     interface operator (.em.)
         module procedure dm_eprod1
         module procedure dm_eprod2
         module procedure dm_eprod3
         module procedure dm_eprod4
     end interface
-
+    
+    ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin1
         module procedure dm_hjoin2
@@ -1351,6 +1353,42 @@ function dm_submatrix(A,Rows,Cols) result(B)
 	PetscErrorCode				::	ierr
     
 	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! B=A(:,i). Get a column from A.
+! -----------------------------------------------------------------------
+function dm_getcol(A,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+    integer,        intent(in)  ::  n
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_getcol(A%x,n,B%x,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! B=A(m,:). Get a row from A.
+! -----------------------------------------------------------------------
+function dm_getrow(A,n) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+    integer,        intent(in)  ::  n
+	type(MatrixIm)				::	B
+	PetscErrorCode				::	ierr
+    
+	call mat_getrow(A%x,n,B%x,ierr)
 end function 
 
 
