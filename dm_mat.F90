@@ -311,7 +311,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A-B
 ! -----------------------------------------------------------------------
-subroutine mat_del(A,B,C,ierr) 
+subroutine mat_minus(A,B,C,ierr) 
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -765,7 +765,7 @@ subroutine mat_math(A,opt,B,ierr)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include "mat_math_type.h"
+#include "mat_type.h"
 	Mat,			intent(in)	::  A
 	Integer,        intent(in)  ::  opt
 	Mat,			intent(out)	::	B

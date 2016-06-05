@@ -32,7 +32,7 @@ program main
     call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',debug,PETSC_NULL_BOOL,ierr)
     
     if(myrank==0) then 
-       print *, "============Input paramenters============"
+       print *, "==============Input paramenters==========="
         print *, "m=",m,",n=",n,"ep=",ep,"debug=",debug
      endif 
 	
@@ -54,7 +54,7 @@ program main
  	endif
     ierr=dm_destroy(A)
 
- 	if(myrank==0) print *, "==============Test dm_seq================"
+ 	if(myrank==0) print *, "==============Test dm_seq================="
     A=dm_seqs(m,n)
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -63,7 +63,7 @@ program main
     ierr=dm_destroy(A)
 
 
-    if(myrank==0) print *, "==============Test dm_eye==============="
+    if(myrank==0) print *, "==============Test dm_eye================="
     A=dm_eyes(m,m)	
     if(debug) then
         if(myrank==0) print *, ">A=(m,m)"
@@ -86,7 +86,7 @@ program main
  	ierr=dm_destroy(A)
 
 
- 	if(myrank==0) print *, "==============Test dm_copy==============="
+ 	if(myrank==0) print *, "==============Test dm_copy================"
  	A=dm_eyes(m,m)
     B=A
     if(debug) then
@@ -99,7 +99,7 @@ program main
  	ierr=dm_destroy(B)
 
 
-    if(myrank==0) print *, "==============Test dm_add==============="
+    if(myrank==0) print *, "==============Test dm_add================="
   	A=dm_eyes(m,m)
     B=dm_eyes(m,m)
     C=A+B
@@ -126,12 +126,11 @@ program main
         if(myrank==0) print *, ">H=B+G"
         ierr=dm_view(H)
  	endif
-    !TODO:There is a bug to free matrix A.
-    !A=A+A	
-    !if(debug) then
-    !    if(myrank==0) print *, ">A="
-    !    ierr=dm_view(a)
- 	!endif
+     A=A+A	
+     if(debug) then
+         if(myrank==0) print *, ">A=A+A"
+         ierr=dm_view(a)
+ 	 endif
     ierr=dm_destroy(A)
   	ierr=dm_destroy(B)
  	ierr=dm_destroy(C)
@@ -142,7 +141,7 @@ program main
  	ierr=dm_destroy(H)
 
 
-    if(myrank==0) print *, "==============Test dm_del==============="
+    if(myrank==0) print *, "==============Test dm_minus==============="
   	A=dm_zeros(m,m)
     B=dm_eyes(m,m)
     C=A-B
@@ -222,7 +221,7 @@ program main
  	ierr=dm_destroy(H)
 
 
-    if(myrank==0) print *, "==============Test dm_mult==============="
+    if(myrank==0) print *, "==============Test dm_mult================"
     A=dm_eyes(m,m)
     B=dm_eyes(m,m*2)
     C=A*B
@@ -305,7 +304,7 @@ program main
  	ierr=dm_destroy(G)
 
 
-    if(myrank==0) print *, "==============Test dm_rep==============="
+    if(myrank==0) print *, "==============Test dm_rep================="
     A=dm_eyes(m,m)
     B=dm_rep(A,3,2) 
     C=dm_rep(dm_eyes(m,m),3,2) 
@@ -322,7 +321,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_sum==============="
+    if(myrank==0) print *, "==============Test dm_sum================="
     A=dm_seqs(m,n)
     B=dm_sum(A,1)
     C=dm_sum(A,2)
@@ -347,7 +346,7 @@ program main
  	ierr=dm_destroy(E)
 
 
-    if(myrank==0) print *, "==============Test dm_axpy=============="
+    if(myrank==0) print *, "==============Test dm_axpy================"
     A=dm_seqs(m,m)	
     B=dm_eyes(m,m) 
     C=dm_eyes(m,m) 
@@ -367,7 +366,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_aypx=============="
+    if(myrank==0) print *, "==============Test dm_aypx================"
     A=dm_seqs(m,m)	
     B=dm_eyes(m,m) 
     C=dm_eyes(m,m) 
@@ -387,7 +386,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_trans=============="
+    if(myrank==0) print *, "==============Test dm_trans==============="
     A=dm_seqs(m,n)	
     B=dm_trans(A)
     C=dm_trans(dm_seqs(m,n))
@@ -404,7 +403,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_xyt==============="
+    if(myrank==0) print *, "==============Test dm_xyt================="
     A=dm_seqs(m,m)
     B=dm_ones(m,m)
     C=dm_xyt(A,B)
@@ -437,7 +436,7 @@ program main
  	ierr=dm_destroy(G)
 
 
-    if(myrank==0) print *, "==============Test dm_xty==============="
+    if(myrank==0) print *, "==============Test dm_xty================="
     A=dm_seqs(m,m)
     B=dm_ones(m,m)
     C=dm_xty(A,B)
@@ -469,7 +468,7 @@ program main
     ierr=dm_destroy(F)
  	ierr=dm_destroy(G)
 
-    if(myrank==0) print *, "==============Test dm_exp==============="
+    if(myrank==0) print *, "==============Test dm_exp================="
     A=dm_seqs(m,m)
     B=dm_exp(A)
     C=dm_exp(dm_seqs(m,m))
@@ -486,7 +485,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_log==============="
+    if(myrank==0) print *, "==============Test dm_log================="
     A=dm_seqs(m,m)
     B=dm_log(A)
     C=dm_log(dm_seqs(m,m))
@@ -503,7 +502,7 @@ program main
  	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_sqrt==============="
+    if(myrank==0) print *, "==============Test dm_sqrt================"
     A=dm_seqs(m,m)
     B=dm_sqrt(A)
     C=dm_sqrt(dm_seqs(m,m))
@@ -548,7 +547,7 @@ program main
   	ierr=dm_destroy(A)
 
 
-    if(myrank==0) print *, "=============Test dm_setvalue============="
+    if(myrank==0) print *, "==============Test dm_setvalue============"
     A=dm_eyes(m,m)
     alpha=8.0
     ierr=dm_setvalue(A,1,1,alpha)
@@ -558,7 +557,7 @@ program main
  	endif
   	ierr=dm_destroy(A)
 
-    if(myrank==0) print *, "=============Test dm_submatrix============"
+    if(myrank==0) print *, "==============Test dm_submatrix==========="
     A=dm_eyes(m,m)
     ierr=dm_setvalue(A,2,2,8)
     
@@ -616,7 +615,7 @@ program main
   	ierr=dm_destroy(Z)
 
 
-    if(myrank==0) print *, "=============Test dm_getcol============"
+    if(myrank==0) print *, "==============Test dm_getcol=============="
     A=dm_seqs(m,n)
     B=dm_getcol(A,1)
     C=dm_getcol(A,2) 
@@ -634,11 +633,10 @@ program main
   	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "=============Test dm_getrow============"
+    if(myrank==0) print *, "==============Test dm_getrow=============="
     A=dm_seqs(m,n)
     B=dm_getrow(A,2)
     C=dm_getrow(A,3) 
-    	
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
