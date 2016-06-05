@@ -116,15 +116,11 @@ function dm_get_bool(str) result(input)
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
     logical         ::  input 
-    PetscBool       ::  flag 
-    PetscErrorCode  ::  ierr
-    call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,flag,PETSC_NULL_BOOL,ierr)
-    !print *,"str=",str," flag=",flag 
-    if(flag .eqv. PETSC_TRUE) then
-        input=.true.
-    else
-        input=.false.
-    endif
+	PetscErrorCode  ::  ierr
+    !call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,str,flag,PETSC_NULL_BOOL,ierr)
+    input=.false.
+	call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',input,PETSC_NULL_BOOL,ierr)
+    !print *,"str=",str," flag=",input
 end function
 
 

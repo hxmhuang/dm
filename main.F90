@@ -27,11 +27,12 @@ program main
     m=dm_get_int('-m')
     n=dm_get_int('-n')
     ep=dm_get_real('-ep')
-    !debug=dm_get_bool('-debug')
 
-    call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',debug,PETSC_NULL_BOOL,ierr)
+    !call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',debug,PETSC_NULL_BOOL,ierr)
+    !print *," debug=",debug
     
-    if(myrank==0) then 
+    debug=dm_get_bool('-debug')
+	if(myrank==0) then 
        print *, "==============Input paramenters==========="
         print *, "m=",m,",n=",n,"ep=",ep,"debug=",debug
      endif 
