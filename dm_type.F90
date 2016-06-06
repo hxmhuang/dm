@@ -4,8 +4,12 @@
 module dm_type 
     implicit none
     type Matrix 
-        Mat  x         
-        integer xtype
+		Mat  x         
+		integer xtype
+		integer nrow
+		integer ncol
+		integer ista
+		integer iend
     end type Matrix 
 
 !    type MatrixIm 

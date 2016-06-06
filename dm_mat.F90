@@ -1247,6 +1247,48 @@ end subroutine
 
 
 
+! -----------------------------------------------------------------------
+! Get row size and column size from A.
+! -----------------------------------------------------------------------
+subroutine mat_getsize(A,nrow,ncol,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,        intent(in)      :: A 
+    PetscInt,	intent(out)     :: nrow,ncol
+    PetscErrorCode      	    ::ierr
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_getsize",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+   
+    call MatGetSize(A,nrow,ncol,ierr)
+
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! Get size and column size from A.
+! -----------------------------------------------------------------------
+subroutine mat_getownershiprange(A,ista,iend,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,        intent(in)      :: A 
+    PetscInt,	intent(out)     :: ista,iend 
+    PetscErrorCode      	    ::ierr
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_getrange",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+   
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
 
 
 end module

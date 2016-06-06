@@ -303,11 +303,11 @@ subroutine dm_copy(B,A)
     else
         call mat_copy(A%x,B%x,ierr)
     endif
-
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     if(B%xtype==MAT_XTYPE_EXPLICIT) then
         call mat_destroy(W%x,ierr)
     endif
- 
     B%xtype=MAT_XTYPE_EXPLICIT
 end subroutine
 
@@ -935,6 +935,6 @@ function dm_getrow(A,n) result(B)
 end function 
 
 
+
+
 end module 
-
-

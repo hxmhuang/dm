@@ -11,7 +11,7 @@ program main
     type(Matrix)    :: A,B,C,D,E,F,G,H 
     type(Matrix)    :: X,Y,Z,U 
     integer         :: myrank, mysize 
-    integer         :: m,n 
+    integer         :: m,n
     real(kind=8)    :: ep,alpha
     logical         :: debug 
     integer         :: ierr
@@ -649,6 +649,18 @@ program main
   	ierr=dm_destroy(A)
   	ierr=dm_destroy(B)
   	ierr=dm_destroy(C)
+
+
+    if(myrank==0) print *, "==============Test dm_getrow=============="
+    A=dm_eyes(m,m)
+	if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, "nrow=",A%nrow,"ncol=",A%ncol
+        if(myrank==0) print *, "rank0:ista=",A%ista,"iend=",A%iend
+        if(myrank==1) print *, "rank1:ista=",A%ista,"iend=",A%iend
+ 	endif
+  	ierr=dm_destroy(A)
 
 
 
