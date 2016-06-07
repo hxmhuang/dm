@@ -52,6 +52,12 @@ module dm
         module procedure dm_setvalue2
     end interface
 
+	interface dm_setvalues
+        module procedure dm_setvalues1
+        module procedure dm_setvalues2
+    end interface
+
+
     interface assignment(=)
         module procedure dm_copy
     end interface
@@ -71,6 +77,7 @@ function dm_init() result(ierr)
     PetscErrorCode  ::  ierr 
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
 end function
+
 
 ! -----------------------------------------------------------------------
 ! Get the rank number of the current process in the commmunicator 
@@ -99,7 +106,7 @@ end function
 ! -----------------------------------------------------------------------
 ! Get the input paramenters 
 ! -----------------------------------------------------------------------
-function dm_get_int(str) result(input)
+function dm_option_int(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
@@ -111,7 +118,7 @@ end function
 ! -----------------------------------------------------------------------
 ! Get the input paramenters 
 ! -----------------------------------------------------------------------
-function dm_get_bool(str) result(input)
+function dm_option_bool(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
@@ -127,7 +134,7 @@ end function
 ! -----------------------------------------------------------------------
 ! Get the input paramenters 
 ! -----------------------------------------------------------------------
-function dm_get_real(str) result(input)
+function dm_option_real(str) result(input)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     character(len=*)::  str
@@ -933,6 +940,49 @@ function dm_getrow(A,n) result(B)
         call mat_destroy(A%x,ierr)
     endif
 end function 
+
+
+! -----------------------------------------------------------------------
+! Set local values in A.
+! -----------------------------------------------------------------------
+function dm_setvalues1(A,m,idxm,n,idxn,v) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	integer,		intent(in)	:: 	m,n
+	integer,		intent(in)	::	idxm(:),idxn(:)
+	real(kind=8)				::	v(:)	
+	PetscErrorCode				::	ierr
+   	
+	call mat_setvalues(A%x,m,idxm,n,idxn,v,ierr) 
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+
+function dm_setvalues2(A,m,idxm,n,idxn,v) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	integer,		intent(in)	:: 	m,n
+	integer,		intent(in)	::	idxm(:),idxn(:)
+	real						::	v(:)	
+	PetscErrorCode				::	ierr
+   	
+	call mat_setvalues(A%x,m,idxm,n,idxn,real(v,kind=8),ierr) 
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
 
 
 

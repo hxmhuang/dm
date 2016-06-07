@@ -12,7 +12,9 @@ program main
     type(Matrix)    :: X,Y,Z,U 
     integer         :: myrank, mysize 
     integer         :: m,n
+	integer			:: idxm(2),idxn(2)
     real(kind=8)    :: ep,alpha
+	real(kind=8)	:: array(4)
     logical         :: debug 
     integer         :: ierr
     character(len=50):: filename
@@ -24,14 +26,14 @@ program main
     
     mysize=dm_comm_size()
     
-    m=dm_get_int('-m')
-    n=dm_get_int('-n')
-    ep=dm_get_real('-ep')
+    m=dm_option_int('-m')
+    n=dm_option_int('-n')
+    ep=dm_option_real('-ep')
 
     !call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',debug,PETSC_NULL_BOOL,ierr)
     !print *," debug=",debug
     
-    debug=dm_get_bool('-debug')
+    debug=dm_option_bool('-debug')
 	if(myrank==0) then 
        print *, "==============Input paramenters==========="
         print *, "m=",m,",n=",n,"ep=",ep,"debug=",debug
@@ -618,15 +620,15 @@ program main
 
     if(myrank==0) print *, "==============Test dm_getcol=============="
     A=dm_seqs(m,n)
-    B=dm_getcol(A,1)
-    C=dm_getcol(A,2) 
+    B=dm_getcol(A,0)
+    C=dm_getcol(A,1) 
     	
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B=dm_getcol(A,1)"
+        if(myrank==0) print *, ">B=dm_getcol(A,0)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_getcol(A,3)"
+        if(myrank==0) print *, ">C=dm_getcol(A,1)"
         ierr=dm_view(C)
  	endif
   	ierr=dm_destroy(A)
@@ -636,14 +638,14 @@ program main
 
     if(myrank==0) print *, "==============Test dm_getrow=============="
     A=dm_seqs(m,n)
-    B=dm_getrow(A,2)
-    C=dm_getrow(A,3) 
+    B=dm_getrow(A,0)
+    C=dm_getrow(A,2) 
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B=dm_getrow(A,2)"
+        if(myrank==0) print *, ">B=dm_getrow(A,0)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_getrow(A,3)"
+        if(myrank==0) print *, ">C=dm_getrow(A,2)"
         ierr=dm_view(C)
  	endif
   	ierr=dm_destroy(A)
@@ -651,7 +653,7 @@ program main
   	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_getrow=============="
+    if(myrank==0) print *, "==============Test dm_getsize=============="
     A=dm_eyes(m,m)
 	if(debug) then
         if(myrank==0) print *, ">A="
@@ -663,6 +665,24 @@ program main
   	ierr=dm_destroy(A)
 
 
+   if(myrank==0) print *, "==============Test dm_setvalues============"
+!   A=dm_eyes(2*m,2*m)
+!   idxm(1)=0	
+!   idxm(2)=2	
+!   idxn(1)=1	
+!   idxn(2)=2
+!   array(1)=9.0
+!   array(2)=8	
+!   array(3)=7	
+!   array(4)=6	
+   ! ierr=dm_setvalues(A,2,idxm,2,idxn,array)	
+    
+!   if(debug) then
+!       if(myrank==0) print *, ">A="
+!       ierr=dm_view(A)
+!	endif
+! 	ierr=dm_destroy(A)
 
-    call PetscFinalize(ierr)
+
+	ierr=dm_finalize()
 end program

@@ -1114,9 +1114,10 @@ subroutine mat_submatrix(A,Rows,Cols,B,ierr)
 	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
-
 	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+ 	call ISDestroy(ISRows,ierr)
+ 	call ISDestroy(ISCols,ierr)
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
@@ -1158,7 +1159,6 @@ subroutine mat_mat2is(A,is,ierr)
 	call MatGetValues(A,ni,idx,1,0,y,ierr) 
 	
 	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y-1),PETSC_COPY_VALUES,is,ierr)
-		
     deallocate(idx,y)
 end subroutine
 
@@ -1189,7 +1189,7 @@ subroutine mat_getcol(A,n,B,ierr)
     call PetscLogEventBegin(ievent,ierr) 
   
     call MatGetSize(A,nrow,ncol,ierr)
-    if(n-1 > ncol) then
+    if(n > ncol) then
         print *, "Error in mat_getcol: the second paramenter should not greater than the column size of A"
         stop
     endif
@@ -1201,12 +1201,13 @@ subroutine mat_getcol(A,n,B,ierr)
     do i=ista,iend-1
         row(i-ista+1)=i 
     enddo
-    col=n-1
+    col=n
 
 	call ISCreateGeneral(PETSC_COMM_WORLD,ni,row,PETSC_COPY_VALUES,ISRows,ierr)
     call ISCreateGeneral(PETSC_COMM_WORLD,1,col,PETSC_COPY_VALUES,ISCols,ierr)
 	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
-    
+   	call ISDestroy(ISRows,ierr) 
+   	call ISDestroy(ISCols,ierr) 
     deallocate(row)
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
@@ -1234,7 +1235,7 @@ subroutine mat_getrow(A,m,B,ierr)
     call PetscLogEventBegin(ievent,ierr) 
    
     call MatGetSize(A,nrow,ncol,ierr)
-    if(m-1 > nrow) then
+    if(m > nrow) then
         print *, "Error in mat_getrow: the second paramenter should not greater than the row size of A"
         stop
     endif
@@ -1258,8 +1259,8 @@ subroutine mat_getsize(A,nrow,ncol,ierr)
 #include <petsc/finclude/petscmat.h>
     Mat,        intent(in)      :: A 
     PetscInt,	intent(out)     :: nrow,ncol
-    PetscErrorCode      	    ::ierr
-    PetscLogEvent               ::  ievent
+    PetscErrorCode      	    :: ierr
+    PetscLogEvent               :: ievent
     call PetscLogEventRegister("mat_getsize",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
    
@@ -1280,13 +1281,38 @@ subroutine mat_getownershiprange(A,ista,iend,ierr)
 #include <petsc/finclude/petscmat.h>
     Mat,        intent(in)      :: A 
     PetscInt,	intent(out)     :: ista,iend 
-    PetscErrorCode      	    ::ierr
-    PetscLogEvent               ::  ievent
+    PetscErrorCode      	    :: ierr
+    PetscLogEvent               :: ievent
     call PetscLogEventRegister("mat_getrange",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
    
 	call MatGetOwnershipRange(A,ista,iend,ierr)
 
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! Get local array from A.
+! -----------------------------------------------------------------------
+subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscmat.h90>
+    Mat,       	intent(in)      :: A 
+	PetscInt,	intent(in)		:: m,n
+	PetscInt,intent(in)			:: idxm(:),idxn(:) 
+	PetscScalar,intent(in)		:: v(:)
+	PetscErrorCode      	    :: ierr
+    PetscLogEvent               :: ievent
+    call PetscLogEventRegister("mat_setvalues",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+ 
+	call MatSetValues(A,m,idxm,n,idxn,v,INSERT_VALUES,ierr) 
+	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
