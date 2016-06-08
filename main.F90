@@ -13,8 +13,10 @@ program main
     integer         :: myrank, mysize 
     integer         :: m,n
 	integer			:: idxm(2),idxn(2)
-    real(kind=8)    :: ep,alpha
-	real(kind=8)	:: array(4)
+    real*8    		:: ep,alpha
+	!There is a bug when using real*8 array(4), so I have to use real type here. 
+	!real*8			:: array(4)
+	real  			:: array(4)
     logical         :: debug 
     integer         :: ierr
     character(len=50):: filename
@@ -30,9 +32,6 @@ program main
     n=dm_option_int('-n')
     ep=dm_option_real('-ep')
 
-    !call PetscOptionsGetBool(PETSC_NULL_OBJECT,PETSC_NULL_CHARACTER,'-debug',debug,PETSC_NULL_BOOL,ierr)
-    !print *," debug=",debug
-    
     debug=dm_option_bool('-debug')
 	if(myrank==0) then 
        print *, "==============Input paramenters==========="
@@ -171,12 +170,11 @@ program main
         if(myrank==0) print *, ">H=B-G"
         ierr=dm_view(H)
  	endif
-    !TODO:There is a bug to free matrix A.
-    !A=A+A	
-    !if(debug) then
-    !    if(myrank==0) print *, ">A="
-    !    ierr=dm_view(a)
- 	!endif
+    A=A+A	
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+ 	endif
     ierr=dm_destroy(A)
   	ierr=dm_destroy(B)
  	ierr=dm_destroy(C)
@@ -655,7 +653,7 @@ program main
 
     if(myrank==0) print *, "==============Test dm_getsize=============="
     A=dm_eyes(m,m)
-	if(debug) then
+    if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
         if(myrank==0) print *, "nrow=",A%nrow,"ncol=",A%ncol
@@ -666,22 +664,22 @@ program main
 
 
    if(myrank==0) print *, "==============Test dm_setvalues============"
-!   A=dm_eyes(2*m,2*m)
-!   idxm(1)=0	
-!   idxm(2)=2	
-!   idxn(1)=1	
-!   idxn(2)=2
-!   array(1)=9.0
-!   array(2)=8	
-!   array(3)=7	
-!   array(4)=6	
-   ! ierr=dm_setvalues(A,2,idxm,2,idxn,array)	
+    A=dm_eyes(2*m,2*m)
+    idxm(1)=0	
+    idxm(2)=2	
+    idxn(1)=1	
+    idxn(2)=2
+    array(1)=9
+    array(2)=8	
+    array(3)=7	
+    array(4)=6	
+  	ierr=dm_setvalues(A,2,idxm,2,idxn,array)	
     
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       ierr=dm_view(A)
-!	endif
-! 	ierr=dm_destroy(A)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+ 	endif
+  	ierr=dm_destroy(A)
 
 
 	ierr=dm_finalize()
