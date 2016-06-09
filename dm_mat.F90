@@ -812,7 +812,11 @@ subroutine mat_math(A,opt,B,ierr)
                     row=cos(rowtmp)
                 case (MAT_MATH_TAN)
                     row=tan(rowtmp)
-                case default
+                case (MAT_MATH_SQU)
+                    row=rowtmp**2
+                case (MAT_MATH_CUBE)
+                    row=rowtmp**3
+				case default
                     row=0.0    
             end select
         enddo

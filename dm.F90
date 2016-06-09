@@ -1045,6 +1045,51 @@ end function
 
 
 ! -----------------------------------------------------------------------
+! B=(A).^2 
+! -----------------------------------------------------------------------
+function dm_squ(A) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_math(A%x,MAT_MATH_SQU,B%x,ierr)
+    B%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+
+! -----------------------------------------------------------------------
+! B=(A).^3 
+! -----------------------------------------------------------------------
+function dm_cube(A) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix)              ::	B
+	PetscErrorCode      		::	ierr
+    call mat_math(A%x,MAT_MATH_CUBE,B%x,ierr)
+    B%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+
+
+! -----------------------------------------------------------------------
 ! B=sqrt(A) 
 ! -----------------------------------------------------------------------
 function dm_sqrt(A) result(B)

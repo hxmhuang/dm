@@ -4,6 +4,8 @@
 #define MAT_MATH_SIN  4
 #define MAT_MATH_COS  5
 #define MAT_MATH_TAN  6
+#define MAT_MATH_SQU  7
+#define MAT_MATH_CUBE 8
 
 #define MAT_XTYPE_IMPLICIT 1
 #define MAT_XTYPE_EXPLICIT 2

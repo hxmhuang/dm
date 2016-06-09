@@ -545,6 +545,40 @@ program main
  	ierr=dm_destroy(C)
 
 
+    if(myrank==0) print *, "==============Test dm_squ================="
+    A=dm_seqs(m,m)
+    B=dm_squ(A)
+    C=dm_squ(dm_seqs(m,m))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B=dm_squ(A)"
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=dm_squ(dm_seqs(m,m))"
+        ierr=dm_view(C)
+ 	endif
+ 	ierr=dm_destroy(A)
+ 	ierr=dm_destroy(B)
+ 	ierr=dm_destroy(C)
+
+
+    if(myrank==0) print *, "==============Test dm_cube================"
+    A=dm_seqs(m,m)
+    B=dm_cube(A)
+    C=dm_cube(dm_seqs(m,m))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B=dm_cube(A)"
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=dm_cube(dm_seqs(m,m))"
+        ierr=dm_view(C)
+ 	endif
+ 	ierr=dm_destroy(A)
+ 	ierr=dm_destroy(B)
+ 	ierr=dm_destroy(C)
+
+
     if(myrank==0) print *, "==============Test dm_solve==============="
     A=dm_seqs(m,m)
     B=dm_ones(m,1)
