@@ -618,6 +618,7 @@ program main
     A=dm_seqs(m,m)
     B=dm_ones(m,1)
     C=dm_solve(A,B)
+    D=A .inv. B
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
@@ -625,10 +626,13 @@ program main
         ierr=dm_view(b)
         if(myrank==0) print *, ">C=dm_solve(A,B)"
         ierr=dm_view(C)
+        if(myrank==0) print *, ">D=A .inv. B"
+        ierr=dm_view(D)
  	endif
   	ierr=dm_destroy(A)
   	ierr=dm_destroy(B)
   	ierr=dm_destroy(C)
+  	ierr=dm_destroy(D)
 
 
     if(myrank==0) print *, "==============Test dm_load================"

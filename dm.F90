@@ -47,10 +47,13 @@ module dm
         module procedure dm_ediv
     end interface
     
-
     ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin
+    end interface
+	! INV(A)*B
+    interface operator (.inv.)
+        module procedure dm_solve
     end interface
 
     interface dm_axpy
@@ -63,10 +66,6 @@ module dm
         module procedure dm_aypx1
         module procedure dm_aypx2
         module procedure dm_aypx3
-    end interface
-
-    interface operator (.tr.)
-        module procedure dm_trans
     end interface
 
 	interface dm_setvalue
@@ -1214,27 +1213,27 @@ end function
 ! -----------------------------------------------------------------------
 ! Solve Ax=b 
 ! -----------------------------------------------------------------------
-function dm_solve(A,b) result(x)
+function dm_solve(A,B) result(X)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix),	intent(in)  ::	b
-	type(Matrix)            	::	x
+	type(Matrix),	intent(in)  ::	B
+	type(Matrix)            	::	X
 	PetscErrorCode      		::	ierr
     
-    call mat_solve(A%x,b%x,x%x,ierr)
-    x%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(x%x,x%nrow,x%ncol,ierr)
-	call mat_getownershiprange(x%x,x%ista,x%iend,ierr) 
+    call mat_solve(A%x,B%x,X%x,ierr)
+    X%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(X%x,X%nrow,X%ncol,ierr)
+	call mat_getownershiprange(X%x,X%ista,X%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
-    if (b%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(b%x,ierr)
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
     endif
 end function 
 
