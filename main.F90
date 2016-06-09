@@ -258,7 +258,7 @@ program main
     F=dm_eyes(m,m)*dm_eyes(m,m*2) 
     G=A*A
     X=A*2.0
-    Y=2.0*A
+    Y=2*A
     alpha=3.0
     Z=alpha*A
     U=A*alpha
@@ -277,9 +277,9 @@ program main
         ierr=dm_view(F)
         if(myrank==0) print *, ">G=A*A"
         ierr=dm_view(G)
-        if(myrank==0) print *, ">X=2.0*A"
+        if(myrank==0) print *, ">X=A*2.0"
         ierr=dm_view(X)
-        if(myrank==0) print *, ">Y=A*2.0"
+        if(myrank==0) print *, ">Y=2*A"
         ierr=dm_view(Y)
         if(myrank==0) print *, ">Z=alpha*A"
         ierr=dm_view(Y)

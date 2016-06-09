@@ -33,6 +33,8 @@ module dm
         module procedure dm_mult3
         module procedure dm_mult4
         module procedure dm_mult5
+        module procedure dm_mult6
+        module procedure dm_mult7
     end interface
     
     ! element multiple
@@ -697,6 +699,43 @@ function dm_mult5(A,alpha) result(B)
     endif
 end function 
 
+function dm_mult6(A,alpha) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	integer,        intent(in)	::  alpha 
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix)                ::	B
+	PetscErrorCode      		::	ierr
+    call mat_copy(A%x,B%x,ierr) 
+    call mat_scale(B%x,real(alpha,8),ierr)
+    B%xtype=MAT_XTYPE_IMPLICIT 
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+function dm_mult7(alpha,A) result(B)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	integer,        intent(in)	::  alpha 
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix)                ::	B
+	PetscErrorCode      		::	ierr
+    call mat_copy(A%x,B%x,ierr) 
+    call mat_scale(B%x,real(alpha,8),ierr)
+    B%xtype=MAT_XTYPE_IMPLICIT 
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
 
 ! -----------------------------------------------------------------------
 ! B=A1.*A2
