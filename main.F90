@@ -164,7 +164,7 @@ program main
     F=A-dm_eyes(m,m)
     G=A-A-A
     H=B-G
-	X=A-2.0
+	X=9*A-2.0
 	Y=2-A
 	Z=real(2,8)-A
 	U=(0-A)+2
@@ -185,7 +185,7 @@ program main
         ierr=dm_view(G)
         if(myrank==0) print *, ">H=B-G"
         ierr=dm_view(H)
-        if(myrank==0) print *, ">X=A-2.0"
+        if(myrank==0) print *, ">X=9*A-2.0"
         ierr=dm_view(X)
         if(myrank==0) print *, ">Y=2-A"
         ierr=dm_view(Y)

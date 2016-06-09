@@ -299,7 +299,7 @@ subroutine mat_add(A,B,C,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
-		print *, "Error: matrix A and matrix B should have the same size"
+		print *, "Error in mat_add: matrix A and matrix B should have the same size"
 		stop	
 	endif
     
@@ -327,7 +327,7 @@ subroutine mat_minus(A,B,C,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
-		print *, "Error: matrix A and matrix B should have the same size"
+		print *, "Error in mat_minus: matrix A and matrix B should have the same size"
 		stop	
 	endif
     

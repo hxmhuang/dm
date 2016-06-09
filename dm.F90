@@ -359,6 +359,8 @@ function dm_add1(A,B) result(C)
 	
     call mat_add(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -384,6 +386,8 @@ function dm_add2(A,alpha) result(C)
 	call mat_scale(B%x,alpha,ierr) 	
     call mat_add(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
    	
 	call mat_destroy(B%x,ierr) 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -471,6 +475,8 @@ function dm_minus1(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_minus(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -496,6 +502,8 @@ function dm_minus2(A,alpha) result(C)
 	call mat_scale(B%x,alpha,ierr) 	
     call mat_minus(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
    	
 	call mat_destroy(B%x,ierr) 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -513,7 +521,7 @@ function dm_minus3(A,alpha) result(C)
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
 	C=dm_minus2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+   C%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 function dm_minus4(alpha,A) result(C)
@@ -532,6 +540,8 @@ function dm_minus4(alpha,A) result(C)
 	call mat_scale(B%x,alpha,ierr) 	
     call mat_minus(B%x,A%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
    	
 	call mat_destroy(B%x,ierr) 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -619,6 +629,8 @@ function dm_mult1(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_mult(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -642,6 +654,8 @@ function dm_mult2(alpha,A) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,alpha,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -662,6 +676,8 @@ function dm_mult3(A,alpha) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,alpha,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -682,6 +698,8 @@ function dm_mult4(alpha,A) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,real(alpha,8),ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -702,6 +720,8 @@ function dm_mult5(A,alpha) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,real(alpha,8),ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -721,6 +741,8 @@ function dm_mult6(A,alpha) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,real(alpha,8),ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -740,6 +762,8 @@ function dm_mult7(alpha,A) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,real(alpha,8),ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -761,6 +785,8 @@ function dm_emult(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_emult(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -786,6 +812,8 @@ function dm_ediv(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_ediv(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -811,6 +839,8 @@ function dm_rep(A,m,n) result(B)
 	PetscErrorCode      		::	ierr
     call mat_rep(A%x,m,n,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -838,6 +868,8 @@ function dm_sum(A,ndim) result(B)
 	PetscErrorCode      		::	ierr
     call mat_sum(A%x,ndim,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -860,6 +892,8 @@ function dm_axpy1(Y,a,X) result(ierr)
 	PetscErrorCode      		::	ierr
     call mat_axpy(Y%x,a,X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -879,6 +913,8 @@ function dm_axpy2(Y,a,X) result(ierr)
 	PetscErrorCode      		::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -897,6 +933,8 @@ function dm_axpy3(Y,a,X) result(ierr)
 	PetscErrorCode      			::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -919,6 +957,8 @@ function dm_aypx1(Y,a,X) result(ierr)
 	PetscErrorCode      		::	ierr
     call mat_aypx(Y%x,a,X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -937,6 +977,8 @@ function dm_aypx2(Y,a,X) result(ierr)
 	PetscErrorCode      		::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -955,6 +997,8 @@ function dm_aypx3(Y,a,X) result(ierr)
 	PetscErrorCode      			::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
     Y%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
+	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -975,6 +1019,8 @@ function dm_trans(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_trans(A%x,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -997,6 +1043,8 @@ function dm_xyt(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_xyt(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1022,6 +1070,8 @@ function dm_xty(A,B) result(C)
 	PetscErrorCode      		::	ierr
     call mat_xty(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
+	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1047,6 +1097,8 @@ function dm_exp(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_math(A%x,MAT_MATH_EXP,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1069,6 +1121,8 @@ function dm_log(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_math(A%x,MAT_MATH_LOG,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1091,6 +1145,8 @@ function dm_squ(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_math(A%x,MAT_MATH_SQU,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1113,6 +1169,8 @@ function dm_cube(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_math(A%x,MAT_MATH_CUBE,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1136,6 +1194,8 @@ function dm_sqrt(A) result(B)
 	PetscErrorCode      		::	ierr
     call mat_math(A%x,MAT_MATH_SQRT,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1159,6 +1219,8 @@ function dm_solve(A,b) result(x)
     
     call mat_solve(A%x,b%x,x%x,ierr)
     x%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(x%x,x%nrow,x%ncol,ierr)
+	call mat_getownershiprange(x%x,x%ista,x%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1184,6 +1246,8 @@ function dm_load(filename) result(A)
     
     call mat_load(filename,A%x,ierr)
     A%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end function 
 
 
@@ -1250,6 +1314,8 @@ function dm_submatrix(A,Rows,Cols) result(B)
     
 	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1279,6 +1345,8 @@ function dm_getcol(A,n) result(B)
     
 	call mat_getcol(A%x,n,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1302,6 +1370,8 @@ function dm_getrow(A,n) result(B)
     
 	call mat_getrow(A%x,n,B%x,ierr)
     B%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
