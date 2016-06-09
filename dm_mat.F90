@@ -1389,7 +1389,6 @@ subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-#include <petsc/finclude/petscmat.h90>
     Mat,       	intent(in)      :: A 
 	PetscInt,	intent(in)		:: m,n
 	PetscInt,intent(in)			:: idxm(:),idxn(:) 
@@ -1405,6 +1404,29 @@ subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
 	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
+
+
+! -----------------------------------------------------------------------
+! Norm(A)
+! -----------------------------------------------------------------------
+subroutine mat_norm(A,ntype,res,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,       	intent(in)      :: A
+	integer,	intent(in)		:: ntype 
+	PetscReal,  intent(out)		:: res 
+	PetscErrorCode      	    :: ierr
+    PetscLogEvent               :: ievent
+    call PetscLogEventRegister("mat_norm",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+ 
+	call MatNorm(A,ntype,res,ierr) 
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
 
 
 end module

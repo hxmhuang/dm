@@ -16,6 +16,7 @@ program main
     real*8    		:: ep,alpha
 	real*8			:: array(4)
 	!real  			:: array(4)
+    real*8    		:: a1,a2,a3
     logical         :: debug 
     integer         :: ierr
     character(len=50):: filename
@@ -787,6 +788,21 @@ program main
         ierr=dm_view(A)
  	endif
   	ierr=dm_destroy(A)
+
+   if(myrank==0) print *, "==============Test dm_norm==============="
+    A=dm_seqs(m,m)
+   	a1=dm_norm_1(A)
+	a2=dm_norm_2(A)
+	a3=dm_norm_inf(A) 
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">NORM_1=",a1
+        if(myrank==0) print *, ">NORM_2=",a2
+        if(myrank==0) print *, ">NORM_INF=",a3
+ 	endif
+  	ierr=dm_destroy(A)
+
 
 
 	ierr=dm_finalize()

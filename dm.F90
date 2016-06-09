@@ -1428,6 +1428,7 @@ function dm_setvalues2(A,m,idxm,n,idxn,v) result(ierr)
     endif
 end function 
 
+
 function dm_setvalues3(A,m,idxm,n,idxn,v) result(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -1448,5 +1449,52 @@ function dm_setvalues3(A,m,idxm,n,idxn,v) result(ierr)
 end function 
 
 
+! -----------------------------------------------------------------------
+! Norm(A)
+! -----------------------------------------------------------------------
+function dm_norm_1(A) result(res)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	real*8 						::	res	
+	PetscErrorCode				::	ierr
+	call mat_norm(A%x,NORM_1,res,ierr) 
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+function dm_norm_2(A) result(res)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	real*8 						::	res	
+	PetscErrorCode				::	ierr
+	call mat_norm(A%x,NORM_FROBENIUS,res,ierr) 
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
+
+function dm_norm_inf(A) result(res)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix),	intent(in)	::	A
+	real*8 						::	res	
+	PetscErrorCode				::	ierr
+	call mat_norm(A%x,NORM_INFINITY,res,ierr) 
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end function 
 
 end module 
