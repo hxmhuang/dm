@@ -1084,7 +1084,7 @@ subroutine mat_setvalue(A,m,n,value,ierr)
     call PetscLogEventRegister("mat_setvalue",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 
-    call MatSetValue(A,m-1,n-1,value,INSERT_VALUES,ierr)
+    call MatSetValue(A,m,n,value,INSERT_VALUES,ierr)
     
     call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -1312,6 +1312,8 @@ subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
     call PetscLogEventBegin(ievent,ierr) 
  
 	call MatSetValues(A,m,idxm,n,idxn,v,INSERT_VALUES,ierr) 
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine

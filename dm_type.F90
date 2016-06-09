@@ -4,12 +4,12 @@
 module dm_type 
     implicit none
     type Matrix 
-		Mat  x         
-		integer xtype
-		integer nrow
-		integer ncol
-		integer ista
-		integer iend
+		Mat  	:: x         
+		integer :: xtype=MAT_XTYPE_IMPLICIT
+		integer :: nrow=0
+		integer :: ncol=0
+		integer :: ista=0
+		integer :: iend=0
     end type Matrix 
 
 !    type MatrixIm 

@@ -50,6 +50,7 @@ module dm
 	interface dm_setvalue
         module procedure dm_setvalue1
         module procedure dm_setvalue2
+        module procedure dm_setvalue3
     end interface
 
 	interface dm_setvalues
@@ -199,8 +200,6 @@ function dm_view(A) result(ierr)
 #include <petsc/finclude/petscmat.h>
     type(Matrix),  intent(in)   ::  A
     PetscErrorCode              ::  ierr
-	call MatAssemblyBegin(A%x,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A%x,MAT_FINAL_ASSEMBLY,ierr)
     call MatView(A%x,PETSC_VIEWER_STDOUT_WORLD, ierr)
 end function 
 
@@ -296,12 +295,12 @@ subroutine dm_copy(B,A)
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     type(Matrix),  intent(in)    ::  A
-    type(Matrix),  intent(out)   ::  B
+    type(Matrix),  intent(inout) ::  B
     type(Matrix)                 ::  W
     PetscErrorCode               ::  ierr
-    !Free the space of B matrix 
-    !call mat_destroy(B%x,ierr)
-    if(B%xtype==MAT_XTYPE_EXPLICIT) then
+	!print *,"B Type=",B%xtype	
+	!print *,"A Type=",A%xtype	
+	if(B%xtype==MAT_XTYPE_EXPLICIT) then
         W%x=B%x
     endif
     
@@ -313,6 +312,7 @@ subroutine dm_copy(B,A)
 	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
 	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     if(B%xtype==MAT_XTYPE_EXPLICIT) then
+    	!Free the space of B matrix 
         call mat_destroy(W%x,ierr)
     endif
     B%xtype=MAT_XTYPE_EXPLICIT
@@ -862,7 +862,21 @@ function dm_setvalue2(A,m,n,value) result(ierr)
 	PetscInt,    	intent(in)	::	value
 	PetscErrorCode	        	::	ierr
 	
-    call mat_setvalue(A%x,m,n,real(value,kind=8),ierr)
+    call mat_setvalue(A%x,m,n,real(value,8),ierr)
+end function 
+
+function dm_setvalue3(A,m,n,value) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>    
+	type(Matrix)	            ::  A 
+	PetscInt,	    intent(in)	::	m,n
+	real,    		intent(in)	::	value
+	PetscErrorCode	        	::	ierr
+	
+    call mat_setvalue(A%x,m,n,real(value,8),ierr)
 end function 
 
 
@@ -959,7 +973,7 @@ function dm_setvalues1(A,m,idxm,n,idxn,v) result(ierr)
    	
 	call mat_setvalues(A%x,m,idxm,n,idxn,v,ierr) 
     
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end function 

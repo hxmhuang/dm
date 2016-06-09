@@ -15,8 +15,8 @@ program main
 	integer			:: idxm(2),idxn(2)
     real*8    		:: ep,alpha
 	!There is a bug when using real*8 array(4), so I have to use real type here. 
-	!real*8			:: array(4)
-	real  			:: array(4)
+	real*8			:: array(4)
+	!real  			:: array(4)
     logical         :: debug 
     integer         :: ierr
     character(len=50):: filename
@@ -560,15 +560,15 @@ program main
 
     if(myrank==0) print *, "==============Test dm_submatrix==========="
     A=dm_eyes(m,m)
-    ierr=dm_setvalue(A,2,2,8)
+    ierr=dm_setvalue(A,1,1,8)
     
     B=dm_ones(2,1)
-    ierr=dm_setvalue(B,1,1,1)
-    ierr=dm_setvalue(B,2,1,2)
+    ierr=dm_setvalue(B,0,0,1)
+    ierr=dm_setvalue(B,1,0,2)
     
     C=dm_ones(2,1)
-    ierr=dm_setvalue(C,1,1,1)
-    ierr=dm_setvalue(C,2,1,2)
+    ierr=dm_setvalue(C,0,0,1)
+    ierr=dm_setvalue(C,1,0,2)
     	
    	D=dm_submatrix(A,B,C)
     E=dm_submatrix(dm_eyes(m,m),B,C)
