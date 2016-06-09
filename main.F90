@@ -14,7 +14,6 @@ program main
     integer         :: m,n
 	integer			:: idxm(2),idxn(2)
     real*8    		:: ep,alpha
-	!There is a bug when using real*8 array(4), so I have to use real type here. 
 	real*8			:: array(4)
 	!real  			:: array(4)
     logical         :: debug 
