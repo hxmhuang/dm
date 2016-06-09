@@ -109,6 +109,9 @@ program main
     F=A+dm_eyes(m,m)
     G=A+A+A
     H=B+G
+	X=A+2.0
+	Y=2+A
+	Z=real(2,8)+A
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
@@ -126,6 +129,12 @@ program main
         ierr=dm_view(G)
         if(myrank==0) print *, ">H=B+G"
         ierr=dm_view(H)
+        if(myrank==0) print *, ">X=A+2.0"
+        ierr=dm_view(X)
+        if(myrank==0) print *, ">Y=2+A"
+        ierr=dm_view(Y)
+        if(myrank==0) print *, ">Z=real(2,8)+A"
+        ierr=dm_view(Z)
  	endif
      A=A+A	
      if(debug) then
@@ -140,10 +149,13 @@ program main
  	ierr=dm_destroy(F)
  	ierr=dm_destroy(G)
  	ierr=dm_destroy(H)
+ 	ierr=dm_destroy(X)
+ 	ierr=dm_destroy(Y)
+ 	ierr=dm_destroy(Z)
 
 
     if(myrank==0) print *, "==============Test dm_minus==============="
-  	A=dm_zeros(m,m)
+  	A=dm_ones(m,m)
     B=dm_eyes(m,m)
     C=A-B
     D=dm_eyes(m,m)-dm_eyes(m,m)
@@ -151,6 +163,10 @@ program main
     F=A-dm_eyes(m,m)
     G=A-A-A
     H=B-G
+	X=A-2.0
+	Y=2-A
+	Z=real(2,8)-A
+	U=(0-A)+2
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
@@ -168,8 +184,16 @@ program main
         ierr=dm_view(G)
         if(myrank==0) print *, ">H=B-G"
         ierr=dm_view(H)
+        if(myrank==0) print *, ">X=A-2.0"
+        ierr=dm_view(X)
+        if(myrank==0) print *, ">Y=2-A"
+        ierr=dm_view(Y)
+        if(myrank==0) print *, ">Z=real(2,8)-A"
+        ierr=dm_view(Z)
+        if(myrank==0) print *, ">U=(0-A)+2"
+        ierr=dm_view(U)
  	endif
-    A=A+A	
+    A=A-A	
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
@@ -182,6 +206,10 @@ program main
  	ierr=dm_destroy(F)
  	ierr=dm_destroy(G)
  	ierr=dm_destroy(H)
+ 	ierr=dm_destroy(X)
+ 	ierr=dm_destroy(Y)
+ 	ierr=dm_destroy(Z)
+ 	ierr=dm_destroy(U)
 
 
     if(myrank==0) print *, "==============Test dm_hjoin==============="
@@ -549,13 +577,22 @@ program main
 
     if(myrank==0) print *, "==============Test dm_setvalue============"
     A=dm_eyes(m,m)
-    alpha=8.0
-    ierr=dm_setvalue(A,1,1,alpha)
+    B=dm_eyes(m,m)
+    C=dm_eyes(m,m)
+    ierr=dm_setvalue(A,1,1,5)
+    ierr=dm_setvalue(B,1,1,6.1)
+    ierr=dm_setvalue(C,1,1,real(7,8))
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
+        if(myrank==0) print *, ">B="
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C="
+        ierr=dm_view(C)
  	endif
   	ierr=dm_destroy(A)
+  	ierr=dm_destroy(B)
+  	ierr=dm_destroy(C)
 
     if(myrank==0) print *, "==============Test dm_submatrix==========="
     A=dm_eyes(m,m)

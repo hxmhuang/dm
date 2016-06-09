@@ -249,7 +249,8 @@ subroutine bk_mat_add(A,B,C,ierr)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-	Mat,			intent(in)	::  A,B 
+	Mat,			intent(in)	::  A 
+	Mat,			intent(in)	::  B 
 	Mat,			intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
