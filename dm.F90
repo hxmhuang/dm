@@ -194,6 +194,8 @@ function dm_create(m,n) result(A)
     ! generate matrix A with size m*n
     call mat_create(A%x,m,n,ierr)
     A%xtype=MAT_XTYPE_IMPLICIT
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end function 
 
 ! -----------------------------------------------------------------------
@@ -257,6 +259,8 @@ function dm_ones(m,n) result(A)
     
     call mat_ones(A%x,m,n,ierr)
     A%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end function
 
 
@@ -277,6 +281,8 @@ function dm_seqs(m,n) result(A)
 
     call mat_seqs(A%x,m,n,ierr)
     A%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end function
 
 
@@ -305,6 +311,8 @@ function dm_eyes(m,n) result(A)
     
     call mat_eyes(A%x,m,n,ierr)
     A%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end function 
 
 
@@ -332,13 +340,13 @@ subroutine dm_copy(B,A)
     else
         call mat_copy(A%x,B%x,ierr)
     endif
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
     if(B%xtype==MAT_XTYPE_EXPLICIT) then
     	!Free the space of B matrix 
         call mat_destroy(W%x,ierr)
     endif
     B%xtype=MAT_XTYPE_EXPLICIT
+	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
+	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
 end subroutine
 
 
