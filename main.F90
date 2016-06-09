@@ -378,15 +378,14 @@ program main
     A=dm_seqs(m,m)	
     B=dm_eyes(m,m) 
     C=dm_eyes(m,m) 
-    alpha=1.0    
-    ierr=dm_axpy(B,alpha,A) 
-    ierr=dm_axpy(C,alpha,dm_seqs(m,m)) 
+    ierr=dm_axpy(B,2.0,A) 
+    ierr=dm_axpy(C,2,dm_seqs(m,m)) 
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B= dm_axpy(B,alpha,A)"
+        if(myrank==0) print *, ">B= dm_axpy(B,2.0,A)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,m))"
+        if(myrank==0) print *, ">C=dm_axpy(C,2,dm_seqs(m,m))"
         ierr=dm_view(C)
  	endif
  	ierr=dm_destroy(A)
@@ -398,15 +397,14 @@ program main
     A=dm_seqs(m,m)	
     B=dm_eyes(m,m) 
     C=dm_eyes(m,m) 
-    alpha=2.0    
-    ierr=dm_aypx(B,alpha,A) 
-    ierr=dm_aypx(C,alpha,dm_seqs(m,m)) 
+    ierr=dm_aypx(B,2.0,A) 
+    ierr=dm_aypx(C,2,dm_seqs(m,m)) 
     if(debug) then
         if(myrank==0) print *, ">A="
         ierr=dm_view(A)
-        if(myrank==0) print *, ">B= dm_axpy(B,alpha,A)"
+        if(myrank==0) print *, ">B= dm_axpy(B,2.0,A)"
         ierr=dm_view(B)
-        if(myrank==0) print *, ">C=dm_axpy(C,alpha,dm_seqs(m,m))"
+        if(myrank==0) print *, ">C=dm_axpy(C,2,dm_seqs(m,m))"
         ierr=dm_view(C)
  	endif
  	ierr=dm_destroy(A)

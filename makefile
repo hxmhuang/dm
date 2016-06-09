@@ -30,6 +30,11 @@ big:
 	make main 
 	-@${MPIEXEC} -n 16 ./main -m 300 -n 300 -ep 3.1 -log_view -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type sor
 
+huge:
+	make clean
+	make main 
+	-@${MPIEXEC} -n 16 ./main -m 1000 -n 1000 -ep 3.1 -log_view -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type sor
+
 
 
 #include ${PETSC_DIR}/lib/petsc/conf/test

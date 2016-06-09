@@ -50,11 +50,13 @@ module dm
     interface dm_axpy
         module procedure dm_axpy1
         module procedure dm_axpy2
+        module procedure dm_axpy3
     end interface
 
     interface dm_aypx
         module procedure dm_aypx1
         module procedure dm_aypx2
+        module procedure dm_aypx3
     end interface
 
     interface operator (.tr.)
@@ -851,6 +853,24 @@ function dm_axpy2(Y,a,X) result(ierr)
     endif
 end function 
 
+function dm_axpy3(Y,a,X) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)		::  X 
+	integer,        intent(in)		::	a
+	type(Matrix), 	intent(inout) 	::  Y 
+	PetscErrorCode      			::	ierr
+    call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
+    Y%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (X%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(X%x,ierr)
+    endif
+end function 
+
 
 ! -----------------------------------------------------------------------
 ! Compute Y = a*Y + X.
@@ -873,7 +893,6 @@ function dm_aypx1(Y,a,X) result(ierr)
     endif
 end function 
 
-
 function dm_aypx2(Y,a,X) result(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -885,9 +904,30 @@ function dm_aypx2(Y,a,X) result(ierr)
 	type(Matrix), intent(inout) ::  Y 
 	PetscErrorCode      		::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
+    Y%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (X%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(X%x,ierr)
+    endif
 end function 
 
-
+function dm_aypx3(Y,a,X) result(ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)		::  X 
+	integer,   		intent(in)		::	a
+	type(Matrix), 	intent(inout) 	::  Y 
+	PetscErrorCode      			::	ierr
+    call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
+    Y%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (X%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(X%x,ierr)
+    endif
+end function 
 
 ! -----------------------------------------------------------------------
 ! B = A^T.
