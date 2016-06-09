@@ -521,6 +521,89 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
+! C=A./B
+! -----------------------------------------------------------------------
+subroutine mat_ediv(A,B,C,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::  A,B 
+	Mat,			intent(out)	::	C
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+	PetscInt					::	col1,col2,m,n
+	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:),idxtmp(:)
+	PetscScalar,allocatable		::	row1(:),row2(:),row3(:),rowtmp(:)
+	PetscInt					::  ista,iend
+    PetscInt                    ::  pos1,pos2,counter
+	integer						::	i
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_ediv",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
+		print *, "Error: Matrix A1 and Matrix A2 should have the same sizes"
+		stop	
+	endif
+    
+    call mat_create(C,nrow1,ncol1,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	    
+    do i=ista,iend-1
+	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+        m=col1
+	    call MatRestoreRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    
+        call MatGetRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+		n=col2
+	    call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    
+        allocate(idxn1(m),row1(m))
+        allocate(idxtmp(m),rowtmp(m))
+	    allocate(idxn2(n),row2(n))
+	    allocate(idxn3(min(m,n)),row3(min(m,n)))
+    	
+        call MatGetRow(A,i,col1,idxn1,row1,ierr)
+        m=col1
+        idxtmp=idxn1
+        rowtmp=row1
+	    call MatRestoreRow(A,i,col1,idxn1,PETSC_NULL_SCALAR,ierr)
+ 
+        call MatGetRow(B,i,col2,idxn2,row2,ierr)
+        counter=0
+        pos1=1
+        pos2=1
+        do while(pos1<=m .and. pos2<=n)
+            if(idxtmp(pos1)<idxn2(pos2)) then
+                pos1=pos1+1
+            elseif(idxtmp(pos1)==idxn2(pos2))then
+                counter=counter+1
+                idxn3(counter)=idxn2(pos2)
+                row3(counter)=rowtmp(pos1)/row2(pos2)
+                pos1=pos1+1
+                pos2=pos2+1
+            else
+                pos2=pos2+1
+            endif
+        enddo
+        call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
+           
+		!print *,">i=",i,"idxn3=",idxn3,"row3=",row3
+		call MatSetValues(C,1,i,counter,idxn3(1:counter),row3(1:counter),INSERT_VALUES,ierr)
+	    deallocate(idxn1,idxn2,idxn3,idxtmp,row1,row2,row3,rowtmp)
+	enddo
+
+	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
 ! The mat_rep function is used to replicate matrix with m times in row and
 ! n times in column. It's name refers to the repmat function in MATLAB. 
 ! Suppose P is an extended identity mM*M matrix and T is another 

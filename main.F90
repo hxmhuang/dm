@@ -34,7 +34,7 @@ program main
     debug=dm_option_bool('-debug')
 	if(myrank==0) then 
        print *, "==============Input paramenters==========="
-        print *, "m=",m,",n=",n,"ep=",ep,"debug=",debug
+        print *, "m=",m,",n=",n,",ep=",ep,",debug=",debug
      endif 
 	
     
@@ -54,6 +54,7 @@ program main
         ierr=dm_view(A)
  	endif
     ierr=dm_destroy(A)
+
 
  	if(myrank==0) print *, "==============Test dm_seq================="
     A=dm_seqs(m,n)
@@ -330,6 +331,40 @@ program main
  	ierr=dm_destroy(E)
     ierr=dm_destroy(F)
  	ierr=dm_destroy(G)
+
+
+    if(myrank==0) print *, "==============Test dm_ediv================"
+    A=dm_eyes(m,m)
+    B=dm_seqs(m,m)
+    C=A .ed. B
+    D=A .ed. (dm_seqs(m,m))
+    E=dm_eyes(m,m) .ed. B
+    F=dm_eyes(m,m) .ed. dm_seqs(m,m) 
+    G=A .ed. A
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        ierr=dm_view(A)
+        if(myrank==0) print *, ">B="
+        ierr=dm_view(B)
+        if(myrank==0) print *, ">C=A./B"
+        ierr=dm_view(C)
+        if(myrank==0) print *, ">D=A./dm_seqs(m,m*2)"
+        ierr=dm_view(D)
+        if(myrank==0) print *, ">E=dm_eyes(m,m)./B"
+        ierr=dm_view(E)
+        if(myrank==0) print *, ">F=dm_eyes(m,m)./dm_seqs(m,m*2)"
+        ierr=dm_view(F)
+        if(myrank==0) print *, ">G=A./A"
+        ierr=dm_view(G)
+ 	endif
+ 	ierr=dm_destroy(A)
+ 	ierr=dm_destroy(B)
+ 	ierr=dm_destroy(C)
+ 	ierr=dm_destroy(D)
+ 	ierr=dm_destroy(E)
+    ierr=dm_destroy(F)
+ 	ierr=dm_destroy(G)
+
 
 
     if(myrank==0) print *, "==============Test dm_rep================="
@@ -719,7 +754,7 @@ program main
   	ierr=dm_destroy(C)
 
 
-    if(myrank==0) print *, "==============Test dm_getsize=============="
+    if(myrank==0) print *, "==============Test dm_getsize============="
     A=dm_eyes(m,m)
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -731,7 +766,7 @@ program main
   	ierr=dm_destroy(A)
 
 
-   if(myrank==0) print *, "==============Test dm_setvalues============"
+   if(myrank==0) print *, "==============Test dm_setvalues==========="
     A=dm_eyes(2*m,2*m)
     idxm(1)=0	
     idxm(2)=2	

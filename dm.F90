@@ -36,12 +36,18 @@ module dm
         module procedure dm_mult6
         module procedure dm_mult7
     end interface
-    
+   
     ! element multiple
     interface operator (.em.)
         module procedure dm_emult
     end interface
+     
+    ! element divide 
+    interface operator (.ed.)
+        module procedure dm_ediv
+    end interface
     
+
     ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin
@@ -72,6 +78,7 @@ module dm
 	interface dm_setvalues
         module procedure dm_setvalues1
         module procedure dm_setvalues2
+        module procedure dm_setvalues3
     end interface
 
 
@@ -740,7 +747,7 @@ function dm_mult7(alpha,A) result(B)
 end function 
 
 ! -----------------------------------------------------------------------
-! B=A1.*A2
+! C=A.*B
 ! -----------------------------------------------------------------------
 function dm_emult(A,B) result(C)
 	implicit none
@@ -753,6 +760,31 @@ function dm_emult(A,B) result(C)
 	type(Matrix)              ::	C
 	PetscErrorCode      		::	ierr
     call mat_emult(A%x,B%x,C%x,ierr)
+    C%xtype=MAT_XTYPE_IMPLICIT 
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+end function 
+
+
+! -----------------------------------------------------------------------
+! C=A./B
+! -----------------------------------------------------------------------
+function dm_ediv(A,B) result(C)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              ::	C
+	PetscErrorCode      		::	ierr
+    call mat_ediv(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
