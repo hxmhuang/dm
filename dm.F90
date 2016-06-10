@@ -171,9 +171,6 @@ end subroutine
 subroutine dm_finalize(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
     integer,intent(out)			::  ierr 
     call PetscFinalize(ierr)
 end subroutine 
@@ -184,10 +181,6 @@ end subroutine
 ! -----------------------------------------------------------------------
 subroutine dm_destroy(A,ierr)
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
     type(Matrix),   intent(in)  ::  A
     integer,intent(out)			::  ierr 
     call mat_destroy(A%x,ierr)
@@ -199,13 +192,9 @@ end subroutine
 ! -----------------------------------------------------------------------
 subroutine dm_view(A,ierr) 
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
     type(Matrix),  intent(in)   ::  A
-    integer,intent(out)			::  ierr 
-    call MatView(A%x,PETSC_VIEWER_STDOUT_WORLD, ierr)
+    integer,	   intent(out)	::  ierr 
+    call mat_view(A%x,ierr)
 end subroutine 
 
 ! -----------------------------------------------------------------------
@@ -213,34 +202,23 @@ end subroutine
 ! -----------------------------------------------------------------------
 function dm_zeros(m,n) result(A)
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-    PetscInt,       intent(in)  ::  m,n 
-    type(Matrix)              ::  A
-    PetscErrorCode              ::  ierr
+    integer, 	intent(in)  ::  m,n 
+    type(Matrix)            ::  A
+    integer					::  ierr
     
     call mat_zeros(A%x,m,n,ierr)
-    A%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_setinfo(A,ierr)
 end function
-
 
 
 function dm_ones(m,n) result(A)
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-    PetscInt,       intent(in)  ::  m,n
-    type(Matrix)              ::  A
-    PetscErrorCode              ::  ierr
+    integer,    intent(in)  ::  m,n
+    type(Matrix)            ::  A
+    integer					::  ierr
     
     call mat_ones(A%x,m,n,ierr)
-    A%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+    call dm_setinfo(A,ierr)
 end function
 
 
@@ -251,18 +229,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_seqs(m,n) result(A)
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-    PetscInt,       intent(in)  ::  m,n
-    type(Matrix)              ::  A
-    PetscErrorCode              ::  ierr
+    integer,   intent(in)  	::  m,n
+    type(Matrix)           	::  A
+    integer					::  ierr
 
     call mat_seqs(A%x,m,n,ierr)
-    A%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+    call dm_setinfo(A,ierr)
 end function
 
 
@@ -281,18 +253,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_eyes(m,n) result(A)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	PetscInt,       intent(in)	::	m,n	
-	type(Matrix)			    ::	A
-	PetscErrorCode	            ::	ierr
+	integer,    intent(in)	::	m,n	
+	type(Matrix)			::	A
+	integer					::	ierr
     
     call mat_eyes(A%x,m,n,ierr)
-    A%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+    call dm_setinfo(A,ierr)
 end function 
 
 
@@ -301,14 +267,10 @@ end function
 ! -----------------------------------------------------------------------
 subroutine dm_copy(B,A)
     implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
     type(Matrix),  intent(in)    ::  A
     type(Matrix),  intent(inout) ::  B
     type(Matrix)                 ::  W
-    PetscErrorCode               ::  ierr
+    integer						 ::  ierr
 	!print *,"B Type=",B%xtype	
 	!print *,"A Type=",A%xtype	
 	if(B%xtype==MAT_XTYPE_EXPLICIT) then
@@ -324,11 +286,9 @@ subroutine dm_copy(B,A)
     	!Free the space of B matrix 
         call mat_destroy(W%x,ierr)
     endif
-    B%xtype=MAT_XTYPE_EXPLICIT
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
+	B%xtype=MAT_XTYPE_EXPLICIT
 end subroutine
-
 
 
 ! -----------------------------------------------------------------------
@@ -336,19 +296,13 @@ end subroutine
 ! -----------------------------------------------------------------------
 function dm_add1(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)                ::	C
-	PetscErrorCode      		::	ierr
+	integer						::	ierr
 	
     call mat_add(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -360,22 +314,16 @@ end function
 
 function dm_add2(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	PetscErrorCode      		::	ierr
+	integer						::	ierr
 	
 	call mat_ones(B%x,A%nrow,A%ncol,ierr)
 	call mat_scale(B%x,alpha,ierr) 	
     call mat_add(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
    	
 	call mat_destroy(B%x,ierr) 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -385,10 +333,6 @@ end function
 
 function dm_add3(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -398,10 +342,6 @@ end function
 
 function dm_add4(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -411,23 +351,14 @@ end function
 
 function dm_add5(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
 	C=dm_add2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 function dm_add6(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -437,10 +368,6 @@ end function
 
 function dm_add7(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -453,14 +380,10 @@ end function
 ! -----------------------------------------------------------------------
 function dm_minus1(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_minus(A%x,B%x,C%x,ierr)
     C%xtype=MAT_XTYPE_IMPLICIT 
 	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
@@ -476,15 +399,11 @@ end function
 
 function dm_minus2(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	PetscErrorCode      		::	ierr
+	integer::	ierr
 	
 	call mat_ones(B%x,A%nrow,A%ncol,ierr)
 	call mat_scale(B%x,alpha,ierr) 	
@@ -501,28 +420,20 @@ end function
 
 function dm_minus3(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
 	C=dm_minus2(A,real(alpha,8))	
-   C%xtype=MAT_XTYPE_IMPLICIT 
+	C%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 function dm_minus4(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	PetscErrorCode      		::	ierr
+	integer						::	ierr
 	
 	call mat_ones(B%x,A%nrow,A%ncol,ierr)
 	call mat_scale(B%x,alpha,ierr) 	
@@ -539,10 +450,6 @@ end function
 
 function dm_minus5(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -552,10 +459,6 @@ end function
 
 function dm_minus6(A,alpha) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -565,10 +468,6 @@ end function
 
 function dm_minus7(alpha,A) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
@@ -576,22 +475,17 @@ function dm_minus7(alpha,A) result(C)
     C%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
-
 ! -----------------------------------------------------------------------
 ! C=[A B] 
 ! -----------------------------------------------------------------------
 function dm_hjoin(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_hjoin(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
+	call dm_setinfo(C,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -607,18 +501,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_mult1(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_mult(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -628,134 +516,64 @@ function dm_mult1(A,B) result(C)
     endif
 end function 
 
-
 function dm_mult2(alpha,A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	PetscScalar,	intent(in)	::  alpha 
+	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,alpha,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end function 
-
 
 function dm_mult3(A,alpha) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	PetscScalar,	intent(in)	::  alpha 
+	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
-    call mat_copy(A%x,B%x,ierr) 
-    call mat_scale(B%x,alpha,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+	type(Matrix)              	::	B
+   	B=dm_mult2(alpha,A)
+	B%xtype=MAT_XTYPE_IMPLICIT 
 end function 
-
 
 function dm_mult4(alpha,A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	real,           intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
-	PetscErrorCode      		::	ierr
-    call mat_copy(A%x,B%x,ierr) 
-    call mat_scale(B%x,real(alpha,8),ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+   	B=dm_mult2(real(alpha,8),A)
+	B%xtype=MAT_XTYPE_IMPLICIT 
 end function 
-
 
 function dm_mult5(A,alpha) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	real,           intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
-	PetscErrorCode      		::	ierr
-    call mat_copy(A%x,B%x,ierr) 
-    call mat_scale(B%x,real(alpha,8),ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+   	B=dm_mult2(real(alpha,8),A)
+	B%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 function dm_mult6(A,alpha) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	integer,        intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
-	PetscErrorCode      		::	ierr
-    call mat_copy(A%x,B%x,ierr) 
-    call mat_scale(B%x,real(alpha,8),ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+   	B=dm_mult2(real(alpha,8),A)
+	B%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 function dm_mult7(alpha,A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	integer,        intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
-	PetscErrorCode      		::	ierr
-    call mat_copy(A%x,B%x,ierr) 
-    call mat_scale(B%x,real(alpha,8),ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+   	B=dm_mult2(real(alpha,8),A)
+	B%xtype=MAT_XTYPE_IMPLICIT 
 end function 
 
 ! -----------------------------------------------------------------------
@@ -763,18 +581,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_emult(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_emult(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -790,18 +602,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_ediv(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_ediv(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -817,18 +623,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_rep(A,m,n) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,	    intent(in)	::  m,n 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_rep(A%x,m,n,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -846,18 +646,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_sum(A,ndim) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	integer,	    intent(in)	::  ndim 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_sum(A%x,ndim,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -871,18 +665,12 @@ end function
 
 subroutine dm_axpy1(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  X 
 	real(kind=8),   intent(in)	::	a
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,a,X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -891,18 +679,12 @@ end subroutine
 
 subroutine dm_axpy2(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  X 
 	real,           intent(in)	::	a
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -911,18 +693,12 @@ end subroutine
 
 subroutine dm_axpy3(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)		::  X 
 	integer,        intent(in)		::	a
 	type(Matrix), 	intent(inout) 	::  Y 
 	integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -935,18 +711,12 @@ end subroutine
 ! -----------------------------------------------------------------------
 subroutine dm_aypx1(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  X 
-	PetscScalar,    intent(in)	::	a
+	real(kind=8),    intent(in)	::	a
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,a,X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -955,18 +725,12 @@ end subroutine
 
 subroutine dm_aypx2(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  X 
 	real        ,   intent(in)	::	a
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -975,18 +739,12 @@ end subroutine
 
 subroutine dm_aypx3(Y,a,X,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)		::  X 
 	integer,   		intent(in)		::	a
 	type(Matrix), 	intent(inout) 	::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
-    Y%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(Y%x,Y%nrow,Y%ncol,ierr)
-	call mat_getownershiprange(Y%x,Y%ista,Y%iend,ierr) 
+    call dm_setinfo(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
@@ -998,17 +756,11 @@ end subroutine
 ! -----------------------------------------------------------------------
 function dm_trans(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_trans(A%x,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1021,18 +773,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_xyt(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_xyt(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1048,18 +794,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_xty(A,B) result(C)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              ::	C
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	C
+	integer						::	ierr
     call mat_xty(A%x,B%x,C%x,ierr)
-    C%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(C%x,C%nrow,C%ncol,ierr)
-	call mat_getownershiprange(C%x,C%ista,C%iend,ierr) 
+    call dm_setinfo(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1075,18 +815,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_exp(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 #include "mat_type.h"
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_math(A%x,MAT_MATH_EXP,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1099,18 +833,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_log(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 #include "mat_type.h"
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_math(A%x,MAT_MATH_LOG,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1123,18 +851,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_squ(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 #include "mat_type.h"
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_math(A%x,MAT_MATH_SQU,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1147,18 +869,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_cube(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 #include "mat_type.h"
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_math(A%x,MAT_MATH_CUBE,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1172,18 +888,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_sqrt(A) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 #include "mat_type.h"
 	type(Matrix),	intent(in)	::  A 
-	type(Matrix)              ::	B
-	PetscErrorCode      		::	ierr
+	type(Matrix)              	::	B
+	integer						::	ierr
     call mat_math(A%x,MAT_MATH_SQRT,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1196,19 +906,13 @@ end function
 ! -----------------------------------------------------------------------
 function dm_solve(A,B) result(X)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)  ::	B
 	type(Matrix)            	::	X
-	PetscErrorCode      		::	ierr
+	integer						::	ierr
     
     call mat_solve(A%x,B%x,X%x,ierr)
-    X%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(X%x,X%nrow,X%ncol,ierr)
-	call mat_getownershiprange(X%x,X%ista,X%iend,ierr) 
+    call dm_setinfo(X,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1224,18 +928,12 @@ end function
 ! -----------------------------------------------------------------------
 function dm_load(filename) result(A)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
     character(len=*),   intent(in)  ::  filename 
 	type(Matrix)	            	::  A 
-	PetscErrorCode      		    ::	ierr
+	integer							::	ierr
     
     call mat_load(filename,A%x,ierr)
-    A%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+	call dm_setinfo(A,ierr)
 end function 
 
 
@@ -1244,13 +942,9 @@ end function
 ! -----------------------------------------------------------------------
 subroutine dm_setvalue1(A,m,n,value,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix)	            ::  A 
-	PetscInt,	    intent(in)	::	m,n
-	PetscScalar,    intent(in)	::	value
+	integer,	    intent(in)	::	m,n
+	real(kind=8),   intent(in)	::	value
 	integer,		intent(out)	::	ierr
 	
     call mat_setvalue(A%x,m,n,value,ierr)
@@ -1258,13 +952,9 @@ end subroutine
 
 subroutine dm_setvalue2(A,m,n,value,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix)	            ::  A 
-	PetscInt,	    intent(in)	::	m,n
-	PetscInt,    	intent(in)	::	value
+	integer,	    intent(in)	::	m,n
+	integer,    	intent(in)	::	value
 	integer,		intent(out)	::	ierr
 	
     call mat_setvalue(A%x,m,n,real(value,8),ierr)
@@ -1272,12 +962,8 @@ end subroutine
 
 subroutine dm_setvalue3(A,m,n,value,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix)	            ::  A 
-	PetscInt,	    intent(in)	::	m,n
+	integer,	    intent(in)	::	m,n
 	real,    		intent(in)	::	value
 	integer,		intent(out)	::	ierr
 	
@@ -1290,21 +976,15 @@ end subroutine
 ! -----------------------------------------------------------------------
 function dm_submatrix(A,Rows,Cols) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	type(Matrix),	intent(in)	::	Rows
 	type(Matrix),	intent(in)	::	Cols
 	type(Matrix)				::	B
-	PetscErrorCode				::	ierr
+	integer						::	ierr
     
 	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
-    
+   	call dm_setinfo(B,ierr)
+ 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
@@ -1322,19 +1002,13 @@ end function
 ! -----------------------------------------------------------------------
 function dm_getcol(A,n) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
     integer,        intent(in)  ::  n
 	type(Matrix)				::	B
-	PetscErrorCode				::	ierr
+	integer						::	ierr
     
 	call mat_getcol(A%x,n,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1347,19 +1021,13 @@ end function
 ! -----------------------------------------------------------------------
 function dm_getrow(A,n) result(B)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
     integer,        intent(in)  ::  n
 	type(Matrix)				::	B
-	PetscErrorCode				::	ierr
+	integer						::	ierr
     
 	call mat_getrow(A%x,n,B%x,ierr)
-    B%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(B%x,B%nrow,B%ncol,ierr)
-	call mat_getownershiprange(B%x,B%ista,B%iend,ierr) 
+    call dm_setinfo(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1372,10 +1040,6 @@ end function
 ! -----------------------------------------------------------------------
 subroutine dm_setvalues1(A,m,idxm,n,idxn,v,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
@@ -1391,10 +1055,6 @@ end subroutine
 
 subroutine dm_setvalues2(A,m,idxm,n,idxn,v,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
@@ -1410,10 +1070,6 @@ end subroutine
 
 subroutine dm_setvalues3(A,m,idxm,n,idxn,v,ierr)
 	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
@@ -1435,8 +1091,6 @@ function dm_norm_1(A) result(res)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	real(kind=8) 				::	res	
 	integer						::	ierr
@@ -1450,11 +1104,9 @@ function dm_norm_2(A) result(res)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	real(kind=8) 				::	res	
-	PetscErrorCode				::	ierr
+	integer						::	ierr
 	call mat_norm(A%x,NORM_FROBENIUS,res,ierr) 
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1465,15 +1117,24 @@ function dm_norm_inf(A) result(res)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>    
 	type(Matrix),	intent(in)	::	A
 	real(kind=8) 				::	res	
-	PetscErrorCode				::	ierr
+	integer						::	ierr
 	call mat_norm(A%x,NORM_INFINITY,res,ierr) 
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end function 
+
+
+subroutine dm_setinfo(A,ierr)
+	implicit none
+	type(Matrix),	intent(inout)	::  A 
+	integer,		intent(out)		::	ierr
+    A%xtype=MAT_XTYPE_IMPLICIT 
+	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+end subroutine
+
 
 end module 

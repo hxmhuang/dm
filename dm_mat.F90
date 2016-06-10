@@ -40,6 +40,19 @@ subroutine mat_destroy(A,ierr)
 end subroutine
 
 
+subroutine mat_view(A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	! destroy matrix A
+    call MatView(A,PETSC_VIEWER_STDOUT_WORLD, ierr)
+end subroutine
+
+
 ! -----------------------------------------------------------------------
 ! A=0 
 ! -----------------------------------------------------------------------

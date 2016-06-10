@@ -788,7 +788,7 @@ program main
  	endif
   	call dm_destroy(A,ierr)
 
-   if(myrank==0) print *, "==============Test dm_norm==============="
+   if(myrank==0) print *, "==============Test dm_norm================"
     A=dm_seqs(m,m)
    	a1=dm_norm_1(A)
 	a2=dm_norm_2(A)
