@@ -1259,7 +1259,7 @@ subroutine mat_mat2is(A,is,ierr)
    
 	call MatGetValues(A,ni,idx,1,0,y,ierr) 
 	
-	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y-1),PETSC_COPY_VALUES,is,ierr)
+	call ISCreateGeneral(PETSC_COMM_WORLD,ni,int(y),PETSC_COPY_VALUES,is,ierr)
     deallocate(idx,y)
 end subroutine
 
