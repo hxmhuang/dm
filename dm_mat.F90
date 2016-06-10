@@ -15,15 +15,15 @@ subroutine mat_create(A,m,n,ierr)
 	PetscInt,		intent(in)	::	m,n	
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_create",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
+!	PetscLogEvent	            ::  ievent
+!	call PetscLogEventRegister("mat_create",0, ievent, ierr)
+!    call PetscLogEventBegin(ievent,ierr)
 	! generate matrix A with size m*n
 	call MatCreate(PETSC_COMM_WORLD,A,ierr);
 	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
 	call MatSetFromOptions(A,ierr)
 	call MatSetUp(A,ierr)
-    call PetscLogEventEnd(ievent,ierr)
+!    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
