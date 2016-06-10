@@ -1441,5 +1441,64 @@ subroutine mat_norm(A,ntype,res,ierr)
 end subroutine
 
 
+! -----------------------------------------------------------------------
+! Transform Cartesian to spherical coordinates.
+! [TH,PHI,R] = cart2sph(X,Y,Z) transforms corresponding elements of
+!    data stored in Cartesian coordinates X,Y,Z to spherical
+!    coordinates (azimuth TH, elevation PHI, and radius R).
+!    TH and PHI are returned in radians.
+! where,
+!   azimuth = atan2(y,x)
+!   elevation = atan2(z,sqrt(x.^2 + y.^2))
+!   r = sqrt(x.^2 + y.^2 + z.^2)
+! -----------------------------------------------------------------------
+subroutine mat_cart2sph(A,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::  A
+	Mat,			intent(out)	::	B
+	PetscErrorCode,	intent(out)	::	ierr
+    
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+	PetscInt,allocatable        ::	idx1(:),idx2(:)
+	PetscScalar,allocatable     ::	row1(:),row2(:)
+	PetscInt					::  ista,iend
+	integer						::	i,j
+    PetscScalar                 ::  newval 
+    
+    call MatGetSize(A,nrow1,ncol1,ierr)
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    
+	nrow2=nrow1
+    ncol2=3
+    call mat_create(B,nrow2,ncol2,ierr)
+    allocate(idx1(ncol1),idx2(ncol2),row1(ncol1),row2(ncol2))
+    
+    do i=ista,iend-1
+        do j=1,ncol1
+            idx1(j)=j-1
+        enddo
+        do j=1,ncol2
+            idx2(j)=j-1
+        enddo
+        
+        call MatGetRow(A,i,ncol1,idx1,row1,ierr)
+        row2(1) = atan2(row1(2),row1(1)) 
+        row2(2) = atan2(row1(3),sqrt(row1(1)**2+row1(2)**2))
+        row2(3) = sqrt(row1(1)**2+row1(2)**2+row1(3)**2) 
+        call MatRestoreRow(A,i,ncol1,idx1,row1,ierr)
+        
+    	call MatSetValues(B,1,i,ncol2,idx2,row2,INSERT_VALUES,ierr)
+	enddo
+    
+    deallocate(idx1,idx2,row1,row2)
+    call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+end subroutine
+
+
 
 end module

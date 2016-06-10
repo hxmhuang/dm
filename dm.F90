@@ -926,15 +926,15 @@ end function
 ! -----------------------------------------------------------------------
 ! Load a standard row-cloumn file into a matrix 
 ! -----------------------------------------------------------------------
-function dm_load(filename) result(A)
+subroutine dm_load(filename,A,ierr)
 	implicit none
     character(len=*),   intent(in)  ::  filename 
-	type(Matrix)	            	::  A 
-	integer							::	ierr
+	type(Matrix),		intent(out)	::  A 
+	integer,			intent(out)	::	ierr
     
     call mat_load(filename,A%x,ierr)
 	call dm_setinfo(A,ierr)
-end function 
+end subroutine 
 
 
 ! -----------------------------------------------------------------------
@@ -1125,6 +1125,16 @@ function dm_norm_inf(A) result(res)
         call mat_destroy(A%x,ierr)
     endif
 end function 
+
+
+subroutine dm_cart2sph(A,B,ierr)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(out)	::  B 
+	integer,		intent(out)	::	ierr
+	call mat_cart2sph(A%x,B%x,ierr)
+	call dm_setinfo(B,ierr)
+end subroutine
 
 
 subroutine dm_setinfo(A,ierr)

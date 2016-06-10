@@ -638,7 +638,7 @@ program main
     if(myrank==0) print *, "==============Test dm_load================"
     filename="md001.00004"
 
-    A=dm_load(filename)
+    call dm_load(filename,A,ierr)
     if(debug) then
         if(myrank==0) print *, ">Load A from md001.00004="
         call dm_view(A,ierr)
@@ -770,7 +770,7 @@ program main
   	call dm_destroy(A,ierr)
 
 
-   if(myrank==0) print *, "==============Test dm_setvalues==========="
+	if(myrank==0) print *, "==============Test dm_setvalues==========="
     A=dm_eyes(2*m,2*m)
     idxm(1)=0	
     idxm(2)=2	
@@ -788,7 +788,8 @@ program main
  	endif
   	call dm_destroy(A,ierr)
 
-   if(myrank==0) print *, "==============Test dm_norm================"
+
+	if(myrank==0) print *, "==============Test dm_norm================"
     A=dm_seqs(m,m)
    	a1=dm_norm_1(A)
 	a2=dm_norm_2(A)
@@ -801,6 +802,21 @@ program main
         if(myrank==0) print *, ">NORM_INF=",a3
  	endif
   	call dm_destroy(A,ierr)
+
+
+	if(myrank==0) print *, "==============Test dm_cart2sph============"
+    filename="md001.00004"
+	call dm_load(filename,A,ierr)	
+	call dm_cart2sph(A,B,ierr)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_cart2sph(A)"
+        call dm_view(B,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+
 
 	call dm_finalize(ierr)
 end program
