@@ -666,25 +666,25 @@ program main
   	call dm_destroy(C,ierr)
 
     if(myrank==0) print *, "==============Test dm_submatrix==========="
-    A=dm_eyes(m,m)
-    call dm_setvalue(A,1,1,8,ierr)
+    A=dm_seqs(m,m)
     
-    B=dm_ones(2,1)
-    call dm_setvalue(B,0,0,1,ierr)
-    call dm_setvalue(B,1,0,2,ierr)
+    B=dm_zeros(3,1)
+    call dm_setvalue(B,0,0,0,ierr)
+    call dm_setvalue(B,1,0,1,ierr)
+    call dm_setvalue(B,2,0,2,ierr)
     
-    C=dm_ones(2,1)
-    call dm_setvalue(C,0,0,1,ierr)
-    call dm_setvalue(C,1,0,2,ierr)
+    C=dm_zeros(1,1)
+    call dm_setvalue(C,0,0,0,ierr)
+    !call dm_setvalue(C,1,0,2,ierr)
     	
    	D=dm_submatrix(A,B,C)
-    E=dm_submatrix(dm_eyes(m,m),B,C)
+    E=dm_submatrix(dm_seqs(m,m),B,C)
     F=dm_submatrix(A,dm_seqs(2,1),C)
     G=dm_submatrix(A,B,dm_seqs(2,1))
-    H=dm_submatrix(dm_eyes(m,m),dm_seqs(2,1),C)
-    X=dm_submatrix(dm_eyes(m,m),B,dm_seqs(2,1))
+    H=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),C)
+    X=dm_submatrix(dm_seqs(m,m),B,dm_seqs(2,1))
     Y=dm_submatrix(A,dm_seqs(2,1),dm_seqs(2,1))
-    Z=dm_submatrix(dm_eyes(m,m),dm_seqs(2,1),dm_seqs(2,1))
+    Z=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))
 
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -695,19 +695,19 @@ program main
         call dm_view(C,ierr)
         if(myrank==0) print *, ">D=dm_submatrix(A,B,C)"
         call dm_view(D,ierr)
-        if(myrank==0) print *, ">E=dm_submatrix(dm_eyes(m,m),B,C)"
+        if(myrank==0) print *, ">E=dm_submatrix(dm_seqs(m,m),B,C)"
         call dm_view(E,ierr)
         if(myrank==0) print *, ">F=dm_submatrix(A,dm_seqs(2,1),C)"
         call dm_view(F,ierr)
         if(myrank==0) print *, ">G=dm_submatrix(A,B,dm_seqs(2,1))"
         call dm_view(G,ierr)
-        if(myrank==0) print *, ">H=dm_submatrix(dm_eyes(m,m),dm_seqs(2,1),C)"
+        if(myrank==0) print *, ">H=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),C)"
         call dm_view(H,ierr)
-        if(myrank==0) print *, ">X=dm_submatrix(dm_eyes(m,m),B,dm_seqs(2,1))"
+        if(myrank==0) print *, ">X=dm_submatrix(dm_seqs(m,m),B,dm_seqs(2,1))"
         call dm_view(X,ierr)
         if(myrank==0) print *, ">Y=dm_submatrix(A,dm_seqs(2,1),dm_seqs(1,1))"
         call dm_view(Y,ierr)
-        if(myrank==0) print *, ">Z=dm_submatrix(dm_eyes(m,m),dm_seqs(2,1),dm_seqs(2,1))"
+        if(myrank==0) print *, ">Z=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))"
         call dm_view(Z,ierr)
  	endif
   	call dm_destroy(A,ierr)
