@@ -1088,6 +1088,24 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
+! Get local values in A.
+! -----------------------------------------------------------------------
+subroutine dm_getvalues(A,m,idxm,n,idxn,v,ierr)
+	implicit none
+	type(Matrix),	intent(in)	::	A
+	integer,		intent(in)	:: 	m,n
+	integer,		intent(in)	::	idxm(:),idxn(:)
+	real(kind=8),	intent(inout)	::	v(:)	
+	integer,		intent(out)	::	ierr
+   	
+	call mat_getvalues(A%x,m,idxm,n,idxn,v,ierr) 
+    
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+end subroutine 
+
+! -----------------------------------------------------------------------
 ! Norm(A)
 ! -----------------------------------------------------------------------
 function dm_norm_1(A) result(res)
@@ -1130,6 +1148,9 @@ function dm_norm_inf(A) result(res)
 end function 
 
 
+! -----------------------------------------------------------------------
+! Cart2sph(A,B)
+! -----------------------------------------------------------------------
 subroutine dm_cart2sph(A,B,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
@@ -1139,6 +1160,10 @@ subroutine dm_cart2sph(A,B,ierr)
 	call dm_set_explicit(B,ierr)
 end subroutine
 
+
+! -----------------------------------------------------------------------
+! Set implicit type and get other information 
+! -----------------------------------------------------------------------
 
 subroutine dm_set_implicit(A,ierr)
 	implicit none
@@ -1150,6 +1175,9 @@ subroutine dm_set_implicit(A,ierr)
 end subroutine
 
 
+! -----------------------------------------------------------------------
+! Set explicit type and get other information 
+! -----------------------------------------------------------------------
 subroutine dm_set_explicit(A,ierr)
 	implicit none
 	type(Matrix),	intent(inout)	::  A 

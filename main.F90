@@ -13,13 +13,12 @@ program main
     integer         :: myrank, mysize 
     integer         :: m,n
 	integer			:: idxm(2),idxn(2)
-    real*8    		:: ep,alpha
-	real*8			:: array(4)
-	!real  			:: array(4)
-    real*8    		:: a1,a2,a3
+    real(kind=8)    :: ep,alpha
+    real(kind=8)    :: a1,a2,a3
     logical         :: debug 
     integer         :: ierr
     character(len=50):: filename
+	real(kind=8),allocatable :: array(:)
     debug=.false.
 
     call dm_init(ierr)
@@ -771,11 +770,12 @@ program main
 
 
 	if(myrank==0) print *, "==============Test dm_setvalues==========="
-    A=dm_eyes(2*m,2*m)
+    A=dm_ones(2*m,2*m)
     idxm(1)=0	
     idxm(2)=2	
     idxn(1)=1	
     idxn(2)=2
+    allocate(array(4))
     array(1)=9
     array(2)=8	
     array(3)=7	
@@ -787,7 +787,24 @@ program main
         call dm_view(A,ierr)
  	endif
   	call dm_destroy(A,ierr)
+    deallocate(array)
 
+	if(myrank==0) print *, "==============Test dm_getvalues==========="
+    A=dm_seqs(2*m,2*m)
+    idxm(1)=A%ista	
+    idxn(1)=0	
+    idxn(2)=1
+    allocate(array(2))
+    array=0
+  	call dm_getvalues(A,1,idxm,2,idxn,array,ierr)	
+    
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">getvalues=",array
+ 	endif
+  	call dm_destroy(A,ierr)
+    deallocate(array)
 
 	if(myrank==0) print *, "==============Test dm_norm================"
     A=dm_seqs(m,m)

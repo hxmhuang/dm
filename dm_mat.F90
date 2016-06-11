@@ -1309,7 +1309,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
-! Get local array from A.
+! Set local array from A.
 ! -----------------------------------------------------------------------
 subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
 	implicit none
@@ -1332,6 +1332,33 @@ subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
 	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
+
+
+! -----------------------------------------------------------------------
+! Get local array from A.
+! -----------------------------------------------------------------------
+subroutine mat_getvalues(A,m,idxm,n,idxn,v,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,       	intent(in)      :: A 
+	PetscInt,	intent(in)		:: m,n
+	PetscInt,intent(in)			:: idxm(:),idxn(:) 
+	PetscScalar,intent(inout)	:: v(:)
+	PetscErrorCode      	    :: ierr
+    PetscLogEvent               :: ievent
+    call PetscLogEventRegister("mat_getvalues",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+	
+    call MatGetValues(A,m,idxm,n,idxn,v,ierr) 
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
 
 
 ! -----------------------------------------------------------------------
