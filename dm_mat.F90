@@ -1430,6 +1430,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
 	    m=col
         idxn=idxntmp
         row=rowtmp 
+        print *, "1===i=",i,"idxn=",idxn,"row=",row
         call MatRestoreRow(C,i,col,idxntmp,rowtmp,ierr)
         
         select case(opt)
@@ -1466,7 +1467,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
 			case default
                 row=0    
         end select
-        
+        print *, "2=",i,"idxn=",idxn,"row=",row
 		call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
         deallocate(idxn,idxntmp,row,rowtmp)
 	enddo
