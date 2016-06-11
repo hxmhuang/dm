@@ -1353,8 +1353,8 @@ subroutine mat_getvalues(A,m,idxm,n,idxn,v,ierr)
     call PetscLogEventBegin(ievent,ierr) 
 	
     call MatGetValues(A,m,idxm,n,idxn,v,ierr) 
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+!	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+!	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
