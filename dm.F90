@@ -36,8 +36,43 @@ module dm
         module procedure dm_mult6
         module procedure dm_mult7
     end interface
-   
-    ! element multiple
+ 
+    interface operator (<)
+        module procedure dm_lt1
+        module procedure dm_lt2
+        module procedure dm_lt3
+        module procedure dm_lt4
+    end interface
+  
+    interface operator (<=)
+        module procedure dm_le1
+        module procedure dm_le2
+        module procedure dm_le3
+        module procedure dm_le4
+    end interface
+    
+    interface operator (>)
+        module procedure dm_gt1
+        module procedure dm_gt2
+        module procedure dm_gt3
+        module procedure dm_gt4
+    end interface
+
+    interface operator (>=)
+        module procedure dm_ge1
+        module procedure dm_ge2
+        module procedure dm_ge3
+        module procedure dm_ge4
+    end interface
+ 
+    interface operator (==)
+        module procedure dm_eq1
+        module procedure dm_eq2
+        module procedure dm_eq3
+        module procedure dm_eq4
+    end interface
+ 
+  ! element multiple
     interface operator (.em.)
         module procedure dm_emult
     end interface
@@ -1145,6 +1180,321 @@ function dm_norm_inf(A) result(res)
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= A<B
+! -----------------------------------------------------------------------
+function dm_lt1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_LT,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_lt2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_lt3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_lt4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= (A<=B)
+! -----------------------------------------------------------------------
+function dm_le1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_LE,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_le2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_le3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_le4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= (A>B)
+! -----------------------------------------------------------------------
+function dm_gt1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_GT,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_gt2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_gt3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_gt4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= (A>=B)
+! -----------------------------------------------------------------------
+function dm_ge1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_GE,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_ge2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_ge3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_ge4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= (A==B)
+! -----------------------------------------------------------------------
+function dm_eq1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_EQ,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_eq2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_eq3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_eq4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 

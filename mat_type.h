@@ -10,4 +10,9 @@
 #define MAT_XTYPE_IMPLICIT 1
 #define MAT_XTYPE_EXPLICIT 2
 
+#define MAT_COMPARE_LT  1
+#define MAT_COMPARE_LE  2
+#define MAT_COMPARE_GT  3
+#define MAT_COMPARE_GE  4
+#define MAT_COMPARE_EQ  5
 

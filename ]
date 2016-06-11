@@ -1393,13 +1393,13 @@ subroutine mat_compare(A,B,opt,C,ierr)
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 	Mat,	        intent(in)	::  A,B 
-    integer,        intent(in)  ::  opt
+    integer         intent(in)  ::  opt
 	Mat,            intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
-	PetscInt					::	col,m
-	PetscInt,allocatable		::	idxn(:),idxntmp(:)
-	PetscScalar,allocatable		::	row(:),rowtmp(:)
+	PetscInt					::	col
+	PetscInt,allocatable		::	idxn(:)
+	PetscScalar,allocatable		::	row(:)
 	PetscInt					::  ista,iend
 	integer						::	i
 	PetscLogEvent	            ::  ievent
@@ -1408,7 +1408,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
 	
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
-	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
+	if(nrow1/=nrow2 .or. nrcol1/=ncol2)then
 		print *, "Error: Matrix A and matrix B should have the same size"
 		stop	
 	endif
@@ -1420,45 +1420,32 @@ subroutine mat_compare(A,B,opt,C,ierr)
     
 	do i=ista,iend-1
 	    call MatGetRow(C,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-	    m=col
+	    allocate(idxn(col),row(col))
 
 	    call MatRestoreRow(C,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-       
-       allocate(idxn(m),idxntmp(m),row(m),rowtmp(m))
-        
-        call MatGetRow(C,i,col,idxntmp,rowtmp,ierr)
-	    m=col
-        idxn=idxntmp
-        row=rowtmp 
-        call MatRestoreRow(C,i,col,idxntmp,rowtmp,ierr)
-        
+        call MatGetRow(C,i,col,idxn,row,ierr)
+	    
         select case(opt)
-            case (MAT_COMPARE_LT)
+            case (MAT_COMPARE_LESS)
                 where(row <  0) 
                    row=1
                 else where
                    row=0
                 end where
-            case (MAT_COMPARE_LE)
+            case (MAT_COMPARE_LESSEQUAL)
                 where(row <= 0) 
                    row=1
                 else where
                    row=0
                 end where
-            case (MAT_COMPARE_GT)
+            case (MAT_COMPARE_GREAT)
                 where(row >  0) 
                    row=1
                 else where
                    row=0
                 end where
-            case (MAT_COMPARE_GE)
+            case (MAT_COMPARE_GREATEQUAL)
                 where(row >= 0) 
-                   row=1
-                else where
-                   row=0
-                end where
-            case (MAT_COMPARE_EQ)
-                where(row == 0) 
                    row=1
                 else where
                    row=0
@@ -1467,8 +1454,12 @@ subroutine mat_compare(A,B,opt,C,ierr)
                 row=0    
         end select
         
-		call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
-        deallocate(idxn,idxntmp,row,rowtmp)
+		call MatSetValues(C,1,i,col,idxn,row,INSERT_VALUES,ierr)
+	    	
+        call MatRestoreRow(C,i,col,idxn,row,ierr)
+        
+		!print *,">i=",i,"idxn3=",idxn3,"row3=",row3
+	    deallocate(idxn1,idxn2,idxn3,row1,row2,row3)
 	enddo
 
 	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
