@@ -847,10 +847,8 @@ function dm_squ(A) result(B)
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)              	::	B
 	integer						::	ierr
-   	print *, "In1 dm_squ===A row=",A%nrow, "A col=",A%ncol 
     call mat_math(A%x,MAT_MATH_SQU,B%x,ierr)
     call dm_set_implicit(B,ierr)
-   	print *, "In2 dm_squ===B row=",B%nrow, "B col=",B%ncol 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
