@@ -155,7 +155,7 @@ subroutine mat_seqs(A,m,n,ierr)
 	do i=ista,iend-1
 		do j=1,n
 			idxn(j)=j-1
-			row(j)=i*n+j
+			row(j)=i*n+j-1
 		enddo
 		call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
 	enddo

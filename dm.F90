@@ -1041,7 +1041,7 @@ function dm_getcol(A,n) result(B)
 	integer						::	ierr
 	type(Matrix)				::  Rows,Cols
 	
-	Rows=dm_seqs(A%nrow,1)-1	
+	Rows=dm_seqs(A%nrow,1)	
 	Cols=dm_zeros(1,1)+n	
 	
 	call mat_submatrix(A%x, Rows%x, Cols%x, B%x, ierr)
@@ -1067,7 +1067,7 @@ function dm_getrow(A,n) result(B)
    	type(Matrix)				::  Rows,Cols
 	
 	Rows=dm_zeros(1,1)+n	
-	Cols=dm_seqs(A%nrow,1)-1	
+	Cols=dm_seqs(A%ncol,1)	
 	
 	call mat_submatrix(A%x, Rows%x, Cols%x, B%x, ierr)
     call dm_set_implicit(B,ierr)
