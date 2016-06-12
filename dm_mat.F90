@@ -65,16 +65,16 @@ subroutine mat_zeros(A,m,n,ierr)
 	Mat,			intent(out)	::	A
 	PetscInt,	    intent(in)	::	m,n
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_zeros",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
+!	PetscLogEvent	            ::  ievent
+!   call PetscLogEventRegister("mat_zeros",0, ievent, ierr)
+!   call PetscLogEventBegin(ievent,ierr)
 
     call mat_create(A,m,n,ierr)
     call MatZeroEntries(A,ierr)
 	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     
-    call PetscLogEventEnd(ievent,ierr)
+!   call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
