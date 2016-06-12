@@ -812,9 +812,9 @@ program main
     A=dm_seqs(m,m)
     B=5*dm_ones(m,m)
     C=(A<B)
-!   D=(A<5)
-!   E=(A<5.0)
-!   F=(A<real(5.0,kind=8))
+    D=(A<5)
+    E=(A<5.0)
+    F=(A<real(5.0,kind=8))
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
@@ -822,145 +822,173 @@ program main
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=A<B"
         call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=A<5"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=A<5.0"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=A<real(5.0,kind=8)"
-!       call dm_view(F,ierr)
+        if(myrank==0) print *, ">D=A<5"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=A<5.0"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=A<real(5.0,kind=8)"
+        call dm_view(F,ierr)
  	endif
   	call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
   	call dm_destroy(C,ierr)
-! 	call dm_destroy(D,ierr)
-! 	call dm_destroy(E,ierr)
-! 	call dm_destroy(F,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
-!   if(myrank==0) print *, "==============Test dm_le=================="
-!   A=dm_seqs(m,m)
-!   B=5*dm_ones(m,m)
-!   C=(A<=B)
-!   D=(A<=5)
-!   E=(A<=5.0)
-!   F=(A<=real(5.0,kind=8))
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B="
-!       call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=(A<=B)"
-!       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=(A<=5)"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=(A<=5.0)"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=(A<=real(5.0,kind=8))"
-!       call dm_view(F,ierr)
-!	endif
-! 	call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
-! 	call dm_destroy(C,ierr)
-! 	call dm_destroy(D,ierr)
-! 	call dm_destroy(E,ierr)
-! 	call dm_destroy(F,ierr)
+    if(myrank==0) print *, "==============Test dm_le=================="
+    A=dm_seqs(m,m)
+    B=5*dm_ones(m,m)
+    C=(A<=B)
+    D=(A<=5)
+    E=(A<=5.0)
+    F=(A<=real(5.0,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=(A<=B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=(A<=5)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=(A<=5.0)"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=(A<=real(5.0,kind=8))"
+        call dm_view(F,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
-!   if(myrank==0) print *, "==============Test dm_gt=================="
-!   A=dm_seqs(m,m)
-!   B=5*dm_ones(m,m)
-!   C=(A>B)
-!   D=(A>5)
-!   E=(A>5.0)
-!   F=(A>real(5.0,kind=8))
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B="
-!       call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=(A>B)"
-!       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=(A>5)"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=(A>5.0)"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=(A>real(5.0,kind=8))"
-!       call dm_view(F,ierr)
-!	endif
-! 	call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
-! 	call dm_destroy(C,ierr)
-! 	call dm_destroy(D,ierr)
-! 	call dm_destroy(E,ierr)
-! 	call dm_destroy(F,ierr)
+    if(myrank==0) print *, "==============Test dm_gt=================="
+    A=dm_seqs(m,m)
+    B=5*dm_ones(m,m)
+    C=(A>B)
+    D=(A>5)
+    E=(A>5.0)
+    F=(A>real(5.0,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=(A>B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=(A>5)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=(A>5.0)"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=(A>real(5.0,kind=8))"
+        call dm_view(F,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
-!   if(myrank==0) print *, "==============Test dm_ge=================="
-!   A=dm_seqs(m,m)
-!   B=5*dm_ones(m,m)
-!   C=(A>=B)
-!   D=(A>=5)
-!   E=(A>=5.0)
-!   F=(A>=real(5.0,kind=8))
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B="
-!       call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=(A>=B)"
-!       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=(A>=5)"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=(A>=5.0)"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=(A>=real(5.0,kind=8))"
-!       call dm_view(F,ierr)
-!	endif
-! 	call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
-! 	call dm_destroy(C,ierr)
-! 	call dm_destroy(D,ierr)
-! 	call dm_destroy(E,ierr)
-! 	call dm_destroy(F,ierr)
+    if(myrank==0) print *, "==============Test dm_ge=================="
+    A=dm_seqs(m,m)
+    B=5*dm_ones(m,m)
+    C=(A>=B)
+    D=(A>=5)
+    E=(A>=5.0)
+    F=(A>=real(5.0,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=(A>=B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=(A>=5)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=(A>=5.0)"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=(A>=real(5.0,kind=8))"
+        call dm_view(F,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
-!   if(myrank==0) print *, "==============Test dm_eq=================="
-!   A=dm_seqs(m,m)
-!   B=5*dm_ones(m,m)
-!   C=(A==B)
-!   D=(A==5)
-!   E=(A==5.0)
-!   F=(A==real(5.0,kind=8))
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B="
-!       call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=(A==B)"
-!       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=(A==5)"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=(A==5.0)"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=(A==real(5.0,kind=8))"
-!       call dm_view(F,ierr)
-!	endif
-! 	call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
-! 	call dm_destroy(C,ierr)
-! 	call dm_destroy(D,ierr)
-! 	call dm_destroy(E,ierr)
-! 	call dm_destroy(F,ierr)
+    if(myrank==0) print *, "==============Test dm_eq=================="
+    A=dm_seqs(m,m)
+    B=5*dm_ones(m,m)
+    C=(A==B)
+    D=(A==5)
+    E=(A==5.0)
+    F=(A==real(5.0,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=(A==B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=(A==5)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=(A==5.0)"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=(A==real(5.0,kind=8))"
+        call dm_view(F,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
 
-!   if(myrank==0) print *, "==============Test dm_cart2sph============"
-!   filename="md001.00004"
-!   call dm_load(filename,A,ierr)	
-!   call dm_cart2sph(A,B,ierr)
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B=dm_cart2sph(A)"
-!       call dm_view(B,ierr)
-!	endif
-! 	call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
+    if(myrank==0) print *, "==============Test dm_nq=================="
+    A=dm_seqs(m,m)
+    B=5*dm_ones(m,m)
+    C=(A/=B)
+    D=(A/=5)
+    E=(A/=5.0)
+    F=(A/=real(5.0,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=(A/=B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=(A/=5)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=(A/=5.0)"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=(A/=real(5.0,kind=8))"
+        call dm_view(F,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
+
+    if(myrank==0) print *, "==============Test dm_cart2sph============"
+    filename="md001.00004"
+    call dm_load(filename,A,ierr)	
+    call dm_cart2sph(A,B,ierr)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_cart2sph(A)"
+        call dm_view(B,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
 
 
 	call dm_finalize(ierr)

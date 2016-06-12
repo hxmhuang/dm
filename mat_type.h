@@ -15,4 +15,5 @@
 #define MAT_COMPARE_GT  3
 #define MAT_COMPARE_GE  4
 #define MAT_COMPARE_EQ  5
+#define MAT_COMPARE_NQ  6
 

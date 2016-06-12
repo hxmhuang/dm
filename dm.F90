@@ -71,7 +71,14 @@ module dm
         module procedure dm_eq3
         module procedure dm_eq4
     end interface
- 
+  
+    interface operator (/=)
+        module procedure dm_nq1
+        module procedure dm_nq2
+        module procedure dm_nq3
+        module procedure dm_eq4
+    end interface
+
   ! element multiple
     interface operator (.em.)
         module procedure dm_emult
@@ -1494,6 +1501,69 @@ function dm_eq4(A,alpha) result(C)
 	call mat_ones(B%x,A%nrow,A%ncol,ierr)
 	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
     C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! C= (A/=B)
+! -----------------------------------------------------------------------
+function dm_nq1(A,B) result(C)
+	implicit none
+#include "mat_type.h"
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_compare(A%x,B%x,MAT_COMPARE_NQ,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+ 
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+
+end function
+
+function dm_nq2(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,alpha,ierr) 	
+    C=dm_nq1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_nq3(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	real,	        intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_nq1(A,B)
+    call dm_set_implicit(C,ierr)
+end function 
+
+function dm_nq4(A,alpha) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	integer,	    intent(in)	::  alpha 
+	type(Matrix)                ::	B
+	type(Matrix)                ::	C
+	integer::	ierr
+	call mat_ones(B%x,A%nrow,A%ncol,ierr)
+	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+    C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
 

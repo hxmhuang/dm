@@ -1396,6 +1396,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
     integer,        intent(in)  ::  opt
 	Mat,            intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
+	Mat                         ::	W
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
 	PetscInt					::	col,m
 	PetscInt,allocatable		::	idxn(:),idxntmp(:)
@@ -1413,25 +1414,23 @@ subroutine mat_compare(A,B,opt,C,ierr)
 		stop	
 	endif
    
-    call mat_minus(A,B,C,ierr)
-    
-	call MatGetOwnershipRange(C,ista,iend,ierr)
+    call mat_minus(A,B,W,ierr)
+    call mat_zeros(C,nrow1,ncol1,ierr)
+	call MatGetOwnershipRange(W,ista,iend,ierr)
 
-    
 	do i=ista,iend-1
-	    call MatGetRow(C,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    call MatGetRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 	    m=col
-
-	    call MatRestoreRow(C,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    call MatRestoreRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
        
-       allocate(idxn(m),idxntmp(m),row(m),rowtmp(m))
+        allocate(idxn(m),idxntmp(m),row(m),rowtmp(m))
         
-        call MatGetRow(C,i,col,idxntmp,rowtmp,ierr)
+        call MatGetRow(W,i,col,idxntmp,rowtmp,ierr)
 	    m=col
         idxn=idxntmp
         row=rowtmp 
-        print *, "1===i=",i,"idxn=",idxn,"row=",row
-        call MatRestoreRow(C,i,col,idxntmp,rowtmp,ierr)
+        !print *, "1===i=",i,"idxn=",idxn,"row=",row
+        call MatRestoreRow(W,i,col,idxntmp,rowtmp,ierr)
         
         select case(opt)
             case (MAT_COMPARE_LT)
@@ -1464,17 +1463,23 @@ subroutine mat_compare(A,B,opt,C,ierr)
                 else where
                    row=0
                 end where
+            case (MAT_COMPARE_NQ)
+                where(row /= 0) 
+                   row=1
+                else where
+                   row=0
+                end where
 			case default
                 row=0    
         end select
-        print *, "2=",i,"idxn=",idxn,"row=",row
+        !print *, "2=",i,"idxn=",idxn,"row=",row
 		call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
         deallocate(idxn,idxntmp,row,rowtmp)
 	enddo
 
 	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
 	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
-    
+    call mat_destroy(W,ierr) 
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
