@@ -309,6 +309,9 @@ subroutine mat_add(A,B,C,ierr)
 	PetscErrorCode,intent(out)  ::	ierr
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
     PetscScalar                 ::  alpha	
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_add",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
@@ -319,6 +322,7 @@ subroutine mat_add(A,B,C,ierr)
     alpha=1.0
     call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine 
 
 
@@ -337,6 +341,9 @@ subroutine mat_minus(A,B,C,ierr)
 	PetscErrorCode,intent(out)  ::	ierr
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
     PetscScalar                 ::  alpha	
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_minus",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
@@ -347,6 +354,7 @@ subroutine mat_minus(A,B,C,ierr)
     alpha=-1.0
     call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine 
 
 
