@@ -264,7 +264,7 @@ program main
     D=dm_eyes(m,m) .vj. dm_eyes(m,m)
     E=dm_eyes(m,m) .vj. B
     F=A .vj. dm_eyes(m,m)
-    G=A .vj. A .vj. A
+    G=A .vj. A .hj. A
     H=B .vj. G
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -279,7 +279,7 @@ program main
         call dm_view(E,ierr)
         if(myrank==0) print *, ">F=A .vj. dm_eyes(m,m)"
         call dm_view(F,ierr)
-        if(myrank==0) print *, ">G=A .vj. A .vj. A"
+        if(myrank==0) print *, ">G=A .vj. A .hjoin. A"
         call dm_view(G,ierr)
         if(myrank==0) print *, ">H=B .vj. G"
         call dm_view(H,ierr)

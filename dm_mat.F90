@@ -417,6 +417,45 @@ subroutine mat_hjoin(A,B,C,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
+! -----------------------------------------------------------------------
+! C=[A] 
+!   [B] 
+! -----------------------------------------------------------------------
+subroutine mat_vjoin(A,B,C,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,	        intent(in)	::  A,B 
+	Mat,            intent(out)	::	C
+	PetscErrorCode,	intent(out)	::	ierr
+	Mat							::	W1,W2,W3
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(ncol1/=ncol2)then
+		print *, "Error: Matrix A and Matrix B should have the same column size"
+		stop	
+	endif
+	
+	call mat_trans(A,W1,ierr)
+	call mat_trans(B,W2,ierr)
+	call mat_hjoin(W1,W2,W3,ierr)
+	call mat_trans(W3,C,ierr)
+	
+	call mat_destroy(W1,ierr)
+	call mat_destroy(W2,ierr)
+	call mat_destroy(W3,ierr)
+
+	call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 
 ! -----------------------------------------------------------------------
 ! C=A*B
@@ -1194,7 +1233,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
-! B=A(rows,cols). Get sub matrix.
+! B=A(rows,cols). Note that Rows and Cols should be m*1 matrix.
 ! -----------------------------------------------------------------------
 subroutine mat_submatrix(A,Rows,Cols,B,ierr)
 	implicit none
@@ -1209,7 +1248,7 @@ subroutine mat_submatrix(A,Rows,Cols,B,ierr)
     PetscLogEvent               ::  ievent
     call PetscLogEventRegister("mat_submatrix",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
-	
+		
 	call mat_mat2is(Rows,ISRows,ierr)
 	call mat_mat2is(Cols,ISCols,ierr)
 	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)

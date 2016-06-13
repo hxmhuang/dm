@@ -78,8 +78,13 @@ module dm
         module procedure dm_nq3
         module procedure dm_eq4
     end interface
-
-  ! element multiple
+  
+	! element multiple
+    interface operator (.to.)
+        module procedure dm_to
+    end interface
+ 
+  	! element multiple
     interface operator (.em.)
         module procedure dm_emult
     end interface
@@ -92,6 +97,11 @@ module dm
     ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin
+    end interface
+    
+	! join vertically
+    interface operator (.vj.)
+        module procedure dm_vjoin
     end interface
 	! INV(A)*B
     interface operator (.inv.)
@@ -121,11 +131,15 @@ module dm
         module procedure dm_setvalues2
         module procedure dm_setvalues3
     end interface
-
-
+	
     interface assignment(=)
         module procedure dm_copy
     end interface
+	
+	interface operator (.to.)
+        module procedure dm_add1 
+    end interface
+
 
 
 contains
@@ -265,9 +279,9 @@ end function
 
 
 ! -----------------------------------------------------------------------
-! A=[1 2 3], This function is only used to generate the test data.
-!   [4 5 6]
-!   [7 8 9]
+! A=[0 1 2], This function is only used to generate the test data.
+!   [3 4 5]
+!   [6 7 8]
 ! -----------------------------------------------------------------------
 function dm_seqs(m,n) result(A)
     implicit none
@@ -276,6 +290,21 @@ function dm_seqs(m,n) result(A)
     integer					::  ierr
 
     call mat_seqs(A%x,m,n,ierr)
+    call dm_set_implicit(A,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! A=[m], This function is only used to generate the test data.
+!   [m+1]
+!   [m+2]
+! -----------------------------------------------------------------------
+function dm_to(m,n) result(A)
+    implicit none
+    integer,   intent(in)  	::  m,n
+    type(Matrix)           	::  A
+    integer					::  ierr
+	A= dm_seqs(n-m+1,1)+m
     call dm_set_implicit(A,ierr)
 end function
 
@@ -528,6 +557,28 @@ function dm_hjoin(A,B) result(C)
         call mat_destroy(B%x,ierr)
     endif
 end function 
+
+! -----------------------------------------------------------------------
+! C=[A] 
+!   [B] 
+! -----------------------------------------------------------------------
+function dm_vjoin(A,B) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+    call mat_vjoin(A%x,B%x,C%x,ierr)
+	call dm_set_implicit(C,ierr)
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+end function 
+
 
 
 ! -----------------------------------------------------------------------
