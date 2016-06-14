@@ -55,6 +55,24 @@ program main
     call dm_destroy(A,ierr)
 
 
+ 	if(myrank==0) print *, "==============Test dm_constants==========="
+    A=dm_constants(m,n,3)
+    B=dm_constants(m,n,4.5)
+    C=dm_constants(m,n,real(5.5,kind=8))
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_constants(m,n,4.5)"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_constants(m,n,real(4.5,kind=8))"
+        call dm_view(C,ierr)
+ 	endif
+    call dm_destroy(A,ierr)
+    call dm_destroy(B,ierr)
+    call dm_destroy(C,ierr)
+
+
+
  	if(myrank==0) print *, "==============Test dm_seqs================"
     A=dm_seqs(m,n)
     if(debug) then
@@ -117,9 +135,9 @@ program main
     F=A+dm_eyes(m,m)
     G=A+A+A
     H=B+G
-	X=A+2.0
-	Y=2+A
-	Z=real(2,8)+A
+    X=A+2.0
+    Y=2+A
+    Z=real(2,8)+A
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
@@ -171,10 +189,10 @@ program main
     F=A-dm_eyes(m,m)
     G=A-A-A
     H=B-G
-	X=9*A-2.0
-	Y=2-A
-	Z=real(2,8)-A
-	U=(0-A)+2
+    X=9*A-2.0
+    Y=2-A
+    Z=real(2,8)-A
+    U=(0-A)+2
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
@@ -802,7 +820,7 @@ program main
   	call dm_destroy(C,ierr)
 
 
-	if(myrank==0) print *, "==============Test dm_setvalues==========="
+    if(myrank==0) print *, "==============Test dm_setvalues==========="
     A=dm_ones(2*m,2*m)
     idxm(1)=0	
     idxm(2)=2	
@@ -822,7 +840,7 @@ program main
   	call dm_destroy(A,ierr)
     deallocate(array)
 
-	if(myrank==0) print *, "==============Test dm_getvalues==========="
+    if(myrank==0) print *, "==============Test dm_getvalues==========="
     A=dm_seqs(2*m,2*m)
     idxm(1)=A%ista	
     idxn(1)=0	
@@ -839,11 +857,11 @@ program main
   	call dm_destroy(A,ierr)
     deallocate(array)
 
-	if(myrank==0) print *, "==============Test dm_norm================"
+    if(myrank==0) print *, "==============Test dm_norm================"
     A=dm_seqs(m,m)
    	a1=dm_norm_1(A)
-	a2=dm_norm_2(A)
-	a3=dm_norm_inf(A) 
+    a2=dm_norm_2(A)
+    a3=dm_norm_inf(A) 
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
@@ -853,7 +871,7 @@ program main
  	endif
   	call dm_destroy(A,ierr)
 
-	if(myrank==0) print *, "==============Test dm_lt=================="
+    if(myrank==0) print *, "==============Test dm_lt=================="
     A=dm_seqs(m,m)
     B=5*dm_ones(m,m)
     C=(A<B)

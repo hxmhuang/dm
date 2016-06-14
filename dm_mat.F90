@@ -15,15 +15,15 @@ subroutine mat_create(A,m,n,ierr)
 	PetscInt,		intent(in)	::	m,n	
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
-!	PetscLogEvent	            ::  ievent
+ 	PetscLogEvent	            ::  ievent
 !	call PetscLogEventRegister("mat_create",0, ievent, ierr)
-!    call PetscLogEventBegin(ievent,ierr)
+!   call PetscLogEventBegin(ievent,ierr)
 	! generate matrix A with size m*n
 	call MatCreate(PETSC_COMM_WORLD,A,ierr);
 	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
 	call MatSetFromOptions(A,ierr)
 	call MatSetUp(A,ierr)
-!    call PetscLogEventEnd(ievent,ierr)
+!   call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
@@ -81,7 +81,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! A=1. Since it is not sparse, we will remove this interface later 
 ! -----------------------------------------------------------------------
-subroutine mat_ones(A,m,n,ierr)
+subroutine bk_mat_ones(A,m,n,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -117,6 +117,90 @@ subroutine mat_ones(A,m,n,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
 	deallocate(idxn,row,results)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! A=1. Since it is not sparse, we will remove this interface later 
+! -----------------------------------------------------------------------
+subroutine mat_ones(A,nrow,ncol,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscInt,	    intent(in)	::	nrow,ncol
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					::  ista,iend,nlocal
+	PetscInt,allocatable		::	idxm(:),idxn(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_ones",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call mat_create(A,nrow,ncol,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	nlocal=iend-ista
+	allocate(idxm(nlocal),idxn(ncol),row(nlocal*ncol))
+
+	do i=1,nlocal
+		idxm(i)=ista+i-1
+	enddo
+	do j=1,ncol
+		idxn(j)=j-1
+	enddo
+	row=1.0
+
+	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	deallocate(idxm,idxn,row)
+end subroutine
+
+! -----------------------------------------------------------------------
+! A=alpha. 
+! -----------------------------------------------------------------------
+subroutine mat_constants(A,nrow,ncol,alpha,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscInt,	    intent(in)	::	nrow,ncol
+	PetscScalar,	intent(in) 	:: 	alpha 
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					::  ista,iend,nlocal
+	PetscInt,allocatable		::	idxm(:),idxn(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_constants",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call mat_create(A,nrow,ncol,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	nlocal=iend-ista
+	!print *,">ista=",ista,"iend=",iend,"ncol=",ncol
+	allocate(idxm(nlocal),idxn(ncol),row(nlocal*ncol))
+
+	do i=1,nlocal
+		idxm(i)=ista+i-1
+	enddo
+	do j=1,ncol
+		idxn(j)=j-1
+	enddo
+	row=alpha
+
+	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
+
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	deallocate(idxm,idxn,row)
     
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -163,6 +247,49 @@ subroutine mat_seqs(A,m,n,ierr)
 	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
 	deallocate(idxn,row)
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! A=[m], This function is only used to generate the test data.
+!   [m+1]
+!   [m+2]
+subroutine mat_to(A,m,n,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	
+	Mat,			intent(out)	::	A
+	PetscInt,	    intent(in)	::	m,n
+	PetscErrorCode,	intent(out)	::	ierr
+	
+	PetscInt					::  ista,iend,nlocal
+	PetscInt,allocatable		::	idxm(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_to",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+    call mat_create(A,n-m+1,1,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	nlocal=iend-ista
+	!print *,">ista=",ista,"iend=",iend,"nlocal=",nlocal
+	allocate(idxm(nlocal),row(nlocal))
+
+	do i=ista,iend-1
+		idxm(i-ista+1)=i
+		row(i-ista+1)=m+i
+	enddo
+	!print *,">idxm=",idxm,"row=",row
+	call MatSetValues(A,nlocal,idxm,1,0,row,INSERT_VALUES,ierr)
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+
+	deallocate(idxm,row)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -256,47 +383,6 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A+B
 ! -----------------------------------------------------------------------
-subroutine bk_mat_add(A,B,C,ierr)
-	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	Mat,			intent(in)	::  A 
-	Mat,			intent(in)	::  B 
-	Mat,			intent(out)	::	C
-	PetscErrorCode,	intent(out)	::	ierr
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
-	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_add",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
-    
-	call MatGetSize(A,nrow1,ncol1,ierr)
-	call MatGetSize(B,nrow2,ncol2,ierr)
-	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
-		print *, "Error in mat_add: the matrix A and B should have the same size."
-		stop	
-	endif
-
-    call MatCreate(PETSC_COMM_WORLD,C,ierr)
-    call MatSetSizes(C,PETSC_DECIDE,PETSC_DECIDE,nrow1,ncol1,ierr)
-    call MatSetType(C,MATCOMPOSITE,ierr)
-	call MatSetUp(C,ierr)
-    !call MatCompositeSetType(B,MAT_COMPOSITE_MULTIPLICATIVE,ierr)
-    
-    call MatCompositeAddMat(C,B,ierr)
-    call MatCompositeAddMat(C,A,ierr)
-
-    call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
-    
-    call PetscLogEventEnd(ievent,ierr)
-end subroutine
-
-
-! -----------------------------------------------------------------------
-! C=A+B
-! -----------------------------------------------------------------------
 subroutine mat_add(A,B,C,ierr) 
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -356,7 +442,6 @@ subroutine mat_minus(A,B,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine 
-
 
 
 ! -----------------------------------------------------------------------
@@ -1557,7 +1642,6 @@ subroutine mat_cart2sph(A,B,ierr)
 	PetscScalar,allocatable     ::	row1(:),row2(:)
 	PetscInt					::  ista,iend
 	integer						::	i,j
-    PetscScalar                 ::  newval 
     
     call MatGetSize(A,nrow1,ncol1,ierr)
     call MatGetOwnershipRange(A,ista,iend,ierr)

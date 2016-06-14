@@ -79,7 +79,7 @@ module dm
         module procedure dm_eq4
     end interface
   
-	! element multiple
+	! sequence form m to n 
     interface operator (.to.)
         module procedure dm_to
     end interface
@@ -103,9 +103,17 @@ module dm
     interface operator (.vj.)
         module procedure dm_vjoin
     end interface
+
 	! INV(A)*B
     interface operator (.inv.)
         module procedure dm_solve
+    end interface
+ 
+	! constant matrix 
+    interface dm_constants 
+        module procedure dm_constants1
+        module procedure dm_constants2
+        module procedure dm_constants3
     end interface
 
     interface dm_axpy
@@ -139,7 +147,6 @@ module dm
 	interface operator (.to.)
         module procedure dm_add1 
     end interface
-
 
 
 contains
@@ -267,6 +274,9 @@ function dm_zeros(m,n) result(A)
 end function
 
 
+! -----------------------------------------------------------------------
+! A=1. 
+! -----------------------------------------------------------------------
 function dm_ones(m,n) result(A)
     implicit none
     integer,    intent(in)  ::  m,n
@@ -276,6 +286,44 @@ function dm_ones(m,n) result(A)
     call mat_ones(A%x,m,n,ierr)
     call dm_set_implicit(A,ierr)
 end function
+
+! -----------------------------------------------------------------------
+! A=alpha. 
+! -----------------------------------------------------------------------
+function dm_constants1(m,n,alpha) result(A)
+    implicit none
+    integer,    intent(in)  ::  m,n
+    real(kind=8),intent(in) ::  alpha 
+    type(Matrix)            ::  A
+    integer					::  ierr
+    
+    call mat_constants(A%x,m,n,alpha,ierr)
+    call dm_set_implicit(A,ierr)
+end function
+
+function dm_constants2(m,n,alpha) result(A)
+    implicit none
+    integer,    intent(in)  ::  m,n
+    real,		intent(in) ::  alpha 
+    type(Matrix)            ::  A
+    integer					::  ierr
+   	
+	A=dm_constants(m,n,real(alpha,kind=8))
+    call dm_set_implicit(A,ierr)
+end function
+
+function dm_constants3(m,n,alpha) result(A)
+    implicit none
+    integer,    intent(in)  ::  m,n
+    integer,	intent(in) 	::  alpha 
+    type(Matrix)            ::  A
+    integer					::  ierr
+    
+   	A=dm_constants(m,n,real(alpha,kind=8))
+    call dm_set_implicit(A,ierr)
+end function
+
+
 
 
 ! -----------------------------------------------------------------------
@@ -304,7 +352,7 @@ function dm_to(m,n) result(A)
     integer,   intent(in)  	::  m,n
     type(Matrix)           	::  A
     integer					::  ierr
-	A= dm_seqs(n-m+1,1)+m
+	call mat_to(A%x,m,n,ierr)	
     call dm_set_implicit(A,ierr)
 end function
 
@@ -390,8 +438,7 @@ function dm_add2(A,alpha) result(C)
 	type(Matrix)                ::	C
 	integer						::	ierr
 	
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     call mat_add(A%x,B%x,C%x,ierr)
     call dm_set_implicit(C,ierr)
    	
@@ -472,8 +519,7 @@ function dm_minus2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     call mat_minus(A%x,B%x,C%x,ierr)
     call dm_set_implicit(C,ierr)
    	
@@ -500,8 +546,7 @@ function dm_minus4(alpha,A) result(C)
 	type(Matrix)                ::	C
 	integer						::	ierr
 	
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     call mat_minus(B%x,A%x,C%x,ierr)
     call dm_set_implicit(C,ierr)
    	
@@ -1271,8 +1316,7 @@ function dm_lt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1284,8 +1328,7 @@ function dm_lt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1297,8 +1340,7 @@ function dm_lt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1334,8 +1376,7 @@ function dm_le2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1347,8 +1388,7 @@ function dm_le3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1360,8 +1400,7 @@ function dm_le4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1397,8 +1436,7 @@ function dm_gt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr)
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1410,8 +1448,7 @@ function dm_gt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1423,8 +1460,7 @@ function dm_gt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1460,8 +1496,7 @@ function dm_ge2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1473,8 +1508,7 @@ function dm_ge3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1486,8 +1520,7 @@ function dm_ge4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1523,8 +1556,7 @@ function dm_eq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 	
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1536,8 +1568,7 @@ function dm_eq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1549,8 +1580,7 @@ function dm_eq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1586,8 +1616,7 @@ function dm_nq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,alpha,ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 	
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1599,8 +1628,7 @@ function dm_nq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1612,8 +1640,7 @@ function dm_nq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_ones(B%x,A%nrow,A%ncol,ierr)
-	call mat_scale(B%x,real(alpha,kind=8),ierr) 	
+	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
