@@ -79,11 +79,6 @@ module dm
         module procedure dm_eq4
     end interface
   
-	! sequence form m to n 
-    interface operator (.to.)
-        module procedure dm_to
-    end interface
- 
   	! element multiple
     interface operator (.em.)
         module procedure dm_emult
@@ -143,11 +138,6 @@ module dm
     interface assignment(=)
         module procedure dm_copy
     end interface
-	
-	interface operator (.to.)
-        module procedure dm_add1 
-    end interface
-
 
 contains
 
@@ -347,12 +337,12 @@ end function
 !   [m+1]
 !   [m+2]
 ! -----------------------------------------------------------------------
-function dm_to(m,n) result(A)
+function dm_m2n(m,n) result(A)
     implicit none
     integer,   intent(in)  	::  m,n
     type(Matrix)           	::  A
     integer					::  ierr
-	call mat_to(A%x,m,n,ierr)	
+	call mat_m2n(A%x,m,n,ierr)	
     call dm_set_implicit(A,ierr)
 end function
 
@@ -518,7 +508,7 @@ function dm_minus2(A,alpha) result(C)
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	integer::	ierr
+	integer						::	ierr
 	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
     call mat_minus(A%x,B%x,C%x,ierr)
     call dm_set_implicit(C,ierr)
@@ -534,8 +524,9 @@ function dm_minus3(A,alpha) result(C)
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_minus2(A,real(alpha,8))	
-	C%xtype=MAT_XTYPE_IMPLICIT 
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus4(alpha,A) result(C)
@@ -561,8 +552,9 @@ function dm_minus5(alpha,A) result(C)
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_minus4(real(alpha,8),A)	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus6(A,alpha) result(C)
@@ -570,8 +562,9 @@ function dm_minus6(A,alpha) result(C)
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_minus2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus7(alpha,A) result(C)
@@ -579,8 +572,9 @@ function dm_minus7(alpha,A) result(C)
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_minus4(real(alpha,8),A)	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+	call dm_set_implicit(C,ierr)
 end function 
 
 ! -----------------------------------------------------------------------
@@ -666,8 +660,9 @@ function dm_mult3(A,alpha) result(B)
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)              	::	B
+	integer						::	ierr
    	B=dm_mult2(alpha,A)
-	B%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(B,ierr)
 end function 
 
 function dm_mult4(alpha,A) result(B)
@@ -675,8 +670,9 @@ function dm_mult4(alpha,A) result(B)
 	real,           intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
+	integer						::	ierr
    	B=dm_mult2(real(alpha,8),A)
-	B%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(B,ierr)
 end function 
 
 function dm_mult5(A,alpha) result(B)
@@ -684,8 +680,9 @@ function dm_mult5(A,alpha) result(B)
 	real,           intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
+	integer						::	ierr
    	B=dm_mult2(real(alpha,8),A)
-	B%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(B,ierr)
 end function 
 
 function dm_mult6(A,alpha) result(B)
@@ -693,8 +690,9 @@ function dm_mult6(A,alpha) result(B)
 	integer,        intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
+	integer						::	ierr
    	B=dm_mult2(real(alpha,8),A)
-	B%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(B,ierr)
 end function 
 
 function dm_mult7(alpha,A) result(B)
@@ -702,8 +700,9 @@ function dm_mult7(alpha,A) result(B)
 	integer,        intent(in)	::  alpha 
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)                ::	B
+	integer						::	ierr
    	B=dm_mult2(real(alpha,8),A)
-	B%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(B,ierr)
 end function 
 
 ! -----------------------------------------------------------------------

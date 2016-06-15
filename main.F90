@@ -81,10 +81,10 @@ program main
  	endif
     call dm_destroy(A,ierr)
 
- 	if(myrank==0) print *, "==============Test dm_to=================="
-    A=0 .to. 2
+ 	if(myrank==0) print *, "==============Test dm_m2n================="
+    A=dm_m2n(0,2)
     if(debug) then
-        if(myrank==0) print *, ">A=0 .to. 2"
+        if(myrank==0) print *, ">A=dm_m2n(0,2)"
         call dm_view(A,ierr)
  	endif
     call dm_destroy(A,ierr)

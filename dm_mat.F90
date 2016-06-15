@@ -255,7 +255,7 @@ end subroutine
 ! A=[m], This function is only used to generate the test data.
 !   [m+1]
 !   [m+2]
-subroutine mat_to(A,m,n,ierr)
+subroutine mat_m2n(A,m,n,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -271,7 +271,7 @@ subroutine mat_to(A,m,n,ierr)
 	PetscScalar,allocatable		::	row(:)
 	integer 					:: 	i
 	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_to",0, ievent, ierr)
+	call PetscLogEventRegister("mat_m2n",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
     call mat_create(A,n-m+1,1,ierr)
@@ -1090,7 +1090,8 @@ subroutine mat_solve(A,b,x,ierr)
     KSP                         ::  ksp
     PC                          ::  pc
     PetscReal                   ::  tol
-    PetscLogEvent	            ::  ievent
+    !PetscInt					:: 	its
+	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_solve",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     !PetscInt                    ::  its
