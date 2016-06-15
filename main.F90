@@ -72,7 +72,6 @@ program main
     call dm_destroy(C,ierr)
 
 
-
  	if(myrank==0) print *, "==============Test dm_seqs================"
     A=dm_seqs(m,n)
     if(debug) then
@@ -80,6 +79,7 @@ program main
         call dm_view(A,ierr)
  	endif
     call dm_destroy(A,ierr)
+
 
  	if(myrank==0) print *, "==============Test dm_m2n================="
     A=dm_m2n(0,2)
