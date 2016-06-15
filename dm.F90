@@ -1644,6 +1644,21 @@ function dm_nq4(A,alpha) result(C)
     call dm_set_implicit(C,ierr)
 end function 
 
+! -----------------------------------------------------------------------
+! sparse(i,j,A,B,ierr)
+! -----------------------------------------------------------------------
+function dm_sparse(Ind_i,Ind_j,A,m,n) result(B)
+	implicit none
+	type(Matrix),	intent(in)	::  Ind_i,Ind_j 
+	type(Matrix),	intent(in)	::  A 
+	integer,	intent(in)		::	m,n	
+	type(Matrix)				::  B 
+	integer						::	ierr
+	call mat_sparse(Ind_i%x,Ind_j%x,A%x,m,n,B%x,ierr)
+	call dm_set_implicit(B,ierr)
+end function 
+
+
 
 ! -----------------------------------------------------------------------
 ! Cart2sph(A,B)

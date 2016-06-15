@@ -1041,6 +1041,28 @@ program main
   	call dm_destroy(F,ierr)
 
 
+    if(myrank==0) print *, "==============Test dm_sparse=============="
+    A=dm_m2n(1,3) .vj. dm_m2n(5,6)
+    B=dm_m2n(0,2) .vj. dm_m2n(5,6)
+	C=dm_m2n(100,104)
+	D=dm_sparse(A,B,C,8,8)	
+    if(debug) then
+        if(myrank==0) print *, ">Ind_i:A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">Ind_j:B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_seqs(m,1)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_sparse"
+        call dm_view(D,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+
+
+
     if(myrank==0) print *, "==============Test dm_cart2sph============"
     filename="md001.00004"
     call dm_load(filename,A,ierr)	

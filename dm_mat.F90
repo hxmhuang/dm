@@ -83,7 +83,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
-! A=1. Since it is not sparse, we will remove this interface later 
+! A=1. 
 ! -----------------------------------------------------------------------
 subroutine bk_mat_ones(A,m,n,ierr)
 	implicit none
@@ -127,7 +127,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
-! A=1. Since it is not sparse, we will remove this interface later 
+! A=1. 
 ! -----------------------------------------------------------------------
 subroutine mat_ones(A,nrow,ncol,ierr)
 	implicit none
@@ -1622,6 +1622,65 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------
+! Create sparse matrix
+! -----------------------------------------------------------------------
+subroutine mat_sparse(Ind_i,Ind_j,A,m,n,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::  Ind_i,Ind_j 
+	Mat,			intent(in)	::	A
+	PetscInt,		intent(in)	::	m,n
+	Mat,			intent(out)	::	B
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2,nrow3,ncol3
+	!PetscScalar					::	row1(1),row2(1),row3(1),row4(1)
+	PetscScalar					::	row1,row2,row3
+	PetscInt					::  ista,iend
+	integer						::	i
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_sparse",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    call MatGetSize(Ind_i,nrow1,ncol1,ierr)
+	call MatGetSize(Ind_j,nrow2,ncol2,ierr)
+	call MatGetSize(A,nrow3,ncol3,ierr)
+	if(nrow1/=nrow2 .or. nrow1/=nrow3 .or. nrow2/=nrow3) then
+		print *, "Error in mat_sparse: matrix Ind_i, matrix Ind_j and matrix A should have the same row size"
+		stop	
+	endif
+    
+	if(ncol1/=1.or. ncol2/=1 .or. ncol3/=1) then
+		print *, "Error in mat_sparse: matrix Ind_i, matrix Ind_j and matrix A should have only one column"
+		stop	
+	endif
+
+    call mat_zeros(B,m,n,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	
+    do i=ista,iend-1
+	    call MatGetRow(Ind_i,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row1,ierr)
+	    call MatRestoreRow(Ind_i,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row1,ierr)
+	    
+		call MatGetRow(Ind_j,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row2,ierr)
+	    call MatRestoreRow(Ind_j,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row2,ierr)
+	    
+		call MatGetRow(A,	 i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row3,ierr)
+	    call MatRestoreRow(A	,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row3,ierr)
+		!print *,">row1=",row1,"row2=",row2,"row3=",row3
+		call MatSetValues(B,1,int(row1),1,int(row2),row3,INSERT_VALUES,ierr)
+	enddo
+
+	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+
+
+! -----------------------------------------------------------------------
 ! Transform Cartesian to spherical coordinates.
 ! [TH,PHI,R] = cart2sph(X,Y,Z) transforms corresponding elements of
 !    data stored in Cartesian coordinates X,Y,Z to spherical
@@ -1678,6 +1737,6 @@ subroutine mat_cart2sph(A,B,ierr)
 	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
 end subroutine
 
-
+ 
 
 end module
