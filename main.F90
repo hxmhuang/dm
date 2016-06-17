@@ -221,7 +221,7 @@ program main
  	endif
     A=A-A	
     if(debug) then
-        if(myrank==0) print *, ">A="
+        if(myrank==0) print *, ">A=A-A"
         call dm_view(A,ierr)
  	endif
     call dm_destroy(A,ierr)
@@ -715,7 +715,7 @@ program main
     C=dm_eyes(m,m)
     call dm_setvalue(A,1,1,5,ierr)
     call dm_setvalue(B,1,1,6.1,ierr)
-    call dm_setvalue(C,1,1,real(7,8),ierr)
+    call dm_setvalue(C,1,1,real(7,kind=8),ierr)
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
@@ -1044,8 +1044,8 @@ program main
     if(myrank==0) print *, "==============Test dm_sparse=============="
     A=dm_m2n(1,3) .vj. dm_m2n(5,6)
     B=dm_m2n(0,2) .vj. dm_m2n(5,6)
-	C=dm_m2n(100,104)
-	D=dm_sparse(A,B,C,8,8)	
+    C=dm_m2n(100,104)
+    D=dm_sparse(A,B,C,8,8)	
     if(debug) then
         if(myrank==0) print *, ">Ind_i:A="
         call dm_view(A,ierr)

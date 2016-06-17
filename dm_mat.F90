@@ -52,9 +52,29 @@ subroutine mat_view(A,ierr)
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(in)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
-	! destroy matrix A
+	! view matrix A
+	call mat_assemble(A,ierr)
     call MatView(A,PETSC_VIEWER_STDOUT_WORLD, ierr)
 end subroutine
+
+
+subroutine mat_assemble(A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(in)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscBool					::  assembled	
+	call MatAssembled(A,assembled,ierr)
+	if(.not. assembled) then
+		call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+		call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	endif
+end subroutine
+
+
 
 
 ! -----------------------------------------------------------------------
@@ -75,8 +95,8 @@ subroutine mat_zeros(A,m,n,ierr)
 
     call mat_create(A,m,n,ierr)
     call MatZeroEntries(A,ierr)
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+!	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+!	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     
 !   call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -117,8 +137,8 @@ subroutine bk_mat_ones(A,m,n,ierr)
 		enddo
 		call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
 	enddo
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
 	deallocate(idxn,row,results)
     
@@ -160,8 +180,8 @@ subroutine mat_ones(A,nrow,ncol,ierr)
 	row=1.0
 
 	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	deallocate(idxm,idxn,row)
 end subroutine
 
@@ -202,8 +222,8 @@ subroutine mat_constants(A,nrow,ncol,alpha,ierr)
 
 	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
 
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	deallocate(idxm,idxn,row)
     
     call PetscLogEventEnd(ievent,ierr)
@@ -247,8 +267,8 @@ subroutine mat_seqs(A,m,n,ierr)
 		enddo
 		call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
 	enddo
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
 	deallocate(idxn,row)
     call PetscLogEventEnd(ievent,ierr)
@@ -290,8 +310,8 @@ subroutine mat_m2n(A,m,n,ierr)
 	enddo
 	!print *,">idxm=",idxm,"row=",row
 	call MatSetValues(A,nlocal,idxm,1,0,row,INSERT_VALUES,ierr)
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
 	deallocate(idxm,row)
     call PetscLogEventEnd(ievent,ierr)
@@ -355,8 +375,8 @@ subroutine mat_eyes(A,m,n,ierr)
 	   	call MatSetValues(A,1,i,counter,idxn,row,INSERT_VALUES,ierr)
 	enddo
 		
-    call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+    !call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+    !call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	deallocate(idxn,row)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -377,10 +397,11 @@ subroutine mat_copy(A,B,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_copy",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    
+   	
+	call mat_assemble(A,ierr)
     call MatDuplicate(A,MAT_COPY_VALUES,B,ierr)
     
-    call PetscLogEventEnd(ievent,ierr)
+	call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
@@ -409,6 +430,8 @@ subroutine mat_add(A,B,C,ierr)
 		stop	
 	endif
     
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
     alpha=1.0
     call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
@@ -441,6 +464,8 @@ subroutine mat_minus(A,B,C,ierr)
 		stop	
 	endif
     
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
     alpha=-1.0
     call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
@@ -477,6 +502,8 @@ subroutine mat_hjoin(A,B,C,ierr)
 		stop	
 	endif
 
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
     call mat_create(C,nrow1,(ncol1+ncol2),ierr)
 	call MatGetOwnershipRange(A,ista,iend,ierr)
 
@@ -508,8 +535,8 @@ subroutine mat_hjoin(A,B,C,ierr)
 	    deallocate(idxn1,idxn2,idxn3,row1,row2,row3)
 	enddo
 
-	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
     
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -533,7 +560,7 @@ subroutine mat_vjoin(A,B,C,ierr)
 	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
-    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(ncol1/=ncol2)then
 		print *, "Error: Matrix A and Matrix B should have the same column size"
@@ -571,6 +598,8 @@ subroutine mat_mult(A,B,C,ierr)
 	call PetscLogEventRegister("mat_mult",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
 	call MatGetSize(A,nrow1,ncol1,ierr)
     call MatGetSize(B,nrow2,ncol2,ierr)
  	if(ncol1/=nrow2)then
@@ -579,8 +608,8 @@ subroutine mat_mult(A,B,C,ierr)
  	endif
 
     call MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr) 
-	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -608,7 +637,10 @@ subroutine mat_emult(A,B,C,ierr)
 	call PetscLogEventRegister("mat_emult",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
-    call MatGetSize(A,nrow1,ncol1,ierr)
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+    
+	call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
 		print *, "Error: Matrix A1 and Matrix A2 should have the same sizes"
@@ -663,8 +695,8 @@ subroutine mat_emult(A,B,C,ierr)
 	    deallocate(idxn1,idxn2,idxn3,idxtmp,row1,row2,row3,rowtmp)
 	enddo
 
-	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -692,6 +724,8 @@ subroutine mat_ediv(A,B,C,ierr)
 	call PetscLogEventRegister("mat_ediv",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2 .or. ncol1/=ncol2)then
@@ -801,8 +835,8 @@ subroutine mat_rep(A,m,n,B,ierr)
 	call mat_destroy(W,ierr)
 	call mat_destroy(T,ierr)
 	
-    call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+    !call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -847,8 +881,8 @@ subroutine mat_sum(A,ndim,B,ierr)
         call mat_destroy(W,ierr)
     endif
 
-	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -869,6 +903,9 @@ subroutine mat_axpy(Y,a,X,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_axpy",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_assemble(X,ierr)
+	call mat_assemble(Y,ierr)
 	
     call MatAXPY(Y,a,X,DIFFERENT_NONZERO_PATTERN,ierr)
     call PetscLogEventEnd(ievent,ierr)
@@ -892,7 +929,10 @@ subroutine mat_aypx(Y,a,X,ierr)
 	call PetscLogEventRegister("mat_aypx",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
-    call MatAYPX(Y,a,X,DIFFERENT_NONZERO_PATTERN,ierr)
+	call mat_assemble(X,ierr)
+	call mat_assemble(Y,ierr)
+    
+	call MatAYPX(Y,a,X,DIFFERENT_NONZERO_PATTERN,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -913,6 +953,7 @@ subroutine mat_trans(A,B,ierr)
 	call PetscLogEventRegister("mat_trans",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
+	call mat_assemble(A,ierr)	
     call MatTranspose(A,MAT_INITIAL_MATRIX,B,ierr)
     
     call PetscLogEventEnd(ievent,ierr)
@@ -935,7 +976,9 @@ subroutine mat_xyt(X,Y,B,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_xyt",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    !call MatMatTransposeMult(X,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,B,ierr) 	
+
+    !MatMatTransposeMult not supported for A of type mpiaij
+	!call MatMatTransposeMult(X,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,B,ierr) 	
     call mat_trans(Y,W,ierr)
     call mat_mult(X,W,B,ierr)
     call mat_destroy(W,ierr)
@@ -959,7 +1002,9 @@ subroutine mat_xty(X,Y,B,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_xty",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    
+   	
+	call mat_assemble(X,ierr)
+	call mat_assemble(Y,ierr)
     call MatTransposeMatMult(X,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,B,ierr)
     
     call PetscLogEventEnd(ievent,ierr)
@@ -982,6 +1027,7 @@ subroutine mat_scale(X,a,ierr)
 	call PetscLogEventRegister("mat_scale",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
+	call mat_assemble(X,ierr)
     call MatScale(X,a,ierr)
     
     call PetscLogEventEnd(ievent,ierr)
@@ -1014,6 +1060,7 @@ subroutine mat_math(A,opt,B,ierr)
 	call PetscLogEventRegister("mat_math",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
+	call mat_assemble(A,ierr)
     call MatGetSize(A,nrow,ncol,ierr)
 
     call mat_create(B,nrow,ncol,ierr)
@@ -1099,6 +1146,9 @@ subroutine mat_solve(A,b,x,ierr)
 	call PetscLogEventRegister("mat_solve",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     !PetscInt                    ::  its
+	
+	call mat_assemble(A,ierr)	
+	call mat_assemble(b,ierr)	
 	
     call mat_mat2vec(b,vec_b,ierr)
     call VecDuplicate(vec_b,vec_x,ierr)
@@ -1263,8 +1313,8 @@ subroutine mat_load(filename,A,ierr)
 		enddo
 		call MatSetValues(A,1,i,ncol,idxn,x(:,i+1),INSERT_VALUES,ierr)
 	enddo
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     deallocate(x,row)
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
@@ -1324,8 +1374,8 @@ subroutine mat_setvalue(A,m,n,value,ierr)
 
     call MatSetValue(A,m,n,value,INSERT_VALUES,ierr)
     
-    call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+    !call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
@@ -1346,14 +1396,18 @@ subroutine mat_submatrix(A,Rows,Cols,B,ierr)
     PetscLogEvent               ::  ievent
     call PetscLogEventRegister("mat_submatrix",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
-		
+	
+	call mat_assemble(A,ierr)
+	call mat_assemble(Rows,ierr)
+	call mat_assemble(Cols,ierr)
+	
 	call mat_mat2is(Rows,ISRows,ierr)
 	call mat_mat2is(Cols,ISCols,ierr)
 	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
-	call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
  	call ISDestroy(ISRows,ierr)
  	call ISDestroy(ISCols,ierr)
     call PetscLogEventEnd(ievent,ierr) 
@@ -1464,8 +1518,8 @@ subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
     call PetscLogEventBegin(ievent,ierr) 
  
 	call MatSetValues(A,m,idxm,n,idxn,v,INSERT_VALUES,ierr) 
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
@@ -1489,6 +1543,7 @@ subroutine mat_getvalues(A,m,idxm,n,idxn,v,ierr)
     call PetscLogEventRegister("mat_getvalues",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 	
+	call mat_assemble(A,ierr)	
     call MatGetValues(A,m,idxm,n,idxn,v,ierr) 
 !	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 !	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -1515,6 +1570,7 @@ subroutine mat_norm(A,ntype,res,ierr)
     call PetscLogEventRegister("mat_norm",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
  
+	call mat_assemble(A,ierr)	
 	call MatNorm(A,ntype,res,ierr) 
     call PetscLogEventEnd(ievent,ierr) 
 end subroutine
@@ -1543,6 +1599,9 @@ subroutine mat_compare(A,B,opt,C,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_compare",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
 	
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
@@ -1643,7 +1702,11 @@ subroutine mat_sparse(Ind_i,Ind_j,A,m,n,B,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_sparse",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    call MatGetSize(Ind_i,nrow1,ncol1,ierr)
+  
+	call mat_assemble(Ind_i,ierr) 
+	call mat_assemble(Ind_j,ierr) 
+	call mat_assemble(A,ierr) 
+	call MatGetSize(Ind_i,nrow1,ncol1,ierr)
 	call MatGetSize(Ind_j,nrow2,ncol2,ierr)
 	call MatGetSize(A,nrow3,ncol3,ierr)
 	if(nrow1/=nrow2 .or. nrow1/=nrow3 .or. nrow2/=nrow3) then
@@ -1706,7 +1769,8 @@ subroutine mat_cart2sph(A,B,ierr)
 	PetscScalar,allocatable     ::	row1(:),row2(:)
 	PetscInt					::  ista,iend
 	integer						::	i,j
-    
+   	
+	call mat_assemble(A,ierr) 
     call MatGetSize(A,nrow1,ncol1,ierr)
     call MatGetOwnershipRange(A,ista,iend,ierr)
     
