@@ -1709,6 +1709,9 @@ subroutine mat_sparse(Ind_i,Ind_j,A,m,n,B,ierr)
 	call MatGetSize(Ind_i,nrow1,ncol1,ierr)
 	call MatGetSize(Ind_j,nrow2,ncol2,ierr)
 	call MatGetSize(A,nrow3,ncol3,ierr)
+	!call mat_view(Ind_i,ierr)
+	!call mat_view(Ind_j,ierr)
+	!call mat_view(A,ierr)
 	if(nrow1/=nrow2 .or. nrow1/=nrow3 .or. nrow2/=nrow3) then
 		print *, "Error in mat_sparse: matrix Ind_i, matrix Ind_j and matrix A should have the same row size"
 		stop	
