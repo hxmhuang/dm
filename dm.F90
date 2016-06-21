@@ -372,6 +372,45 @@ end function
 
 
 ! -----------------------------------------------------------------------
+! The vertical eye plus zero matrix
+! A= [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+!	 [0 0 0]
+!	 [0 0 0]
+! -----------------------------------------------------------------------
+function dm_veyezero(nrow1,nrow2) result(A)
+	implicit none
+	integer,    intent(in)	::	nrow1,nrow2	
+	type(Matrix)			::	A
+	integer					::	ierr
+    
+    call mat_veyezero(A%x,nrow1,nrow2,ierr)
+    call dm_set_implicit(A,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! The vertical zero plus eye matrix
+! A= [0 0 0]
+!	 [0 0 0]
+!	 [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+! -----------------------------------------------------------------------
+function dm_vzeroeye(nrow1,nrow2) result(A)
+	implicit none
+	integer,    intent(in)	::	nrow1,nrow2	
+	type(Matrix)			::	A
+	integer					::	ierr
+    
+    call mat_vzeroeye(A%x,nrow1,nrow2,ierr)
+    call dm_set_implicit(A,ierr)
+end function 
+
+
+
+! -----------------------------------------------------------------------
 ! B=A. This function uses the implicit matrix A directly because A is not need to free. 
 ! -----------------------------------------------------------------------
 subroutine dm_copy(B,A)
@@ -407,17 +446,26 @@ function dm_add1(A,B) result(C)
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)                ::	C
+	real(kind=8)				::  alpha	
 	integer						::	ierr
-	
-    call mat_add(A%x,B%x,C%x,ierr)
-    call dm_set_implicit(C,ierr)
-    
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
-    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+	alpha=1.0
+	if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
+		C%x=A%x
+		call mat_axpy(C%x,alpha,B%x,ierr)
         call mat_destroy(B%x,ierr)
-    endif
+	else if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
+		C%x=A%x
+		call mat_axpy(C%x,alpha,B%x,ierr)
+	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then	
+		C%x=B%x
+		call mat_axpy(C%x,alpha,A%x,ierr)
+	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
+		call mat_copy(A%x,C%x,ierr)
+		call mat_axpy(C%x,alpha,B%x,ierr)
+	else
+		print *,"Error in dm_add: wrong xtype value in this funtion."
+	endif 
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_add2(A,alpha) result(C)
@@ -429,13 +477,8 @@ function dm_add2(A,alpha) result(C)
 	integer						::	ierr
 	
 	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
-    call mat_add(A%x,B%x,C%x,ierr)
+    C=dm_add1(A,B)
     call dm_set_implicit(C,ierr)
-   	
-	call mat_destroy(B%x,ierr) 
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
 end function 
 
 function dm_add3(A,alpha) result(C)
@@ -443,8 +486,9 @@ function dm_add3(A,alpha) result(C)
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_add2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_add4(alpha,A) result(C)
@@ -452,8 +496,9 @@ function dm_add4(alpha,A) result(C)
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_add2(A,alpha)	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_add5(alpha,A) result(C)
@@ -461,7 +506,9 @@ function dm_add5(alpha,A) result(C)
 	type(Matrix),	intent(in)	::  A 
 	real,			intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_add2(A,real(alpha,8))	
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_add6(A,alpha) result(C)
@@ -469,8 +516,9 @@ function dm_add6(A,alpha) result(C)
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_add2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_add7(alpha,A) result(C)
@@ -478,8 +526,9 @@ function dm_add7(alpha,A) result(C)
 	type(Matrix),	intent(in)	::  A 
 	integer,		intent(in)	::  alpha 
 	type(Matrix)                ::	C
+	integer						::	ierr
 	C=dm_add2(A,real(alpha,8))	
-    C%xtype=MAT_XTYPE_IMPLICIT 
+    call dm_set_implicit(C,ierr)
 end function 
 
 ! -----------------------------------------------------------------------
@@ -489,17 +538,27 @@ function dm_minus1(A,B) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
-	type(Matrix)              	::	C
+	type(Matrix)                ::	C
+	real(kind=8)				::  alpha	
 	integer						::	ierr
-    call mat_minus(A%x,B%x,C%x,ierr)
-    call dm_set_implicit(C,ierr)
-    
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+	alpha=-1.0
+	if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
+		C%x=B%x
+		call mat_aypx(C%x,alpha,A%x,ierr)
         call mat_destroy(A%x,ierr)
-    endif
-    if (B%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(B%x,ierr)
-    endif
+	else if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
+		C%x=A%x
+		call mat_axpy(C%x,alpha,B%x,ierr)
+	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then	
+		C%x=B%x
+		call mat_aypx(C%x,alpha,A%x,ierr)
+	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
+		call mat_copy(A%x,C%x,ierr)
+		call mat_axpy(C%x,alpha,B%x,ierr)
+	else
+		print *,"Error in dm_minus: wrong xtype value in this funtion."
+	endif 
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus2(A,alpha) result(C)
@@ -510,13 +569,8 @@ function dm_minus2(A,alpha) result(C)
 	type(Matrix)                ::	C
 	integer						::	ierr
 	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
-    call mat_minus(A%x,B%x,C%x,ierr)
-    call dm_set_implicit(C,ierr)
-   	
-	call mat_destroy(B%x,ierr) 
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
+    C=dm_minus1(A,B)
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus3(A,alpha) result(C)
@@ -538,13 +592,8 @@ function dm_minus4(alpha,A) result(C)
 	integer						::	ierr
 	
 	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
-    call mat_minus(B%x,A%x,C%x,ierr)
+    C=dm_minus1(B,A)
     call dm_set_implicit(C,ierr)
-   	
-	call mat_destroy(B%x,ierr) 
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(A%x,ierr)
-    endif
 end function 
 
 function dm_minus5(alpha,A) result(C)
@@ -1137,7 +1186,8 @@ function dm_getcol(A,n) result(B)
 	type(Matrix)				::  Rows,Cols
 	
 	Rows=dm_seqs(A%nrow,1)	
-	Cols=dm_zeros(1,1)+n	
+	!Cols=dm_zeros(1,1)+n	
+	Cols=dm_constants(1,1,n)	
 	
 	call mat_submatrix(A%x, Rows%x, Cols%x, B%x, ierr)
     call dm_set_implicit(B,ierr)

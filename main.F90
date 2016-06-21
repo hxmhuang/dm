@@ -92,25 +92,61 @@ program main
 
     if(myrank==0) print *, "==============Test dm_eye================="
     A=dm_eyes(m,m)	
+    B=dm_eyes(m,m*2)	
+    C=dm_eyes(2*m,m)	
     if(debug) then
-        if(myrank==0) print *, ">A=(m,m)"
+        if(myrank==0) print *, ">A=dm_eyes(m,m)"
         call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_eyes(m,2m)"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_eyes(2*m,m)"
+        call dm_view(C,ierr)
  	endif
  	call dm_destroy(A,ierr)
+ 	call dm_destroy(B,ierr)
+ 	call dm_destroy(C,ierr)
 
-    A=dm_eyes(m,m*2)	
+    if(myrank==0) print *, "==============Test dm_veyezero============"
+    A=dm_veyezero(m,n)	
+    B=dm_veyezero(m,2*n)	
+    C=dm_veyezero(1,0)	
+    D=dm_veyezero(0,1)	
     if(debug) then
-        if(myrank==0) print *, ">A=(m,2m)"
+        if(myrank==0) print *, ">A=dm_veyezero(m,n)"
         call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_veyezero(m,2*n)"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_veyezero(1,0)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_veyezero(0,1)"
+        call dm_view(D,ierr)
  	endif
  	call dm_destroy(A,ierr)
+ 	call dm_destroy(B,ierr)
+ 	call dm_destroy(C,ierr)
+ 	call dm_destroy(D,ierr)
 
-    A=dm_eyes(2*m,m)	
+
+    if(myrank==0) print *, "==============Test dm_vzeroeye============"
+    A=dm_vzeroeye(m,n)	
+    B=dm_vzeroeye(m,2*n)	
+    C=dm_vzeroeye(1,0)	
+    D=dm_vzeroeye(0,1)	
     if(debug) then
-        if(myrank==0) print *, ">A=(2m,m)"
+        if(myrank==0) print *, ">A=dm_vzeroeye(m,n)"
         call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_vzeroeye(m,2*n)"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_vzeroeye(1,0)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_vzeroeye(0,1)"
+        call dm_view(D,ierr)
  	endif
  	call dm_destroy(A,ierr)
+ 	call dm_destroy(B,ierr)
+ 	call dm_destroy(C,ierr)
+ 	call dm_destroy(D,ierr)
+
 
 
  	if(myrank==0) print *, "==============Test dm_copy================"
@@ -229,11 +265,11 @@ program main
  	call dm_destroy(C,ierr)
  	call dm_destroy(D,ierr)
  	call dm_destroy(E,ierr)
- 	call dm_destroy(F,ierr)
+  	call dm_destroy(F,ierr)
  	call dm_destroy(G,ierr)
  	call dm_destroy(H,ierr)
  	call dm_destroy(X,ierr)
- 	call dm_destroy(Y,ierr)
+    call dm_destroy(Y,ierr)
  	call dm_destroy(Z,ierr)
  	call dm_destroy(U,ierr)
 

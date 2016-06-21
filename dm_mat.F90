@@ -26,6 +26,27 @@ subroutine mat_create(A,m,n,ierr)
 !   call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
+subroutine mat_create_local(A,m,n,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	PetscInt,		intent(in)	::	m,n	
+	Mat,			intent(out)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+!  	PetscLogEvent	            ::  ievent
+! 	call PetscLogEventRegister("mat_create",0, ievent, ierr)
+!   call PetscLogEventBegin(ievent,ierr)
+	! generate matrix A with size m*n
+	call MatCreate(PETSC_COMM_WORLD,A,ierr);
+	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
+	call MatSetFromOptions(A,ierr)
+	call MatSetUp(A,ierr)
+!   call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 
 subroutine mat_destroy(A,ierr)
 	implicit none
@@ -73,8 +94,6 @@ subroutine mat_assemble(A,ierr)
 		call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	endif
 end subroutine
-
-
 
 
 ! -----------------------------------------------------------------------
@@ -381,6 +400,86 @@ subroutine mat_eyes(A,m,n,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
+! -----------------------------------------------------------------------
+! The vertical eye plus zero matrix
+! A= [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+!	 [0 0 0]
+!	 [0 0 0]
+! -----------------------------------------------------------------------
+subroutine mat_veyezero(A,nrow1,nrow2,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt,       intent(in)	::	nrow1,nrow2	
+	PetscInt					::  ista,iend
+	PetscScalar					::	row
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_veyezero",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_zeros(A,nrow1+nrow2,nrow1,ierr)
+	
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+    
+	do i=ista,iend-1
+		do j=0,nrow1-1
+			if(i==j) then
+				row=real(1.0,kind=8)
+	   			call MatSetValues(A,1,i,1,j,row,INSERT_VALUES,ierr)
+			endif	
+		enddo
+	enddo
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! The vertical zero plus eye matrix
+! A= [0 0 0]
+!	 [0 0 0]
+!	 [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+! -----------------------------------------------------------------------
+subroutine mat_vzeroeye(A,nrow1,nrow2,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt,       intent(in)	::	nrow1,nrow2	
+	PetscInt					::  ista,iend
+	PetscScalar					::	row
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_vzeroeye",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_zeros(A,nrow1+nrow2,nrow2,ierr)
+	
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+    
+	do i=ista,iend-1
+		do j=0,nrow2-1
+			if(i==j+nrow1) then
+				row=real(1.0,kind=8)
+	   			call MatSetValues(A,1,i,1,j,row,INSERT_VALUES,ierr)
+			endif	
+		enddo
+	enddo
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 
 ! -----------------------------------------------------------------------
 ! B=A 
@@ -408,7 +507,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A+B
 ! -----------------------------------------------------------------------
-subroutine mat_add(A,B,C,ierr) 
+subroutine bk_mat_add(A,B,C,ierr) 
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -433,8 +532,9 @@ subroutine mat_add(A,B,C,ierr)
 	call mat_assemble(A,ierr)
 	call mat_assemble(B,ierr)
     alpha=1.0
-    call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
+	call MatDuplicate(A,MAT_COPY_VALUES,C,ierr)
 	call MatAXPY(C,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+     
     call PetscLogEventEnd(ievent,ierr)
 end subroutine 
 
@@ -442,7 +542,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A-B
 ! -----------------------------------------------------------------------
-subroutine mat_minus(A,B,C,ierr) 
+subroutine bk_mat_minus(A,B,C,ierr) 
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -545,6 +645,51 @@ end subroutine
 ! C=[A] 
 !   [B] 
 ! -----------------------------------------------------------------------
+subroutine bk_mat_vjoin(A,B,C,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,	        intent(in)	::  A,B 
+	Mat,            intent(out)	::	C
+	PetscErrorCode,	intent(out)	::	ierr
+	Mat							::	W1,W2,W3
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+	PetscScalar					::  alpha
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+	
+	call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(ncol1/=ncol2)then
+		print *, "Error in mat_vjoin: matrix A and matrix B should have the same column size"
+		stop	
+	endif
+
+	call mat_veyezero(W1,nrow1,nrow2,ierr)
+	call mat_vzeroeye(W2,nrow1,nrow2,ierr)
+	call mat_assemble(W1,ierr)
+	call mat_assemble(W2,ierr)
+    
+	call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr) 
+    call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
+	
+	alpha=1.0
+	call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
+	
+	call mat_destroy(W1,ierr)
+	call mat_destroy(W2,ierr)
+	call mat_destroy(W3,ierr)
+
+	call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 subroutine mat_vjoin(A,B,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -578,7 +723,6 @@ subroutine mat_vjoin(A,B,C,ierr)
 
 	call PetscLogEventEnd(ievent,ierr)
 end subroutine
-
 
 
 ! -----------------------------------------------------------------------
@@ -1063,7 +1207,8 @@ subroutine mat_math(A,opt,B,ierr)
 	call mat_assemble(A,ierr)
     call MatGetSize(A,nrow,ncol,ierr)
 
-    call mat_create(B,nrow,ncol,ierr)
+    !call mat_create(B,nrow,ncol,ierr)
+    call mat_copy(A,B,ierr)
     
     call MatGetOwnershipRange(A,ista,iend,ierr)
 	    
@@ -1266,7 +1411,6 @@ subroutine mat_vec2mat(v,A,ierr)
 	deallocate(ix,y)
 
 end subroutine
-
 
 
 ! -----------------------------------------------------------------------
@@ -1595,6 +1739,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
 	PetscInt,allocatable		::	idxn(:),idxntmp(:)
 	PetscScalar,allocatable		::	row(:),rowtmp(:)
 	PetscInt					::  ista,iend
+	PetscScalar					::  alpha 
 	integer						::	i
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_compare",0, ievent, ierr)
@@ -1609,8 +1754,13 @@ subroutine mat_compare(A,B,opt,C,ierr)
 		print *, "Error: Matrix A and matrix B should have the same size"
 		stop	
 	endif
-   
-    call mat_minus(A,B,W,ierr)
+  	
+	! W=A-B 
+    alpha=-1.0
+    call MatDuplicate(A,MAT_COPY_VALUES,W,ierr)
+	call MatAXPY(W,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+    
+	!call mat_minus(A,B,W,ierr)
     call mat_zeros(C,nrow1,ncol1,ierr)
 	call MatGetOwnershipRange(W,ista,iend,ierr)
 
@@ -1805,5 +1955,4 @@ subroutine mat_cart2sph(A,B,ierr)
 end subroutine
 
  
-
 end module
