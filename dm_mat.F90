@@ -598,7 +598,7 @@ subroutine mat_hjoin(A,B,C,ierr)
     call MatGetSize(A,nrow1,ncol1,ierr)
 	call MatGetSize(B,nrow2,ncol2,ierr)
 	if(nrow1/=nrow2)then
-		print *, "Error: Matrix A and Matrix B should have the same row size"
+		print *, "Error in mat_hjoin: Matrix A and Matrix B should have the same row size"
 		stop	
 	endif
 
