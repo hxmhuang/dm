@@ -1766,7 +1766,7 @@ subroutine dm_diag_set1(A,value,ierr)
 	integer							::	ierr
 	
 	call mat_diag_set(A%x,value,ierr)
-	call dm_set_implicit(A,ierr)
+    call dm_set_explicit(A,ierr)
 end subroutine
 
 subroutine dm_diag_set2(A,value,ierr) 
@@ -1776,7 +1776,7 @@ subroutine dm_diag_set2(A,value,ierr)
 	integer							::	ierr
 	
 	call mat_diag_set(A%x,real(value,kind=8),ierr)
-	call dm_set_implicit(A,ierr)
+    call dm_set_explicit(A,ierr)
 end subroutine
 
 subroutine dm_diag_set3(A,value,ierr) 
@@ -1786,7 +1786,7 @@ subroutine dm_diag_set3(A,value,ierr)
 	integer							::	ierr
 	
 	call mat_diag_set(A%x,real(value,kind=8),ierr)
-	call dm_set_implicit(A,ierr)
+    call dm_set_explicit(A,ierr)
 end subroutine
 
 

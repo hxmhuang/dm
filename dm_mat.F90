@@ -1298,7 +1298,6 @@ subroutine mat_solve(A,b,x,ierr)
     call mat_mat2vec(b,vec_b,ierr)
     call VecDuplicate(vec_b,vec_x,ierr)
 
-    
     call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
     
     call KSPSetOperators(ksp,A,A,ierr)
@@ -1388,27 +1387,24 @@ subroutine mat_vec2mat(v,A,ierr)
 	PetscInt	            	::  nrow	
 	PetscInt					::  ista,iend
 	PetscInt					::  ni
-	PetscInt,allocatable		::  ix(:) 
-	PetscScalar,allocatable		::  y(:) 
+	PetscScalar					::  y 
 	integer 					:: 	i
-     
-    call VecGetSize(v,nrow,ierr)
-    call mat_create(A,nrow,1,ierr)
+    
+	call VecGetSize(v,nrow,ierr)
+    call mat_zeros(A,nrow,1,ierr)
 
     call MatGetOwnershipRange(A,ista,iend,ierr)
     ni=iend-ista
 
-    allocate(ix(ni),y(ni))
-	
 	do i=ista,iend-1
-        ix(i-ista+1)=i 
+		call VecGetValues(v,1,i,y,ierr)
+		if(y /= 0) then
+    		call MatSetValues(A,1,i,1,0,y,INSERT_VALUES,ierr)
+		endif	
     enddo
-    call VecGetValues(v,ni,ix,y,ierr)  
-    call MatSetValues(A,ni,ix,1,0,y,INSERT_VALUES,ierr)
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	
+	call mat_assemble(A,ierr)	
 
-	deallocate(ix,y)
 
 end subroutine
 
@@ -1983,6 +1979,9 @@ subroutine mat_diag_set(A,value,ierr)
 	call VecSetSizes(x,PETSC_DECIDE,nrow,ierr)
 	call VecSetFromOptions(x,ierr)
 	call VecSet(x,value,ierr)
+	!call VecAssemblyBegin(x,ierr)
+	!call VecAssemblyEnd(x,ierr)
+	!call mat_assemble(A,ierr)	
 	
 	call MatDiagonalSet(A,x,INSERT_VALUES,ierr)
 
