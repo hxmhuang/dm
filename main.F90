@@ -465,7 +465,6 @@ program main
  	call dm_destroy(G,ierr)
 
 
-
     if(myrank==0) print *, "==============Test dm_rep================="
     A=dm_eyes(m,m)
     B=dm_rep(A,3,2) 
@@ -1112,6 +1111,29 @@ program main
   	call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
 
+
+    if(myrank==0) print *, "==============Test dm_diag_set============"
+    A=dm_seqs(m,m)
+    B=A
+	C=A
+	D=A
+	call dm_diag_set(B,real(2.0,kind=8),ierr)
+    call dm_diag_set(C,1.5,ierr)
+    call dm_diag_set(D,1,ierr)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_diag_set(A,real(2.0,kind=8))"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_diag_set(A,1.5)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_diag_set(A,1)"
+        call dm_view(D,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
 
 	call dm_finalize(ierr)
 end program

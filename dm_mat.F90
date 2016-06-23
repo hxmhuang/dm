@@ -1954,5 +1954,43 @@ subroutine mat_cart2sph(A,B,ierr)
 	call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
 end subroutine
 
+
+! -----------------------------------------------------------------------
+! Set the diagonal of A to constant value 
+! -----------------------------------------------------------------------
+subroutine mat_diag_set(A,value,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(inout)	::	A
+ 	PetscScalar,    intent(in)		::	value	
+	PetscErrorCode,	intent(out)		::	ierr
+	Vec								::  x 
+	PetscInt						::  nrow,ncol 
+	PetscLogEvent	            	::  ievent
+	call PetscLogEventRegister("mat_diag_set",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+	call MatGetSize(A,nrow,ncol,ierr)
+ 	if(nrow /= ncol) then
+		print *, "Error in mat_diag_set: the row number should equal to the column number"
+		stop	
+	endif
+	
+	call VecCreate(PETSC_COMM_WORLD,x,ierr)
+	call VecSetSizes(x,PETSC_DECIDE,nrow,ierr)
+	call VecSetFromOptions(x,ierr)
+	call VecSet(x,value,ierr)
+	
+	call MatDiagonalSet(A,x,INSERT_VALUES,ierr)
+
+	call VecDestroy(x,ierr)
+    
+	call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
  
 end module

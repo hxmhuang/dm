@@ -88,7 +88,7 @@ module dm
     interface operator (.ed.)
         module procedure dm_ediv
     end interface
-    
+  
     ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin
@@ -135,7 +135,13 @@ module dm
         module procedure dm_setvalues3
     end interface
 	
-    interface assignment(=)
+    interface dm_diag_set
+        module procedure dm_diag_set1
+        module procedure dm_diag_set2
+        module procedure dm_diag_set3
+    end interface
+    
+	interface assignment(=)
         module procedure dm_copy
     end interface
 
@@ -1747,6 +1753,40 @@ subroutine dm_set_explicit(A,ierr)
     A%xtype=MAT_XTYPE_EXPLICIT 
 	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
 	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+end subroutine
+
+
+! -----------------------------------------------------------------------
+! Set the diagonal of A to constant value 
+! -----------------------------------------------------------------------
+subroutine dm_diag_set1(A,value,ierr) 
+	implicit none
+	type(Matrix),	intent(inout)	::  A 
+	real(kind=8),	intent(in)		::  value
+	integer							::	ierr
+	
+	call mat_diag_set(A%x,value,ierr)
+	call dm_set_implicit(A,ierr)
+end subroutine
+
+subroutine dm_diag_set2(A,value,ierr) 
+	implicit none
+	type(Matrix),	intent(inout)	::  A 
+	real,			intent(in)		::  value
+	integer							::	ierr
+	
+	call mat_diag_set(A%x,real(value,kind=8),ierr)
+	call dm_set_implicit(A,ierr)
+end subroutine
+
+subroutine dm_diag_set3(A,value,ierr) 
+	implicit none
+	type(Matrix),	intent(inout)	::  A 
+	integer,		intent(in)		::  value
+	integer							::	ierr
+	
+	call mat_diag_set(A%x,real(value,kind=8),ierr)
+	call dm_set_implicit(A,ierr)
 end subroutine
 
 
