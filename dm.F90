@@ -135,10 +135,10 @@ module dm
         module procedure dm_setvalues3
     end interface
 	
-    interface dm_diag_set
-        module procedure dm_diag_set1
-        module procedure dm_diag_set2
-        module procedure dm_diag_set3
+    interface dm_setdiag
+        module procedure dm_setdiag1
+        module procedure dm_setdiag2
+        module procedure dm_setdiag3
     end interface
     
 	interface assignment(=)
@@ -1157,7 +1157,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! B=A(rows,cols). Get sub matrix.
 ! -----------------------------------------------------------------------
-function dm_submatrix(A,Rows,Cols) result(B)
+function dm_getsub(A,Rows,Cols) result(B)
 	implicit none
 	type(Matrix),	intent(in)	::	A
 	type(Matrix),	intent(in)	::	Rows
@@ -1165,7 +1165,7 @@ function dm_submatrix(A,Rows,Cols) result(B)
 	type(Matrix)				::	B
 	integer						::	ierr
     
-	call mat_submatrix(A%x,Rows%x,Cols%x,B%x,ierr)
+	call mat_getsub(A%x,Rows%x,Cols%x,B%x,ierr)
    	call dm_set_implicit(B,ierr)
  
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1195,7 +1195,7 @@ function dm_getcol(A,n) result(B)
 	!Cols=dm_zeros(1,1)+n	
 	Cols=dm_constants(1,1,n)	
 	
-	call mat_submatrix(A%x, Rows%x, Cols%x, B%x, ierr)
+	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1220,7 +1220,7 @@ function dm_getrow(A,n) result(B)
 	Rows=dm_zeros(1,1)+n	
 	Cols=dm_seqs(A%ncol,1)	
 	
-	call mat_submatrix(A%x, Rows%x, Cols%x, B%x, ierr)
+	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1759,35 +1759,53 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! Set the diagonal of A to constant value 
 ! -----------------------------------------------------------------------
-subroutine dm_diag_set1(A,value,ierr) 
+subroutine dm_setdiag1(A,value,ierr) 
 	implicit none
 	type(Matrix),	intent(inout)	::  A 
 	real(kind=8),	intent(in)		::  value
 	integer							::	ierr
 	
-	call mat_diag_set(A%x,value,ierr)
+	call mat_setdiag(A%x,value,ierr)
     call dm_set_explicit(A,ierr)
 end subroutine
 
-subroutine dm_diag_set2(A,value,ierr) 
+subroutine dm_setdiag2(A,value,ierr) 
 	implicit none
 	type(Matrix),	intent(inout)	::  A 
 	real,			intent(in)		::  value
 	integer							::	ierr
 	
-	call mat_diag_set(A%x,real(value,kind=8),ierr)
+	call mat_setdiag(A%x,real(value,kind=8),ierr)
     call dm_set_explicit(A,ierr)
 end subroutine
 
-subroutine dm_diag_set3(A,value,ierr) 
+subroutine dm_setdiag3(A,value,ierr) 
 	implicit none
 	type(Matrix),	intent(inout)	::  A 
 	integer,		intent(in)		::  value
 	integer							::	ierr
 	
-	call mat_diag_set(A%x,real(value,kind=8),ierr)
+	call mat_setdiag(A%x,real(value,kind=8),ierr)
     call dm_set_explicit(A,ierr)
 end subroutine
 
+
+! -----------------------------------------------------------------------
+! Set one column of A to another matrix B 
+! -----------------------------------------------------------------------
+subroutine dm_setcol(A,idxn,B,ierr)
+	implicit none
+
+	type(Matrix),	intent(inout)	::  A
+	integer,		intent(in)		:: 	idxn 
+	type(Matrix),	intent(in)		::  B 
+	integer,		intent(out)		::	ierr
+
+	call mat_setcol(A%x,idxn,B%x,ierr)	
+    call dm_set_explicit(A,ierr)
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+end subroutine
 
 end module 

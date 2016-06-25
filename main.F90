@@ -763,7 +763,7 @@ program main
   	call dm_destroy(B,ierr)
   	call dm_destroy(C,ierr)
 
-    if(myrank==0) print *, "==============Test dm_submatrix==========="
+    if(myrank==0) print *, "==============Test dm_getsub=============="
     A=dm_seqs(m,m)
     
     B=dm_zeros(2,1)
@@ -774,14 +774,14 @@ program main
     call dm_setvalue(C,0,0,0,ierr)
     call dm_setvalue(C,1,0,1,ierr)
     	
-   	D=dm_submatrix(A,B,C)
-    E=dm_submatrix(dm_seqs(m,m),B,C)
-    F=dm_submatrix(A,dm_seqs(2,1),C)
-    G=dm_submatrix(A,B,dm_seqs(2,1))
-    H=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),C)
-    X=dm_submatrix(dm_seqs(m,m),B,dm_seqs(2,1))
-    Y=dm_submatrix(A,dm_seqs(2,1),dm_seqs(2,1))
-    Z=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))
+   	D=dm_getsub(A,B,C)
+    E=dm_getsub(dm_seqs(m,m),B,C)
+    F=dm_getsub(A,dm_seqs(2,1),C)
+    G=dm_getsub(A,B,dm_seqs(2,1))
+    H=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),C)
+    X=dm_getsub(dm_seqs(m,m),B,dm_seqs(2,1))
+    Y=dm_getsub(A,dm_seqs(2,1),dm_seqs(2,1))
+    Z=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))
 
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -790,21 +790,21 @@ program main
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C="
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_submatrix(A,B,C)"
+        if(myrank==0) print *, ">D=dm_getsub(A,B,C)"
         call dm_view(D,ierr)
-        if(myrank==0) print *, ">E=dm_submatrix(dm_seqs(m,m),B,C)"
+        if(myrank==0) print *, ">E=dm_getsub(dm_seqs(m,m),B,C)"
         call dm_view(E,ierr)
-        if(myrank==0) print *, ">F=dm_submatrix(A,dm_seqs(2,1),C)"
+        if(myrank==0) print *, ">F=dm_getsub(A,dm_seqs(2,1),C)"
         call dm_view(F,ierr)
-        if(myrank==0) print *, ">G=dm_submatrix(A,B,dm_seqs(2,1))"
+        if(myrank==0) print *, ">G=dm_getsub(A,B,dm_seqs(2,1))"
         call dm_view(G,ierr)
-        if(myrank==0) print *, ">H=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),C)"
+        if(myrank==0) print *, ">H=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),C)"
         call dm_view(H,ierr)
-        if(myrank==0) print *, ">X=dm_submatrix(dm_seqs(m,m),B,dm_seqs(2,1))"
+        if(myrank==0) print *, ">X=dm_getsub(dm_seqs(m,m),B,dm_seqs(2,1))"
         call dm_view(X,ierr)
-        if(myrank==0) print *, ">Y=dm_submatrix(A,dm_seqs(2,1),dm_seqs(1,1))"
+        if(myrank==0) print *, ">Y=dm_getsub(A,dm_seqs(2,1),dm_seqs(1,1))"
         call dm_view(Y,ierr)
-        if(myrank==0) print *, ">Z=dm_submatrix(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))"
+        if(myrank==0) print *, ">Z=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))"
         call dm_view(Z,ierr)
  	endif
   	call dm_destroy(A,ierr)
@@ -1112,28 +1112,69 @@ program main
   	call dm_destroy(B,ierr)
 
 
-    if(myrank==0) print *, "==============Test dm_diag_set============"
+    if(myrank==0) print *, "==============Test dm_setdiag============="
     A=dm_seqs(m,m)
     B=A
 	C=A
 	D=A
-	call dm_diag_set(B,real(2.0,kind=8),ierr)
-    call dm_diag_set(C,1.5,ierr)
-    call dm_diag_set(D,1,ierr)
+	call dm_setdiag(B,real(2.0,kind=8),ierr)
+    call dm_setdiag(C,1.5,ierr)
+    call dm_setdiag(D,1,ierr)
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B=dm_diag_set(A,real(2.0,kind=8))"
+        if(myrank==0) print *, ">B=dm_set_diag(A,real(2.0,kind=8))"
         call dm_view(B,ierr)
-        if(myrank==0) print *, ">C=dm_diag_set(A,1.5)"
+        if(myrank==0) print *, ">C=dm_set_diag(A,1.5)"
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_diag_set(A,1)"
+        if(myrank==0) print *, ">D=dm_set_diag(A,1)"
         call dm_view(D,ierr)
  	endif
   	call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
   	call dm_destroy(C,ierr)
   	call dm_destroy(D,ierr)
+
+
+    if(myrank==0) print *, "==============Test dm_setcol=============="
+    A=dm_seqs(m,m)
+    !B=dm_m2n(10,10+m-1)
+    B=dm_veyezero(1,m-1)
+	C=A
+	D=A
+	E=A
+	F=A
+	G=A
+	call dm_setcol(C,0,B,ierr)
+ 	call dm_setcol(D,m-1,B,ierr)
+ 	call dm_setcol(E,m-1,dm_m2n(10,10+m-1),ierr)
+ 	call dm_setcol(F,1,dm_zeros(m,1),ierr)
+ 	call dm_setcol(G,1,dm_ones(m,1),ierr)
+
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_setcol(A,0,B)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_setcol(A,m-1,dm_m2n(10,10+m-1))"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=dm_setcol(A,m-1,dm_m2n(10,10+m))"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=dm_setcol(A,1,dm_zeros(m,1))"
+        call dm_view(F,ierr)
+        if(myrank==0) print *, ">G=dm_setcol(A,1,dm_ones(m,1))"
+        call dm_view(G,ierr)
+ 	endif
+  	call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+  	call dm_destroy(C,ierr)
+  	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
+  	call dm_destroy(G,ierr)
+
 
 	call dm_finalize(ierr)
 end program

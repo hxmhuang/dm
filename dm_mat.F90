@@ -1523,7 +1523,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! B=A(rows,cols). Note that Rows and Cols should be m*1 matrix.
 ! -----------------------------------------------------------------------
-subroutine mat_submatrix(A,Rows,Cols,B,ierr)
+subroutine mat_getsub(A,Rows,Cols,B,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1534,7 +1534,7 @@ subroutine mat_submatrix(A,Rows,Cols,B,ierr)
 	Mat,			intent(out)	:: 	B
 	IS							:: 	ISRows,ISCols
     PetscLogEvent               ::  ievent
-    call PetscLogEventRegister("mat_submatrix",0, ievent, ierr) 
+    call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 	
 	call mat_assemble(A,ierr)
@@ -1818,9 +1818,7 @@ subroutine mat_compare(A,B,opt,C,ierr)
 		call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
         deallocate(idxn,idxntmp,row,rowtmp)
 	enddo
-
-	call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-	call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+	call mat_assemble(C,ierr)
     call mat_destroy(W,ierr) 
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -1954,7 +1952,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! Set the diagonal of A to constant value 
 ! -----------------------------------------------------------------------
-subroutine mat_diag_set(A,value,ierr)
+subroutine mat_setdiag(A,value,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1966,7 +1964,7 @@ subroutine mat_diag_set(A,value,ierr)
 	Vec								::  x 
 	PetscInt						::  nrow,ncol 
 	PetscLogEvent	            	::  ievent
-	call PetscLogEventRegister("mat_diag_set",0, ievent, ierr)
+	call PetscLogEventRegister("mat_setdiag",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
 	call MatGetSize(A,nrow,ncol,ierr)
@@ -1991,5 +1989,64 @@ subroutine mat_diag_set(A,value,ierr)
 end subroutine
 
 
- 
+subroutine mat_setcol(A,idxn,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(inout)	::  A 
+	Mat,			intent(in)		::  B 
+	PetscInt,		intent(in)		:: 	idxn	
+	PetscErrorCode,	intent(out)		::	ierr
+	PetscInt						::	nrow1,ncol1,nrow2,ncol2
+	PetscInt						::	col1,col2,m,n
+	PetscInt						::	idxn1(1),idxn2(1)
+	PetscScalar						::	row1(1),row2(1)
+	PetscInt						::  ista,iend
+	integer							::	i
+	PetscLogEvent	            	::  ievent
+	call PetscLogEventRegister("mat_setcol",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+    
+	call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(nrow1/=nrow2)then
+		print *, "Error in mat_setcol: Matrix A and Matrix B should have the same row number"
+		stop	
+	endif
+    if(ncol2/=1)then
+		print *, "Error in mat_setcol: the column number of Matrix B should be 1"
+		stop	
+	endif
+
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	   
+	m=0
+	!call MatZeroRows(A,1,idxn,0.0,0,0,ierr) 
+    do i=ista,iend-1
+		idxn1=0
+		idxn2=0
+		row2=0
+		row1=0 
+        call MatGetRow(B,i,col2,idxn2,row2,ierr)
+		print *,">i=",i,"idxn2=",idxn1,"row2=",row2
+        m=col2
+        idxn1=idxn2
+        row1=row2
+	    call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
+		
+		print *,">m=",m,"idxn1=",idxn1,"row1=",row1
+		!if(m > 0) then	
+			call MatSetValues(A,1,i,1,idxn,row1,INSERT_VALUES,ierr)
+		!endif
+	enddo
+
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 end module
