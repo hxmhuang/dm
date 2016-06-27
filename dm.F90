@@ -1808,4 +1808,65 @@ subroutine dm_setcol(A,idxn,B,ierr)
     endif
 end subroutine
 
+
+subroutine dm_test(m,n,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	PetscInt,		intent(in)	::	m,n	
+	PetscErrorCode,	intent(out)	::	ierr
+	Mat				            ::	A,B,C
+
+	PetscInt					::  ista1,iend1
+	PetscInt					::  ista2,iend2
+	PetscInt,allocatable		::	idxn(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i,j
+	
+    call MatCreate(PETSC_COMM_WORLD,A,ierr);
+	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
+	call MatSetFromOptions(A,ierr)
+	call MatSetUp(A,ierr)
+	call MatGetOwnershipRange(A,ista1,iend1,ierr)
+ 	
+    allocate(idxn(n),row(n))
+    do i=ista1,iend1-1
+    	do j=1,n
+    		idxn(j)=j-1
+    		row(j)=i*n+j-1
+    	enddo
+    	call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
+    enddo
+ 	deallocate(idxn,row)
+
+    call MatCreate(PETSC_COMM_SELF,B,ierr);
+    call MatSetSizes(B,PETSC_DECIDE,PETSC_DECIDE,n,m,ierr)
+    call MatSetFromOptions(B,ierr)
+    call MatSetUp(B,ierr)
+    call MatGetOwnershipRange(B,ista2,iend2,ierr)
+
+    allocate(idxn(m),row(m))
+    do i=ista2,iend2-1
+    	do j=1,m
+    		idxn(j)=j-1
+    		row(j)=i*n+j-1
+    	enddo
+    	call MatSetValues(B,1,i,n,idxn,row,INSERT_VALUES,ierr)
+    enddo
+ 	deallocate(idxn,row)
+
+    call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+    call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+    call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
+    call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
+    
+!    call MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr) 
+
+!   call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
+!   call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+!   call MatView(C,PETSC_VIEWER_STDOUT_WORLD, ierr)
+end subroutine
+
 end module 

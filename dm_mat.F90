@@ -2033,15 +2033,15 @@ subroutine mat_setcol(A,idxn,B,ierr)
 		row2=0
 		row1=0 
         call MatGetRow(B,i,col2,idxn2,row2,ierr)
-		print *,">i=",i,"idxn2=",idxn1,"row2=",row2
+		!print *,">i=",i,"idxn2=",idxn1,"row2=",row2
         m=col2
         idxn1=idxn2
         row1=row2
 	    call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
 		
-		print *,">m=",m,"idxn1=",idxn1,"row1=",row1
+		!print *,">m=",m,"idxn1=",idxn1,"row1=",row1
 		!if(m > 0) then	
-			call MatSetValues(A,1,i,1,idxn,row1,INSERT_VALUES,ierr)
+		call MatSetValues(A,1,i,1,idxn,row1,INSERT_VALUES,ierr)
 		!endif
 	enddo
 

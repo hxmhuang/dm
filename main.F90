@@ -1176,5 +1176,8 @@ program main
   	call dm_destroy(G,ierr)
 
 
+    if(myrank==0) print *, "==============Test dm_test================"
+    call dm_test(m,n,ierr)
+
 	call dm_finalize(ierr)
 end program
