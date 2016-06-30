@@ -76,7 +76,7 @@ module dm
         module procedure dm_nq1
         module procedure dm_nq2
         module procedure dm_nq3
-        module procedure dm_eq4
+        module procedure dm_nq4
     end interface
   
   	! element multiple
@@ -253,7 +253,7 @@ subroutine dm_view(A,ierr)
     implicit none
     type(Matrix),  intent(in)   ::  A
     integer,	   intent(out)	::  ierr 
-   call mat_view(A%x,A%isGlobal,ierr)
+   call mat_view(A%x,ierr)
 end subroutine 
 
 ! -----------------------------------------------------------------------
@@ -279,17 +279,11 @@ subroutine dm_create(A,m,n,isGlobal,ierr)
     integer,        intent(out)         ::  ierr
      
     if (present(isGlobal)) then
-        if(isGlobal) then
-            call mat_create(A%x,m,n,ierr)
-            A%isGlobal=.true.
-        else
-            call mat_create_local(A%x,m,n,ierr)
-            A%isGlobal=.false.
-        endif
+		A%isGlobal=isGlobal
     else
-        call mat_create(A%x,m,n,ierr)
         A%isGlobal=.true.
     endif
+	call mat_create(A%x,m,n,isGlobal,ierr)
 end subroutine 
 
 
@@ -308,7 +302,7 @@ function dm_zeros(m,n,isGlobal) result(A)
     else
         call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_zeros(A%x,m,n,ierr)
+    call mat_zeros(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -328,7 +322,7 @@ function dm_ones(m,n,isGlobal) result(A)
     else
         call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_ones(A%x,m,n,ierr)
+    call mat_ones(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -349,7 +343,7 @@ function dm_constants1(m,n,alpha,isGlobal) result(A)
     else
         call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_constants(A%x,m,n,alpha,ierr)
+    call mat_constants(A%x,alpha,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -395,7 +389,7 @@ function dm_seqs(m,n,isGlobal) result(A)
     else
         call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_seqs(A%x,m,n,ierr)
+    call mat_seqs(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -462,7 +456,7 @@ function dm_eyes(m,n,isGlobal) result(A)
         call dm_create(A,m,n,.true.,ierr)
     endif
 
-    call mat_eyes(A%x,m,n,ierr)
+    call mat_eyes(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function 
 
@@ -595,7 +589,7 @@ function dm_add2(A,alpha) result(C)
 	integer						::	ierr
     
     call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
-    call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
+    call mat_constants(B%x,alpha,ierr) 
     C=dm_add1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -696,7 +690,7 @@ function dm_minus2(A,alpha) result(C)
 	integer						::	ierr
 
     call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
+	call mat_constants(B%x,alpha,ierr) 
     C=dm_minus1(A,B)
 	call dm_set_implicit(C,ierr)
 end function 
@@ -718,9 +712,9 @@ function dm_minus4(alpha,A) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
-	
-    call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
+    
+	call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
+	call mat_constants(B%x,alpha,ierr) 
     C=dm_minus1(B,A)
     call dm_set_implicit(C,ierr)
 end function 
@@ -804,7 +798,7 @@ function dm_vjoin(A,B) result(C)
 		stop	
 	endif
     
-    call mat_vjoin(A%x,B%x,A%isGlobal,C%x,ierr)
+    call mat_vjoin(A%x,B%x,C%x,ierr)
     C%isGlobal=A%isGlobal
 	call dm_set_implicit(C,ierr)
 
@@ -817,7 +811,6 @@ function dm_vjoin(A,B) result(C)
 end function 
 
 
-
 ! -----------------------------------------------------------------------
 ! C=A*B
 ! -----------------------------------------------------------------------
@@ -827,7 +820,19 @@ function dm_mult1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_mult: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	if(A%ncol /= B%nrow)then
+ 		print *, "Error in dm_mult: the column of A matrix should equal to the row of B matrix."
+		stop	
+	endif
+    
     call mat_mult(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -846,6 +851,7 @@ function dm_mult2(alpha,A) result(B)
 	integer						::	ierr
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,alpha,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -912,10 +918,23 @@ function dm_emult(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-    call mat_emult(A%x,B%x,C%x,ierr)
-    call dm_set_implicit(C,ierr)
     
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
+		print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
+		stop	
+	endif
+   
+	call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
+    call mat_emult(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	call dm_set_implicit(C,ierr)
+    
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
     if (B%xtype==MAT_XTYPE_IMPLICIT) then
@@ -933,8 +952,21 @@ function dm_ediv(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+  
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
+		print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
+		stop	
+	endif
+   
+	call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
     call mat_ediv(A%x,B%x,C%x,ierr)
-    call dm_set_implicit(C,ierr)
+    C%isGlobal=A%isGlobal
+	call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -955,6 +987,7 @@ function dm_rep(A,m,n) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_rep(A%x,m,n,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -978,6 +1011,7 @@ function dm_sum(A,ndim) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_sum(A%x,ndim,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -989,14 +1023,15 @@ end function
 ! -----------------------------------------------------------------------
 ! Compute Y = a*X + Y.
 ! -----------------------------------------------------------------------
-
 subroutine dm_axpy1(Y,a,X,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::  X 
 	real(kind=8),   intent(in)	::	a
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
+	!call dm_create(Y,X%nrow,X%ncol,X%isGlobal,ierr)
     call mat_axpy(Y%x,a,X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1011,6 +1046,7 @@ subroutine dm_axpy2(Y,a,X,ierr)
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1025,6 +1061,7 @@ subroutine dm_axpy3(Y,a,X,ierr)
 	type(Matrix), 	intent(inout) 	::  Y 
 	integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1043,6 +1080,7 @@ subroutine dm_aypx1(Y,a,X,ierr)
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,a,X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1057,6 +1095,7 @@ subroutine dm_aypx2(Y,a,X,ierr)
 	type(Matrix), intent(inout) ::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1071,12 +1110,14 @@ subroutine dm_aypx3(Y,a,X,ierr)
 	type(Matrix), 	intent(inout) 	::  Y 
 	integer,		intent(out)	::	ierr
     call mat_aypx(Y%x,real(a,kind=8),X%x,ierr)
+    Y%isGlobal=X%isGlobal
     call dm_set_explicit(Y,ierr)
     
     if (X%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(X%x,ierr)
     endif
 end subroutine
+
 
 ! -----------------------------------------------------------------------
 ! B = A^T.
@@ -1086,7 +1127,9 @@ function dm_trans(A) result(B)
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix)              	::	B
 	integer						::	ierr
+
     call mat_trans(A%x,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1104,7 +1147,14 @@ function dm_xyt(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-    call mat_xyt(A%x,B%x,C%x,ierr)
+     
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_xyt: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	call mat_xyt(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1125,7 +1175,14 @@ function dm_xty(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-    call mat_xty(A%x,B%x,C%x,ierr)
+     
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_xyt: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	call mat_xty(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1147,6 +1204,7 @@ function dm_exp(A) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_math(A%x,MAT_MATH_EXP,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1165,6 +1223,7 @@ function dm_log(A) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_math(A%x,MAT_MATH_LOG,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1183,6 +1242,7 @@ function dm_squ(A) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_math(A%x,MAT_MATH_SQU,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1200,6 +1260,7 @@ function dm_cube(A) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_math(A%x,MAT_MATH_CUBE,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1219,6 +1280,7 @@ function dm_sqrt(A) result(B)
 	type(Matrix)              	::	B
 	integer						::	ierr
     call mat_math(A%x,MAT_MATH_SQRT,B%x,ierr)
+    B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1237,7 +1299,23 @@ function dm_solve(A,B) result(X)
 	type(Matrix)            	::	X
 	integer						::	ierr
     
-    call mat_solve(A%x,B%x,X%x,ierr)
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_solve: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+    
+	 if(A%nrow /= B%nrow) then
+        call dm_printf("Error in dm_solve: Matrix A and B should have the same row size.",ierr)
+        stop
+    endif
+     
+	 if(B%ncol /= 1) then
+        call dm_printf("Error in dm_solve: the column of B should be 1.",ierr)
+        stop
+    endif
+
+	call mat_solve(A%x,B%x,X%x,ierr)
+	X%isGlobal=A%isGlobal
     call dm_set_implicit(X,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1252,13 +1330,15 @@ end function
 ! -----------------------------------------------------------------------
 ! Load a standard row-cloumn file into a matrix 
 ! -----------------------------------------------------------------------
-subroutine dm_load(filename,A,ierr)
+subroutine dm_load(filename,isGlobal,A,ierr)
 	implicit none
     character(len=*),   intent(in)  ::  filename 
+    logical,   			intent(in)  ::  isGlobal 
 	type(Matrix),		intent(out)	::  A 
 	integer,			intent(out)	::	ierr
     
-    call mat_load(filename,A%x,ierr)
+	A%isGlobal=isGlobal
+    call mat_load(filename,A%isGlobal,A%x,ierr)
 	call dm_set_explicit(A,ierr)
 end subroutine 
 
@@ -1333,12 +1413,12 @@ function dm_getcol(A,n) result(B)
 	type(Matrix)				::	B
 	integer						::	ierr
 	type(Matrix)				::  Rows,Cols
-	
-	Rows=dm_seqs(A%nrow,1)	
-	!Cols=dm_zeros(1,1)+n	
-	Cols=dm_constants(1,1,n)	
+
+	Rows=dm_seqs(A%nrow,1,A%isGlobal)	
+	Cols=dm_constants(1,1,n,A%isGlobal)	
 	
 	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
+	B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1360,10 +1440,11 @@ function dm_getrow(A,n) result(B)
 	integer						::	ierr
    	type(Matrix)				::  Rows,Cols
 	
-	Rows=dm_zeros(1,1,A%isGlobal)+n	
+	Rows=dm_constants(1,1,n,A%isGlobal)	
 	Cols=dm_seqs(A%ncol,1)	
 	
 	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
+	B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1494,7 +1575,19 @@ function dm_lt1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-    call mat_compare(A%x,B%x,MAT_COMPARE_LT,C%x,ierr)
+	
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_lt: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+    
+	call mat_compare(A%x,B%x,MAT_COMPARE_LT,C%x,ierr)
+	C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1514,7 +1607,10 @@ function dm_lt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1526,7 +1622,10 @@ function dm_lt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1538,7 +1637,11 @@ function dm_lt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	 
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+	
     C=dm_lt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1554,6 +1657,17 @@ function dm_le1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+ 
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error in dm_le: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_le: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
     call mat_compare(A%x,B%x,MAT_COMPARE_LE,C%x,ierr)
     call dm_set_implicit(C,ierr)
     
@@ -1574,7 +1688,10 @@ function dm_le2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1586,7 +1703,10 @@ function dm_le3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1598,7 +1718,10 @@ function dm_le4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_le1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1614,6 +1737,17 @@ function dm_gt1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+	
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error in dm_gt: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_gt: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
     call mat_compare(A%x,B%x,MAT_COMPARE_GT,C%x,ierr)
     call dm_set_implicit(C,ierr)
     
@@ -1634,7 +1768,11 @@ function dm_gt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1646,7 +1784,10 @@ function dm_gt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1658,7 +1799,10 @@ function dm_gt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_gt1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1674,6 +1818,17 @@ function dm_ge1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+	
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error in dm_ge: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_ge: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
     call mat_compare(A%x,B%x,MAT_COMPARE_GE,C%x,ierr)
     call dm_set_implicit(C,ierr)
     
@@ -1693,8 +1848,11 @@ function dm_ge2(A,alpha) result(C)
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr)
+	integer						::	ierr
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1705,8 +1863,11 @@ function dm_ge3(A,alpha) result(C)
 	real,	        intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
+	integer						::	ierr
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1717,8 +1878,11 @@ function dm_ge4(A,alpha) result(C)
 	integer,	    intent(in)	::  alpha 
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
-	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr)
+	integer						::	ierr
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_ge1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1734,6 +1898,17 @@ function dm_eq1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+	
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error in dm_eq: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_eq: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
     call mat_compare(A%x,B%x,MAT_COMPARE_EQ,C%x,ierr)
     call dm_set_implicit(C,ierr)
     
@@ -1754,7 +1929,10 @@ function dm_eq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1766,7 +1944,10 @@ function dm_eq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1778,7 +1959,10 @@ function dm_eq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_eq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1794,7 +1978,19 @@ function dm_nq1(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+	
+	if(A%nrow/=B%nrow .or. A%ncol/=B%ncol)then
+		print *, "Error in dm_nq: Matrix A and matrix B should have the same size"
+		stop	
+	endif
+ 
+	if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_nq: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
     call mat_compare(A%x,B%x,MAT_COMPARE_NQ,C%x,ierr)
+	C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1814,7 +2010,10 @@ function dm_nq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,alpha,ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1826,7 +2025,10 @@ function dm_nq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1838,10 +2040,14 @@ function dm_nq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-	call mat_constants(B%x,A%nrow,A%ncol,real(alpha,kind=8),ierr) 	
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
     C=dm_nq1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
+
 
 ! -----------------------------------------------------------------------
 ! sparse(i,j,A,B,ierr)
@@ -1853,6 +2059,12 @@ function dm_sparse(Ind_i,Ind_j,A,m,n) result(B)
 	integer,	intent(in)		::	m,n	
 	type(Matrix)				::  B 
 	integer						::	ierr
+ 
+    if((Ind_i%isGlobal .neqv. Ind_j%isGlobal) .or. (A%isGlobal .neqv. Ind_i%isGlobal) ) then
+        call dm_printf("Error in dm_sparse: Matrix Ind_i, Ind_j and A should have the same distribution.",ierr)
+        stop
+    endif
+	B=dm_zeros(m,n,A%isGlobal)
 	call mat_sparse(Ind_i%x,Ind_j%x,A%x,m,n,B%x,ierr)
 	call dm_set_implicit(B,ierr)
 end function 
@@ -1867,6 +2079,8 @@ subroutine dm_cart2sph(A,B,ierr)
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(out)	::  B 
 	integer,		intent(out)	::	ierr
+	
+	B=dm_zeros(A%nrow,A%ncol,A%isGlobal)
 	call mat_cart2sph(A%x,B%x,ierr)
 	call dm_set_explicit(B,ierr)
 end subroutine
@@ -1944,6 +2158,16 @@ subroutine dm_setcol(A,idxn,B,ierr)
 	type(Matrix),	intent(in)		::  B 
 	integer,		intent(out)		::	ierr
 
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_setcol: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+	if(A%nrow/= B%nrow)then
+		print *, "Error in dm_setcol: Matrix A and Matrix B should have the same row size."
+		stop	
+	endif
+
 	call mat_setcol(A%x,idxn,B%x,ierr)	
     call dm_set_explicit(A,ierr)
     if (B%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1958,17 +2182,21 @@ subroutine dm_test(m,n,ierr)
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscksp.h>
+#include <petsc/finclude/petscpc.h>
 	PetscInt,		intent(in)	::	m,n	
 	PetscErrorCode,	intent(out)	::	ierr
-	Mat				            ::	A,B,C
-
+	Mat				            ::	A
+	Vec							:: 	b,x
+    KSP                         ::  ksp
+    PC                          ::  pc
 	PetscInt					::  ista1,iend1
-	PetscInt					::  ista2,iend2
 	PetscInt,allocatable		::	idxn(:)
 	PetscScalar,allocatable		::	row(:)
 	integer 					:: 	i,j
+	PetscScalar					:: 	alpha
 	
-    call MatCreate(PETSC_COMM_WORLD,A,ierr);
+    call MatCreate(PETSC_COMM_SELF,A,ierr);
 	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
 	call MatSetFromOptions(A,ierr)
 	call MatSetUp(A,ierr)
@@ -1978,37 +2206,35 @@ subroutine dm_test(m,n,ierr)
     do i=ista1,iend1-1
     	do j=1,n
     		idxn(j)=j-1
-    		row(j)=i*n+j-1
+    		row(j)=1
     	enddo
     	call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
     enddo
  	deallocate(idxn,row)
-
-    call MatCreate(PETSC_COMM_SELF,B,ierr);
-    call MatSetSizes(B,PETSC_DECIDE,PETSC_DECIDE,n,m,ierr)
-    call MatSetFromOptions(B,ierr)
-    call MatSetUp(B,ierr)
-    call MatGetOwnershipRange(B,ista2,iend2,ierr)
-
-    allocate(idxn(m),row(m))
-    do i=ista2,iend2-1
-    	do j=1,m
-    		idxn(j)=j-1
-    		row(j)=i*n+j-1
-    	enddo
-    	call MatSetValues(B,1,i,n,idxn,row,INSERT_VALUES,ierr)
-    enddo
- 	deallocate(idxn,row)
-
-    call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
     call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr)
-    
-!    call MatMatMult(A,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr) 
+	call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)	
 
-!   call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-!   call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
+	alpha=3.0	
+	call VecCreate(PETSC_COMM_SELF,b,ierr)
+    call VecSetSizes(b,PETSC_DECIDE,m,ierr)
+    call VecSetFromOptions(b,ierr)
+	call VecSet(b,alpha,ierr)
+
+	call VecAssemblyBegin(b,ierr)
+    call VecAssemblyEnd(b,ierr)
+	call VecView(b,	PETSC_VIEWER_STDOUT_SELF,ierr) 
+    
+    call VecDuplicate(b,x,ierr)
+    
+	call KSPCreate(PETSC_COMM_SELF,ksp,ierr)
+    call KSPSetOperators(ksp,A,A,ierr)
+    call KSPGetPC(ksp,pc,ierr)
+    call KSPSetTolerances(ksp,1.0E-10,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL,PETSC_DEFAULT_INTEGER,ierr)
+    call KSPSetFromOptions(ksp,ierr)
+    call KSPSolve(ksp,b,x,ierr)
+    
+	call VecView(x,	PETSC_VIEWER_STDOUT_SELF,ierr) 
 !   call MatView(C,PETSC_VIEWER_STDOUT_WORLD, ierr)
 end subroutine
 
