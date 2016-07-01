@@ -134,7 +134,7 @@ module dm
         module procedure dm_setvalues2
         module procedure dm_setvalues3
     end interface
-	
+
     interface dm_setdiag
         module procedure dm_setdiag1
         module procedure dm_setdiag2
@@ -1152,7 +1152,6 @@ function dm_xyt(A,B) result(C)
         call dm_printf("Error in dm_xyt: Matrix A and B should have the same distribution.",ierr)
         stop
     endif
-
 	call mat_xyt(A%x,B%x,C%x,ierr)
     C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
@@ -1389,6 +1388,7 @@ function dm_getsub(A,Rows,Cols) result(B)
 	integer						::	ierr
     
 	call mat_getsub(A%x,Rows%x,Cols%x,B%x,ierr)
+	B%isGLobal=A%isGlobal
    	call dm_set_implicit(B,ierr)
  
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1441,7 +1441,7 @@ function dm_getrow(A,n) result(B)
    	type(Matrix)				::  Rows,Cols
 	
 	Rows=dm_constants(1,1,n,A%isGlobal)	
-	Cols=dm_seqs(A%ncol,1)	
+	Cols=dm_seqs(A%ncol,1,A%isGlobal)	
 	
 	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
 	B%isGlobal=A%isGlobal
@@ -1450,53 +1450,50 @@ function dm_getrow(A,n) result(B)
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
-	call mat_destroy(Rows%x,ierr)
-	call mat_destroy(Cols%x,ierr)
+ 	call mat_destroy(Rows%x,ierr)
+ 	call mat_destroy(Cols%x,ierr)
 end function 
 
 
 ! -----------------------------------------------------------------------
 ! Set local values in A.
 ! -----------------------------------------------------------------------
-subroutine dm_setvalues1(A,m,idxm,n,idxn,v,ierr)
+subroutine dm_setvalues1(A,idxm,idxn,v,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::	A
-	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
 	real(kind=8),	intent(in)	::	v(:)	
 	integer,		intent(out)	::	ierr
    	
-	call mat_setvalues(A%x,m,idxm,n,idxn,v,ierr) 
+	call mat_setvalues(A%x,idxm,idxn,v,ierr) 
     
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end subroutine 
 
-subroutine dm_setvalues2(A,m,idxm,n,idxn,v,ierr)
+subroutine dm_setvalues2(A,idxm,idxn,v,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::	A
-	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
 	real,			intent(in)	::	v(:)	
 	integer,		intent(out)	::	ierr
 
-	call mat_setvalues(A%x,m,idxm,n,idxn,real(v,8),ierr) 
+	call mat_setvalues(A%x,idxm,idxn,real(v,8),ierr) 
     
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end subroutine 
 
-subroutine dm_setvalues3(A,m,idxm,n,idxn,v,ierr)
+subroutine dm_setvalues3(A,idxm,idxn,v,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::	A
-	integer,		intent(in)	:: 	m,n
 	integer,		intent(in)	::	idxm(:),idxn(:)
 	integer,		intent(in)	::	v(:)	
 	integer,		intent(out)	::	ierr
 
-	call mat_setvalues(A%x,m,idxm,n,idxn,real(v,8),ierr) 
+	call mat_setvalues(A%x,idxm,idxn,real(v,8),ierr) 
     
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -1507,20 +1504,21 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! Get local values in A.
 ! -----------------------------------------------------------------------
-subroutine dm_getvalues(A,m,idxm,n,idxn,v,ierr)
+subroutine dm_getvalues(A,idxm,idxn,v,ierr)
 	implicit none
 	type(Matrix),	intent(in)	::	A
-	integer,		intent(in)	:: 	m,n
-	integer,		intent(in)	::	idxm(:),idxn(:)
+	integer,		intent(in)	::	idxm(:)
+	integer,		intent(in)	::	idxn(:)
 	real(kind=8),	intent(inout)	::	v(:)	
 	integer,		intent(out)	::	ierr
    	
-	call mat_getvalues(A%x,m,idxm,n,idxn,v,ierr) 
+	call mat_getvalues(A%x,idxm,idxn,v,ierr) 
     
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
 end subroutine 
+
 
 ! -----------------------------------------------------------------------
 ! Norm(A)
@@ -1669,6 +1667,7 @@ function dm_le1(A,B) result(C)
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_LE,C%x,ierr)
+	C%isGlobal=A%isGlobal	
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1749,6 +1748,7 @@ function dm_gt1(A,B) result(C)
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_GT,C%x,ierr)
+	C%isGlobal=A%isGlobal	
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1830,6 +1830,7 @@ function dm_ge1(A,B) result(C)
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_GE,C%x,ierr)
+	C%isGlobal=A%isGlobal	
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1910,6 +1911,7 @@ function dm_eq1(A,B) result(C)
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_EQ,C%x,ierr)
+	C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
     
     if (A%xtype==MAT_XTYPE_IMPLICIT) then

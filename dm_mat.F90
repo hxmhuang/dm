@@ -1484,21 +1484,23 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! Set local array from A.
 ! -----------------------------------------------------------------------
-subroutine mat_setvalues(A,m,idxm,n,idxn,v,ierr)
+subroutine mat_setvalues(A,idxm,idxn,v,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     Mat,       	intent(in)      :: A 
-	PetscInt,	intent(in)		:: m,n
 	PetscInt,intent(in)			:: idxm(:),idxn(:) 
 	PetscScalar,intent(in)		:: v(:)
+	PetscInt					:: m,n
 	PetscErrorCode      	    :: ierr
     PetscLogEvent               :: ievent
     call PetscLogEventRegister("mat_setvalues",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
  
+	m=size(idxm)
+	n=size(idxn)	
 	call MatSetValues(A,m,idxm,n,idxn,v,INSERT_VALUES,ierr) 
 	
     call PetscLogEventEnd(ievent,ierr) 
@@ -1508,21 +1510,22 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! Get local array from A.
 ! -----------------------------------------------------------------------
-subroutine mat_getvalues(A,m,idxm,n,idxn,v,ierr)
+subroutine mat_getvalues(A,idxm,idxn,v,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     Mat,       	intent(in)      :: A 
-	PetscInt,	intent(in)		:: m,n
 	PetscInt,intent(in)			:: idxm(:),idxn(:) 
 	PetscScalar,intent(inout)	:: v(:)
 	PetscErrorCode      	    :: ierr
+	PetscInt					:: m,n
     PetscLogEvent               :: ievent
     call PetscLogEventRegister("mat_getvalues",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
-	
+	m=size(idxm)
+	n=size(idxn)	
 	call mat_assemble(A,ierr)	
     call MatGetValues(A,m,idxm,n,idxn,v,ierr) 
 !	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
