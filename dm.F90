@@ -1390,26 +1390,20 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! B=A(rows,cols). Get sub matrix.
 ! -----------------------------------------------------------------------
-function dm_getsub(A,Rows,Cols) result(B)
+function dm_getsub(A,rows,cols) result(B)
 	implicit none
 	type(Matrix),	intent(in)	::	A
-	type(Matrix),	intent(in)	::	Rows
-	type(Matrix),	intent(in)	::	Cols
+	integer,		intent(in)	::	rows(:),cols(:)
 	type(Matrix)				::	B
 	integer						::	ierr
     
-	call mat_getsub(A%x,Rows%x,Cols%x,B%x,ierr)
+	!print *, "A%isGLobal=",A%isGlobal
+	call mat_getsub(A%x,rows,cols,B%x,ierr)
 	B%isGLobal=A%isGlobal
    	call dm_set_implicit(B,ierr)
  
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
-    endif
-    if (Rows%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(Rows%x,ierr)
-    endif
-    if (Cols%xtype==MAT_XTYPE_IMPLICIT) then
-        call mat_destroy(Cols%x,ierr)
     endif
 end function 
 
@@ -1423,20 +1417,24 @@ function dm_getcol(A,n) result(B)
     integer,        intent(in)  ::  n
 	type(Matrix)				::	B
 	integer						::	ierr
-	type(Matrix)				::  Rows,Cols
-
-	Rows=dm_seqs(A%nrow,1,A%isGlobal)	
-	Cols=dm_constants(1,1,n,A%isGlobal)	
+	integer,allocatable			::	rows(:),cols(:)
+	integer 					:: 	i
 	
-	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
+	allocate(rows(A%nrow),cols(1))	
+	cols(1)=n
+	do i=1,A%nrow
+		rows(i)=i-1
+	enddo	
+	
+	call mat_getsub(A%x, rows, cols, B%x, ierr)
 	B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
     
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+	deallocate(rows,cols)	
+    
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
-	call mat_destroy(Rows%x,ierr)
-	call mat_destroy(Cols%x,ierr)
 end function 
  
 
@@ -1449,20 +1447,24 @@ function dm_getrow(A,n) result(B)
     integer,        intent(in)  ::  n
 	type(Matrix)				::	B
 	integer						::	ierr
-   	type(Matrix)				::  Rows,Cols
+	integer,allocatable			::	rows(:),cols(:)
+	integer 					:: 	i
 	
-	Rows=dm_constants(1,1,n,A%isGlobal)	
-	Cols=dm_seqs(A%ncol,1,A%isGlobal)	
+	allocate(rows(1),cols(A%ncol))	
+	rows(1)=n
+	do i=1,A%ncol
+		cols(i)=i-1
+	enddo	
 	
-	call mat_getsub(A%x, Rows%x, Cols%x, B%x, ierr)
+	call mat_getsub(A%x, rows, cols, B%x, ierr)
 	B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
-    
+   	
+	deallocate(rows,cols)	
+
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
- 	call mat_destroy(Rows%x,ierr)
- 	call mat_destroy(Cols%x,ierr)
 end function 
 
 
@@ -2197,58 +2199,17 @@ subroutine dm_test(m,n,ierr)
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscksp.h>
 #include <petsc/finclude/petscpc.h>
-	PetscInt,		intent(in)	::	m,n	
-	PetscErrorCode,	intent(out)	::	ierr
-	Mat				            ::	A
-	Vec							:: 	b,x
-    KSP                         ::  ksp
-    PC                          ::  pc
-	PetscInt					::  ista1,iend1
-	PetscInt,allocatable		::	idxn(:)
-	PetscScalar,allocatable		::	row(:)
-	integer 					:: 	i,j
-	PetscScalar					:: 	alpha
-	
-    call MatCreate(PETSC_COMM_SELF,A,ierr);
-	call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m,n,ierr)
-	call MatSetFromOptions(A,ierr)
-	call MatSetUp(A,ierr)
-	call MatGetOwnershipRange(A,ista1,iend1,ierr)
- 	
-    allocate(idxn(n),row(n))
-    do i=ista1,iend1-1
-    	do j=1,n
-    		idxn(j)=j-1
-    		row(j)=1
-    	enddo
-    	call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
-    enddo
- 	deallocate(idxn,row)
-	call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-    call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
-	call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)	
-
-	alpha=3.0	
-	call VecCreate(PETSC_COMM_SELF,b,ierr)
-    call VecSetSizes(b,PETSC_DECIDE,m,ierr)
-    call VecSetFromOptions(b,ierr)
-	call VecSet(b,alpha,ierr)
-
-	call VecAssemblyBegin(b,ierr)
-    call VecAssemblyEnd(b,ierr)
-	call VecView(b,	PETSC_VIEWER_STDOUT_SELF,ierr) 
-    
-    call VecDuplicate(b,x,ierr)
-    
-	call KSPCreate(PETSC_COMM_SELF,ksp,ierr)
-    call KSPSetOperators(ksp,A,A,ierr)
-    call KSPGetPC(ksp,pc,ierr)
-    call KSPSetTolerances(ksp,1.0E-10,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL,PETSC_DEFAULT_INTEGER,ierr)
-    call KSPSetFromOptions(ksp,ierr)
-    call KSPSolve(ksp,b,x,ierr)
-    
-	call VecView(x,	PETSC_VIEWER_STDOUT_SELF,ierr) 
-!   call MatView(C,PETSC_VIEWER_STDOUT_WORLD, ierr)
+ 	PetscInt,		intent(in)	::	m,n	
+    PetscErrorCode,	intent(out)	::	ierr
+!   Mat				            ::	A
+!   Vec							:: 	b,x
+!   KSP                         ::  ksp
+!   PC                          ::  pc
+!	PetscInt					::  ista1,iend1
+!	PetscInt,allocatable		::	idxn(:)
+!	PetscScalar,allocatable		::	row(:)
+!	integer 					:: 	i,j
+!	PetscScalar					:: 	alpha
 end subroutine
 
 end module 

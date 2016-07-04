@@ -12,7 +12,6 @@ program main
     type(Matrix)    		:: X,Y,Z,U,V,W 
     integer         		:: myrank, mysize 
     integer         		:: m,n
-	integer,allocatable		:: idxm(:),idxn(:)
     real(kind=8)    		:: ep,alpha
     real(kind=8)    		:: a1,a2,a3
     logical         		:: debug 
@@ -30,12 +29,12 @@ program main
     call dm_option_int('-n',n,ierr)
 	call dm_option_real('-ep',ep,ierr)
     call dm_option_bool('-debug',debug,ierr)
-	
-	if(myrank==0) then 
+    
+    if(myrank==0) then 
        print *, "==============Input paramenters==========="
         print *, "m=",m,",n=",n,",ep=",ep,",debug=",debug
      endif 
-	
+    
     
  	if(myrank==0) print *, "==============Test dm_zeros==============="
     A=dm_zeros(m,n)
@@ -950,83 +949,40 @@ program main
 
     if(myrank==0) print *, "==============Test dm_getsub=============="
     A=dm_seqs(m,m)
-    
-    B=dm_zeros(2,1)
-    call dm_setvalue(B,0,0,0,ierr)
-    call dm_setvalue(B,1,0,2,ierr)
-    
-    C=dm_zeros(2,1)
-    call dm_setvalue(C,0,0,0,ierr)
-    call dm_setvalue(C,1,0,1,ierr)
-    	
-   	D=dm_getsub(A,B,C)
-    E=dm_getsub(dm_seqs(m,m),B,C)
-    F=dm_getsub(A,dm_seqs(2,1),C)
-    G=dm_getsub(A,B,dm_seqs(2,1))
-    H=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),C)
-    X=dm_getsub(dm_seqs(m,m),B,dm_seqs(2,1))
-    Y=dm_getsub(A,dm_seqs(2,1),dm_seqs(2,1))
-    Z=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))
-    U=dm_getsub(dm_seqs(m,m,.false.),dm_seqs(2,1,.false.),dm_seqs(2,1,.false.))
-    V=dm_getsub(dm_seqs(m,m,.false.),dm_seqs(1,1,.false.),dm_seqs(1,1,.false.))
+   	B=dm_getsub(A,(/0,1/),(/0,1/))
+    C=dm_seqs(m,m,.false.)
+   	D=dm_getsub(C,(/0,1/),(/0,1/))
     if(debug) then
-        if(myrank==0) print *, ">A="
+        if(myrank==0) print *, ">A=dm_seqs(m,m)"
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B="
+        if(myrank==0) print *, ">B=dm_getsub(A,0:1,0:1)"
         call dm_view(B,ierr)
-        if(myrank==0) print *, ">C="
-        call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_getsub(A,B,C)"
-        call dm_view(D,ierr)
-        if(myrank==0) print *, ">E=dm_getsub(dm_seqs(m,m),B,C)"
-        call dm_view(E,ierr)
-        if(myrank==0) print *, ">F=dm_getsub(A,dm_seqs(2,1),C)"
-        call dm_view(F,ierr)
-        if(myrank==0) print *, ">G=dm_getsub(A,B,dm_seqs(2,1))"
-        call dm_view(G,ierr)
-        if(myrank==0) print *, ">H=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),C)"
-        call dm_view(H,ierr)
-        if(myrank==0) print *, ">X=dm_getsub(dm_seqs(m,m),B,dm_seqs(2,1))"
-        call dm_view(X,ierr)
-        if(myrank==0) print *, ">Y=dm_getsub(A,dm_seqs(2,1),dm_seqs(1,1))"
-        call dm_view(Y,ierr)
-        if(myrank==0) print *, ">Z=dm_getsub(dm_seqs(m,m),dm_seqs(2,1),dm_seqs(2,1))"
-        call dm_view(Z,ierr)
-        if(myrank==0) print *, ">U=dm_getsub(dm_seqs(m,m,.false.),dm_seqs(2,1,.false.),dm_seqs(2,1,.false.))"
-        if(myrank==0) call dm_view(U,ierr)
-        if(myrank==0) print *, ">V=dm_getsub(dm_seqs(m,m,.false.),dm_seqs(1,1,.false.),dm_seqs(1,1,.false.))"
-        if(myrank==0) call dm_view(V,ierr)
+        if(myrank==0) print *, ">C=dm_seqs(m,m,.false.)"
+        if(myrank==0) call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_getsub(A,0:1,0:1)"
+        if(myrank==0) call dm_view(D,ierr)
  	endif
-  	call dm_destroy(A,ierr)
-  	call dm_destroy(B,ierr)
+ 	call dm_destroy(A,ierr)
+ 	call dm_destroy(B,ierr)
   	call dm_destroy(C,ierr)
   	call dm_destroy(D,ierr)
-  	call dm_destroy(E,ierr)
-  	call dm_destroy(F,ierr)
-  	call dm_destroy(G,ierr)
-  	call dm_destroy(H,ierr)
-  	call dm_destroy(X,ierr)
-  	call dm_destroy(Y,ierr)
-  	call dm_destroy(Z,ierr)
-  	call dm_destroy(U,ierr)
-  	call dm_destroy(V,ierr)
 
 
     if(myrank==0) print *, "==============Test dm_getcol=============="
-    A=dm_seqs(m,n)
+    A=dm_seqs(m,m)
     B=dm_getcol(A,0)
     C=dm_getcol(A,1) 
-    D=dm_seqs(m,n,.false.)
+    D=dm_seqs(m,m,.false.)
     E=dm_getcol(D,0)
     F=dm_getcol(D,1) 
     if(debug) then
-        if(myrank==0) print *, ">A=dm_seqs(m,n)"
+        if(myrank==0) print *, ">A=dm_seqs(m,m)"
         call dm_view(A,ierr)
         if(myrank==0) print *, ">B=dm_getcol(A,0)"
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=dm_getcol(A,1)"
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_seqs(m,n,.false.)"
+        if(myrank==0) print *, ">D=dm_seqs(m,m,.false.)"
         if(myrank==0) call dm_view(D,ierr)
         if(myrank==0) print *, ">E=dm_getcol(D,0)"
         if(myrank==0) call dm_view(E,ierr)
@@ -1042,20 +998,20 @@ program main
 
 
     if(myrank==0) print *, "==============Test dm_getrow=============="
-    A=dm_seqs(m,n)
+    A=dm_seqs(m,m)
     B=dm_getrow(A,0)
     C=dm_getrow(A,2) 
-    D=dm_seqs(m,n,.false.)
+    D=dm_seqs(m,m,.false.)
     E=dm_getrow(D,0)
     F=dm_getrow(D,1) 
     if(debug) then
-        if(myrank==0) print *, ">A="
+        if(myrank==0) print *, ">A=dm_seqs(m,m)"
         call dm_view(A,ierr)
         if(myrank==0) print *, ">B=dm_getrow(A,0)"
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=dm_getrow(A,2)"
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_seqs(m,n,.false.)"
+        if(myrank==0) print *, ">D=dm_seqs(m,m,.false.)"
         if(myrank==0) call dm_view(D,ierr)
         if(myrank==0) print *, ">E=dm_getrow(D,0)"
         if(myrank==0) call dm_view(E,ierr)
@@ -1073,17 +1029,8 @@ program main
     if(myrank==0) print *, "==============Test dm_setvalues==========="
     A=dm_ones(2*m,2*m)
     B=dm_ones(2*m,2*m,.false.)
- 	allocate(idxm(2),idxn(2),array(4))
-    idxm(1)=0	
-    idxm(2)=2	
-    idxn(1)=1	
-    idxn(2)=2
-    array(1)=9
-    array(2)=8	
-    array(3)=7	
-    array(4)=6	
-  	call dm_setvalues(A,idxm,idxn,array,ierr)	
-  	call dm_setvalues(B,idxm,idxn,array,ierr)	
+  	call dm_setvalues(A,(/0,2/),(/1,2/),(/9,8,7,6/),ierr)	
+  	call dm_setvalues(B,(/0,2/),(/1,2/),(/9,8,7,6/),ierr)	
     
     if(debug) then
         if(myrank==0) print *, ">A="
@@ -1092,30 +1039,26 @@ program main
         if(myrank==0) call dm_view(B,ierr)
  	endif
   	call dm_destroy(A,ierr)
- 	deallocate(idxm,idxn,array)
 
     if(myrank==0) print *, "==============Test dm_getvalues==========="
     A=dm_seqs(2*m,2*m)
     B=dm_seqs(2*m,2*m,.false.)
-    allocate(idxm(1),idxn(2),array(2))
-    idxm(1)=A%ista	
-    idxn(1)=1	
-    idxn(2)=2
+    allocate(array(2))
     array=0
-  	call dm_getvalues(A,idxm,idxn,array,ierr)	
+  	call dm_getvalues(A,(/A%ista/),(/1,2/),array,ierr)	
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
         if(myrank==0) print *, ">getvalues=dm_getvalues(A,idxm,idxn,array,ierr) ",array
  	endif
-  	call dm_getvalues(B,idxm,idxn,array,ierr)	
+  	call dm_getvalues(B,(/A%ista/),(/1,2/),array,ierr)	
     if(debug) then
         if(myrank==0) print *, ">B="
         if(myrank==0) call dm_view(B,ierr)
         if(myrank==0) print *, ">getvalues=dm_getvalues(B,idxm,idxn,array,ierr)",array
  	endif
     call dm_destroy(B,ierr)
- 	deallocate(idxm,idxn,array)
+ 	deallocate(array)
 
     if(myrank==0) print *, "==============Test dm_norm================"
     A=dm_seqs(m,m)

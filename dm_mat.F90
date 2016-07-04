@@ -1357,7 +1357,75 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! B=A(rows,cols). Note that Rows and Cols should be m*1 matrix.
 ! -----------------------------------------------------------------------
-subroutine mat_getsub(A,Rows,Cols,B,ierr)
+subroutine mat_getsub(A,rows,cols,B,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,				intent(in)	::	A
+	integer,			intent(in)	::	rows(:),cols(:)
+	PetscErrorCode,		intent(out)	::	ierr
+	Mat,				intent(out)	:: 	B
+	PetscInt						::  ista,iend,ni,c1,c2
+	PetscInt						::  nrow,ncol 
+	integer							:: 	i,j	
+	PetscBool						:: 	isGlobal	
+	integer,allocatable				::  vrow(:),vcol(:)	
+	IS								:: 	ISRows,ISCols
+    PetscLogEvent               	::  ievent
+    call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+	
+	call mat_assemble(A,ierr)
+	call mat_gettype(A,isGLobal,ierr)	
+	call MatGetSize(A,nrow,ncol,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	ni=iend-ista
+
+	allocate(vrow(size(rows)),vcol(size(cols)))	
+	vrow=0
+	vcol=0
+
+	c1=0	
+	do i=ista,iend-1
+		do j=1,size(rows)
+			if(rows(j) == i) then
+				c1=c1+1	
+				vrow(c1)=i
+			endif
+		enddo
+	enddo
+
+	c2=0	
+	do i=0,ncol-1
+		do j=1,size(cols)
+			if(cols(j) == i) then
+				c2=c2+1	
+				vcol(c2)=i
+			endif
+		enddo
+	enddo
+
+ 
+	if(isGlobal) then		
+		call ISCreateGeneral(PETSC_COMM_WORLD,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
+		call ISCreateGeneral(PETSC_COMM_WORLD,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
+	else
+		call ISCreateGeneral(PETSC_COMM_SELF,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
+		call ISCreateGeneral(PETSC_COMM_SELF,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
+	endif
+	deallocate(vrow,vcol)	
+	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
+ 	call ISDestroy(ISRows,ierr)
+ 	call ISDestroy(ISCols,ierr)
+    call PetscLogEventEnd(ievent,ierr) 
+end subroutine
+
+
+subroutine bk_mat_getsub(A,Rows,Cols,B,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
