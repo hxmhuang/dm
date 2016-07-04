@@ -337,9 +337,9 @@ program main
         if(myrank==0) print *, ">W=2-dm_eyes(m,m,.false.)"
         if(myrank==0) call dm_view(W,ierr)
  	endif
-    A=A-A	
+    A=-A	
     if(debug) then
-        if(myrank==0) print *, ">A=A-A"
+        if(myrank==0) print *, ">A=-A"
         call dm_view(A,ierr)
  	endif
     call dm_destroy(A,ierr)

@@ -586,7 +586,6 @@ subroutine mat_mult(A,B,C,ierr)
 	Mat,			intent(in)	::  A,B 
 	Mat,			intent(out)	::	C	
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_mult",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
@@ -611,7 +610,6 @@ subroutine mat_emult(A,B,C,ierr)
 	Mat,			intent(in)	::  A,B 
 	Mat,			intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
 	PetscInt					::	col1,col2,m,n
 	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:),idxtmp(:)
 	PetscScalar,allocatable		::	row1(:),row2(:),row3(:),rowtmp(:)
@@ -687,7 +685,6 @@ subroutine mat_ediv(A,B,C,ierr)
 	Mat,			intent(in)	::  A,B 
 	Mat,			intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
 	PetscInt					::	col1,col2,m,n
 	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:),idxtmp(:)
 	PetscScalar,allocatable		::	row1(:),row2(:),row3(:),rowtmp(:)
@@ -1106,7 +1103,7 @@ subroutine mat_solve(A,b,x,ierr)
 	Mat,			intent(in)	::	b
 	Mat,			intent(out)	::	x
 	PetscErrorCode,	intent(out)	::	ierr
-   	PetscInt					:: 	its 
+   	!PetscInt					:: 	its 
     Vec                         ::  vec_b
     Vec                         ::  vec_x
     KSP                         ::  ksp
@@ -1759,7 +1756,6 @@ subroutine mat_cart2sph(A,B,ierr)
 	PetscScalar,allocatable     ::	row1(:),row2(:)
 	PetscInt					::  ista,iend
 	integer						::	i,j
-   	PetscBool					:: 	isGlobal	
 	call mat_assemble(A,ierr) 
     call MatGetSize(A,nrow1,ncol1,ierr)
     call MatGetOwnershipRange(A,ista,iend,ierr)
@@ -1848,7 +1844,7 @@ subroutine mat_setcol(A,idxn,B,ierr)
 	PetscInt,		intent(in)		:: 	idxn	
 	PetscErrorCode,	intent(out)		::	ierr
 	PetscInt						::	nrow1,ncol1,nrow2,ncol2
-	PetscInt						::	col1,col2,m,n
+	PetscInt						::	col2,m
 	PetscInt						::	idxn1(1),idxn2(1)
 	PetscScalar						::	row1(1),row2(1)
 	PetscInt						::  ista,iend

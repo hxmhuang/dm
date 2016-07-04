@@ -25,6 +25,7 @@ module dm
         module procedure dm_minus5
         module procedure dm_minus6
         module procedure dm_minus7
+        module procedure dm_minus8
     end interface
 
     interface operator (*)
@@ -748,6 +749,16 @@ function dm_minus7(alpha,A) result(C)
 	C=dm_minus4(real(alpha,8),A)	
 	call dm_set_implicit(C,ierr)
 end function 
+
+function dm_minus8(A) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix)                ::	C
+	integer						::	ierr
+	C=(-1.0)*A
+	call dm_set_implicit(C,ierr)
+end function 
+
 
 ! -----------------------------------------------------------------------
 ! C=[A B] 
