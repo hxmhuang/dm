@@ -1373,6 +1373,7 @@ subroutine mat_getsub(A,rows,cols,B,ierr)
 	PetscBool						:: 	isGlobal	
 	integer,allocatable				::  vrow(:),vcol(:)	
 	IS								:: 	ISRows,ISCols
+	integer							::  myrank
     PetscLogEvent               	::  ievent
     call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
@@ -1384,31 +1385,20 @@ subroutine mat_getsub(A,rows,cols,B,ierr)
 	ni=iend-ista
 
 	allocate(vrow(size(rows)),vcol(size(cols)))	
+
+	call MPI_Comm_rank(PETSC_COMM_WORLD,myrank,ierr)
+	c1=0
+	c2=0
 	vrow=0
 	vcol=0
+	if(myrank==0) then
+		c1=size(rows)
+		c2=size(cols)
+		vrow=rows
+		vcol=cols
+	endif
 
-	c1=0	
-	do i=ista,iend-1
-		do j=1,size(rows)
-			if(rows(j) == i) then
-				c1=c1+1	
-				vrow(c1)=i
-			endif
-		enddo
-	enddo
-
-	c2=0	
-	do i=0,ncol-1
-		do j=1,size(cols)
-			if(cols(j) == i) then
-				c2=c2+1	
-				vcol(c2)=i
-			endif
-		enddo
-	enddo
-
- 
-	if(isGlobal) then		
+	if(isGlobal) then
 		call ISCreateGeneral(PETSC_COMM_WORLD,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
 		call ISCreateGeneral(PETSC_COMM_WORLD,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
 	else

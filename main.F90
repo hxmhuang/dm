@@ -949,23 +949,31 @@ program main
 
     if(myrank==0) print *, "==============Test dm_getsub=============="
     A=dm_seqs(m,m)
-   	B=dm_getsub(A,(/0,1/),(/0,1/))
-    C=dm_seqs(m,m,.false.)
-   	D=dm_getsub(C,(/0,1/),(/0,1/))
+   	B=dm_getsub(A,(/0,1,2/),(/0,1/))
+   	C=dm_getsub(A,(/0,2,1/),(/1,0/))
+    D=dm_seqs(m,m,.false.)
+   	E=dm_getsub(D,(/0,1,2/),(/0,1/))
+   	F=dm_getsub(D,(/0,2,1/),(/1,0/))
     if(debug) then
         if(myrank==0) print *, ">A=dm_seqs(m,m)"
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B=dm_getsub(A,0:1,0:1)"
+        if(myrank==0) print *, ">B=dm_getsub(A,(/0,1,2/),(/0,1/))"
         call dm_view(B,ierr)
-        if(myrank==0) print *, ">C=dm_seqs(m,m,.false.)"
-        if(myrank==0) call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_getsub(A,0:1,0:1)"
+        if(myrank==0) print *, ">C=dm_getsub(A,(/0,2,1/),(/1,0/))"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_seqs(m,m,.false.)"
         if(myrank==0) call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=dm_getsub(C,(/0,1,2/),(/0,1/))"
+        if(myrank==0) call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=dm_getsub(C,(/0,1,2/),(/0,1/))"
+        if(myrank==0) call dm_view(F,ierr)
  	endif
  	call dm_destroy(A,ierr)
  	call dm_destroy(B,ierr)
   	call dm_destroy(C,ierr)
   	call dm_destroy(D,ierr)
+  	call dm_destroy(E,ierr)
+  	call dm_destroy(F,ierr)
 
 
     if(myrank==0) print *, "==============Test dm_getcol=============="
