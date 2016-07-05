@@ -97,12 +97,12 @@ subroutine mat_zeros(A,ierr)
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					:: 	ista,iend
 !	PetscLogEvent	            ::  ievent
 !   call PetscLogEventRegister("mat_zeros",0, ievent, ierr)
 !   call PetscLogEventBegin(ievent,ierr)
 
     call MatZeroEntries(A,ierr)
-    
 !   call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -144,6 +144,7 @@ subroutine mat_ones(A,ierr)
 	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 	deallocate(idxm,idxn,row)
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 ! -----------------------------------------------------------------------
