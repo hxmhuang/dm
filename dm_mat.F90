@@ -556,15 +556,10 @@ subroutine bk_mat_vjoin(A,B,C,ierr)
 	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
-    print *,">HERE======1"
 	call mat_trans(A,W1,ierr)
-    print *,">HERE======2"
 	call mat_trans(B,W2,ierr)
-    print *,">HERE======3"
 	call mat_hjoin(W1,W2,W3,ierr)
-    print *,">HERE======4"
 	call mat_trans(W3,C,ierr)
-    print *,">HERE======5"
 	
 	call mat_destroy(W1,ierr)
 	call mat_destroy(W2,ierr)
@@ -895,7 +890,6 @@ subroutine mat_aypx(Y,a,X,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_aypx",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-
 	call mat_assemble(X,ierr)
 	call mat_assemble(Y,ierr)
     
@@ -1367,36 +1361,33 @@ subroutine mat_getsub(A,rows,cols,B,ierr)
 	integer,			intent(in)	::	rows(:),cols(:)
 	PetscErrorCode,		intent(out)	::	ierr
 	Mat,				intent(out)	:: 	B
-	PetscInt						::  ista,iend,ni,c1,c2
-	PetscInt						::  nrow,ncol 
-	integer							:: 	i,j	
+	Mat								:: 	W1,W2
+	IS								:: 	ISRows,ISCols
+	PetscInt						::  ista1,iend1,c1
+	PetscInt						::  ista2,iend2,c2
+	integer							:: 	i	
 	PetscBool						:: 	isGlobal	
 	integer,allocatable				::  vrow(:),vcol(:)	
-	IS								:: 	ISRows,ISCols
-	integer							::  myrank
     PetscLogEvent               	::  ievent
     call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 	
 	call mat_assemble(A,ierr)
 	call mat_gettype(A,isGLobal,ierr)	
-	call MatGetSize(A,nrow,ncol,ierr)
-	call MatGetOwnershipRange(A,ista,iend,ierr)
-	ni=iend-ista
-
-	allocate(vrow(size(rows)),vcol(size(cols)))	
-
-	call MPI_Comm_rank(PETSC_COMM_WORLD,myrank,ierr)
-	c1=0
-	c2=0
-	vrow=0
-	vcol=0
-	if(myrank==0) then
-		c1=size(rows)
-		c2=size(cols)
-		vrow=rows
-		vcol=cols
-	endif
+	
+	call mat_create(W1,size(rows),1,isGlobal,ierr)
+	call mat_create(W2,size(cols),1,isGlobal,ierr)
+    call MatGetOwnershipRange(W1,ista1,iend1,ierr)
+    call MatGetOwnershipRange(W2,ista2,iend2,ierr)
+	c1=iend1-ista1
+	c2=iend2-ista2
+	allocate(vrow(c1),vcol(c2))	
+	do i=ista1,iend1-1
+		vrow(i-ista1+1)=rows(i+1)	
+	enddo	
+	do i=ista2,iend2-1
+		vcol(i-ista2+1)=cols(i+1)	
+	enddo	
 
 	if(isGlobal) then
 		call ISCreateGeneral(PETSC_COMM_WORLD,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
@@ -1409,6 +1400,8 @@ subroutine mat_getsub(A,rows,cols,B,ierr)
 	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
 	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
+	call MatDestroy(W1,ierr)
+	call MatDestroy(W2,ierr)
  	call ISDestroy(ISRows,ierr)
  	call ISDestroy(ISCols,ierr)
     call PetscLogEventEnd(ievent,ierr) 

@@ -1417,20 +1417,11 @@ function dm_getcol(A,n) result(B)
     integer,        intent(in)  ::  n
 	type(Matrix)				::	B
 	integer						::	ierr
-	integer,allocatable			::	rows(:),cols(:)
 	integer 					:: 	i
 	
-	allocate(rows(A%nrow),cols(1))	
-	cols(1)=n
-	do i=1,A%nrow
-		rows(i)=i-1
-	enddo	
-	
-	call mat_getsub(A%x, rows, cols, B%x, ierr)
+	call mat_getsub(A%x, (/(i,i=0,A%nrow-1)/), (/n/), B%x, ierr)
 	B%isGlobal=A%isGlobal
     call dm_set_implicit(B,ierr)
-    
-	deallocate(rows,cols)	
     
 	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
