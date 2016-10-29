@@ -4,13 +4,16 @@
 module dm_type 
     implicit none
     type Matrix 
-		Mat  	:: x         
-		integer :: xtype=MAT_XTYPE_IMPLICIT
-		logical :: isGlobal=.true.
-		integer :: nrow=0
-		integer :: ncol=0
-		integer :: ista=0
-		integer :: iend=0
+		Mat					:: x         
+		integer				:: xtype=MAT_XTYPE_IMPLICIT
+		logical 			:: isGlobal=.true.
+		integer 			:: nrow=0
+		integer 			:: ncol=0
+		integer 			:: ista=0
+		integer 			:: iend=0
+		integer 			:: nx=0
+		integer 			:: ny=0
+		integer 			:: nz=0
     end type Matrix 
 
 end module 

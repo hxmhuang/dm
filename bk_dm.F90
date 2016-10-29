@@ -104,6 +104,13 @@ module dm
     interface operator (.inv.)
         module procedure dm_solve
     end interface
+ 
+	! constant matrix 
+    interface dm_constants 
+        module procedure dm_constants1
+        module procedure dm_constants2
+        module procedure dm_constants3
+    end interface
 
     interface dm_axpy
         module procedure dm_axpy1
@@ -279,9 +286,6 @@ subroutine dm_create(A,m,n,k,isGlobal,ierr)
         A%isGlobal=.true.
     endif
 	call mat_create(A%x,m,n,k,isGlobal,ierr)
-	A%nx=m
-	A%ny=n
-	A%nz=k
 end subroutine 
 
 
@@ -304,23 +308,89 @@ function dm_zeros(m,n,k,isGlobal) result(A)
     call dm_set_implicit(A,ierr)
 end function
 
-
 ! -----------------------------------------------------------------------
 ! A=1. 
 ! -----------------------------------------------------------------------
-function dm_ones(m,n,k,isGlobal) result(A)
+function dm_ones(m,n,isGlobal) result(A)
     implicit none
-    integer, 	intent(in)          ::  m,n,k 
+    integer, 	intent(in)          ::  m,n 
     logical,    intent(in),optional ::  isGlobal 
     type(Matrix)                    ::  A
     integer					        ::  ierr
     
     if (present(isGlobal)) then
-        call dm_create(A,m,n,k,isGlobal,ierr)
+        call dm_create(A,m,n,isGlobal,ierr)
     else
-        call dm_create(A,m,n,k,.true.,ierr)
+        call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_constants(A%x,real(1.0,8),ierr)
+    call mat_ones(A%x,ierr)
+    call dm_set_implicit(A,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! A=alpha. 
+! -----------------------------------------------------------------------
+function dm_constants1(m,n,alpha,isGlobal) result(A)
+    implicit none
+    integer,     intent(in)             ::  m,n
+    real(kind=8),intent(in)             ::  alpha 
+    logical,     intent(in),optional    ::  isGlobal 
+    type(Matrix)                        ::  A
+    integer					            ::  ierr
+    
+    if (present(isGlobal)) then
+        call dm_create(A,m,n,isGlobal,ierr)
+    else
+        call dm_create(A,m,n,.true.,ierr)
+    endif
+    call mat_constants(A%x,alpha,ierr)
+    call dm_set_implicit(A,ierr)
+end function
+
+function dm_constants2(m,n,alpha,isGlobal) result(A)
+    implicit none
+    integer,    intent(in)              ::  m,n
+    real,		intent(in)              ::  alpha 
+    logical,    intent(in),optional     ::  isGlobal 
+    type(Matrix)                        ::  A
+    integer					            ::  ierr
+   	
+	A=dm_constants1(m,n,real(alpha,kind=8),isGlobal)
+    call dm_set_implicit(A,ierr)
+end function
+
+function dm_constants3(m,n,alpha,isGlobal) result(A)
+    implicit none
+    integer,    intent(in)              ::  m,n
+    integer,	intent(in) 	            ::  alpha 
+    logical,    intent(in),optional     ::  isGlobal 
+    type(Matrix)                        ::  A
+    integer					            ::  ierr
+    
+   	A=dm_constants1(m,n,real(alpha,kind=8),isGlobal)
+    call dm_set_implicit(A,ierr)
+end function
+
+
+! -----------------------------------------------------------------------
+! A=[0 1 2], This function is only used to generate the test data.
+!   [3 4 5]
+!   [6 7 8]
+! -----------------------------------------------------------------------
+function dm_seqs(m,n,isGlobal) result(A)
+    implicit none
+    integer,     intent(in)             ::  m,n
+    logical,     intent(in),optional    ::  isGlobal 
+    type(Matrix)           	            ::  A
+    integer					            ::  ierr
+
+    if (present(isGlobal)) then
+        call dm_create(A,m,n,isGlobal,ierr)
+    else
+        call dm_create(A,m,n,.true.,ierr)
+    endif
+    call mat_seqs(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -343,9 +413,9 @@ function dm_m2n(m,n,isGlobal) result(A)
     endif
     
     if (present(isGlobal)) then
-        call dm_create(A,n-m+1,1,1,isGlobal,ierr)
+        call dm_create(A,n-m+1,1,isGlobal,ierr)
     else
-        call dm_create(A,n-m+1,1,1,.true.,ierr)
+        call dm_create(A,n-m+1,1,.true.,ierr)
     endif
 	
     call mat_m2n(A%x,m,n,ierr)	
@@ -354,44 +424,97 @@ end function
 
 
 ! -----------------------------------------------------------------------
-! The eye function is used to generate the simple and complex identity matrixs. 
+! The eyes function is used to generate the simple and complex identity matrixs. 
 ! For example, if A is a 2*6 matrix, we can use mat_eye(A,ierr) to obtain 
-! A= [1 0 0 0 0 0]
-!	 [0 1 0 0 0 0]
+! A= [1 0 1 0 1 0]
+!	 [0 1 0 1 1 0]
 ! if A is a 6*2 matrix, then mat_eye(A,ierr) will generate
 ! A= [1 0]
 !	 [0 1]
-!	 [0 0]
-!    [0 0]
-!	 [0 0]
-!    [0 0]
+!	 [1 0]
+!    [0 1]
+!	 [1 0]
+!    [0 1]
 ! -----------------------------------------------------------------------
-function dm_eye(m,n,k,isGlobal) result(A)
+function dm_eyes(m,n,isGlobal) result(A)
 	implicit none
-    integer,    intent(in)  	        ::  m,n,k
+    integer,    intent(in)  	        ::  m,n
     logical,    intent(in),optional     ::  isGlobal 
 	type(Matrix)			            ::	A
 	integer                             ::	nmax, nmin 
 	integer					            ::	ierr
      
     nmin=min(m,n)
- 	if(nmin <= 0) then
-		print *, "Error in dm_eye: the size of matrix A should be greater than zero" 
+	nmax=max(m,n)
+ 	if(mod(nmax,nmin) /= 0) then
+		print *, "Error in dm_eyes: the size of matrix A should be (NM)*M or M*(NM)"
 		stop	
 	endif
 
     if (present(isGlobal)) then
-        call dm_create(A,m,n,k,isGlobal,ierr)
+        call dm_create(A,m,n,isGlobal,ierr)
     else
-        call dm_create(A,m,n,k,.true.,ierr)
+        call dm_create(A,m,n,.true.,ierr)
     endif
-    call mat_eye(A%x,m,n,k,ierr)
+
+    call mat_eyes(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function 
 
 
 ! -----------------------------------------------------------------------
-! B=A. This function uses the implicit matrix A directly because A is not need to release. 
+! The vertical eye plus zero matrix
+! A= [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+!	 [0 0 0]
+!	 [0 0 0]
+! -----------------------------------------------------------------------
+function dm_veyezero(nrow1,nrow2,isGlobal) result(A)
+	implicit none
+	integer,    intent(in)	            ::	nrow1,nrow2
+    logical,    intent(in),optional     ::  isGlobal 
+	type(Matrix)			            ::	A
+	integer					            ::	ierr
+    
+    if (present(isGlobal)) then
+        call dm_create(A,nrow1+nrow2,nrow1,isGlobal,ierr)
+    else
+        call dm_create(A,nrow1+nrow2,nrow1,.true.,ierr)
+    endif
+    call mat_veyezero(A%x,nrow1,nrow2,ierr)
+    call dm_set_implicit(A,ierr)
+end function 
+
+
+! -----------------------------------------------------------------------
+! The vertical zero plus eye matrix
+! A= [0 0 0]
+!	 [0 0 0]
+!	 [1 0 0]
+!	 [0 1 0]
+!	 [0 0 1]
+! -----------------------------------------------------------------------
+function dm_vzeroeye(nrow1,nrow2,isGlobal) result(A)
+	implicit none
+	integer,    intent(in)	::	nrow1,nrow2	
+    logical,    intent(in),optional     ::  isGlobal 
+	type(Matrix)			::	A
+	integer					::	ierr
+    
+    if (present(isGlobal)) then
+        call dm_create(A,nrow1+nrow2,nrow2,isGlobal,ierr)
+    else
+        call dm_create(A,nrow1+nrow2,nrow2,.true.,ierr)
+    endif
+    call mat_vzeroeye(A%x,nrow1,nrow2,ierr)
+    call dm_set_implicit(A,ierr)
+end function 
+
+
+
+! -----------------------------------------------------------------------
+! B=A. This function uses the implicit matrix A directly because A is not need to free. 
 ! -----------------------------------------------------------------------
 subroutine dm_copy(B,A)
     implicit none
@@ -399,8 +522,9 @@ subroutine dm_copy(B,A)
     type(Matrix),  intent(inout) ::  B
     type(Matrix)                 ::  W
     integer						 ::  ierr
-    
-	B%isGlobal=A%isGlobal
+	!print *,"B Type=",B%xtype	
+	!print *,"A Type=",A%xtype
+    B%isGlobal=A%isGlobal
 	if(B%xtype==MAT_XTYPE_EXPLICIT) then
         W%x=B%x
     endif
@@ -411,7 +535,7 @@ subroutine dm_copy(B,A)
         call mat_copy(A%x,B%x,ierr)
     endif
     if(B%xtype==MAT_XTYPE_EXPLICIT) then
-    	!release the original B matrix 
+    	!Free the space of B matrix 
         call mat_destroy(W%x,ierr)
     endif
     call dm_set_explicit(B,ierr)
@@ -461,11 +585,13 @@ function dm_add2(A,alpha) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
-    C=dm_add1(A,C)
+    
+    call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
+    call mat_constants(B%x,alpha,ierr) 
+    C=dm_add1(A,B)
     call dm_set_implicit(C,ierr)
 end function 
 
@@ -560,13 +686,14 @@ function dm_minus2(A,alpha) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
 
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
-    C=dm_minus1(A,C)
- 	call dm_set_implicit(C,ierr)
+    call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
+	call mat_constants(B%x,alpha,ierr) 
+    C=dm_minus1(A,B)
+	call dm_set_implicit(C,ierr)
 end function 
 
 function dm_minus3(A,alpha) result(C)
@@ -583,12 +710,13 @@ function dm_minus4(alpha,A) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	real(kind=8),	intent(in)	::  alpha 
+	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
-   
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
-    C=dm_minus1(C,A)
+    
+	call dm_create(B,A%nrow,A%ncol,A%isGlobal,ierr)
+	call mat_constants(B%x,alpha,ierr) 
+    C=dm_minus1(B,A)
     call dm_set_implicit(C,ierr)
 end function 
 
@@ -642,22 +770,22 @@ function dm_hjoin(A,B) result(C)
 	type(Matrix)              	::	C
 	integer						::	ierr
 
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_hjoin: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_hjoin: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
 
-!   call dm_create(C,A%nrow,A%ncol+B%ncol,A%isGlobal,ierr)
-!   call mat_hjoin(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
+    call dm_create(C,A%nrow,A%ncol+B%ncol,A%isGlobal,ierr)
+    call mat_hjoin(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	call dm_set_implicit(C,ierr)
 
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
 ! -----------------------------------------------------------------------
@@ -802,27 +930,27 @@ function dm_emult(A,B) result(C)
 	type(Matrix)              	::	C
 	integer						::	ierr
     
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
 
-!   if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
-!   	print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
-!   	stop	
-!   endif
-!  
-!   call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
-!   call mat_emult(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
-!   
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+	if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
+		print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
+		stop	
+	endif
+   
+	call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
+    call mat_emult(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	call dm_set_implicit(C,ierr)
+    
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
 
@@ -836,27 +964,27 @@ function dm_ediv(A,B) result(C)
 	type(Matrix)              	::	C
 	integer						::	ierr
   
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
+    if(A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
 
-!   if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
-!   	print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
-!   	stop	
-!   endif
-!  
-!   call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
-!   call mat_ediv(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
-!   
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+	if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
+		print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
+		stop	
+	endif
+   
+	call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
+    call mat_ediv(A%x,B%x,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	call dm_set_implicit(C,ierr)
+    
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
 
@@ -1481,12 +1609,12 @@ function dm_lt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,alpha,ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_lt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_lt3(A,alpha) result(C)
@@ -1496,12 +1624,12 @@ function dm_lt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_lt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_lt4(A,alpha) result(C)
@@ -1511,13 +1639,13 @@ function dm_lt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	 
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!
-!!!!C=dm_lt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	 
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+	
+    C=dm_lt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1563,12 +1691,12 @@ function dm_le2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,alpha,ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_le1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_le3(A,alpha) result(C)
@@ -1578,12 +1706,12 @@ function dm_le3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_le1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_le4(A,alpha) result(C)
@@ -1593,12 +1721,12 @@ function dm_le4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_le1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_le1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1644,13 +1772,13 @@ function dm_gt2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,alpha,ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
 
-!!!!C=dm_gt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_gt3(A,alpha) result(C)
@@ -1660,12 +1788,12 @@ function dm_gt3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_gt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_gt4(A,alpha) result(C)
@@ -1675,12 +1803,12 @@ function dm_gt4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_gt1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_gt1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1726,12 +1854,12 @@ function dm_ge2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,alpha,ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_ge1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_ge3(A,alpha) result(C)
@@ -1741,12 +1869,12 @@ function dm_ge3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_ge1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_ge4(A,alpha) result(C)
@@ -1756,12 +1884,12 @@ function dm_ge4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer						::	ierr
-!	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!   call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!   B%isGlobal=A%isGlobal
-!   call dm_set_implicit(B,ierr)
-!   C=dm_ge1(A,B)
-!   call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_ge1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1807,12 +1935,12 @@ function dm_eq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,alpha,ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_eq1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_eq3(A,alpha) result(C)
@@ -1822,12 +1950,12 @@ function dm_eq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_eq1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_eq4(A,alpha) result(C)
@@ -1837,12 +1965,12 @@ function dm_eq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_eq1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_eq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1888,12 +2016,12 @@ function dm_nq2(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!   call mat_constants(B%x,alpha,ierr) 	
-!   B%isGlobal=A%isGlobal
-!   call dm_set_implicit(B,ierr)
-!   C=dm_nq1(A,B)
-!   call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,alpha,ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_nq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_nq3(A,alpha) result(C)
@@ -1903,12 +2031,12 @@ function dm_nq3(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!   call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!   B%isGlobal=A%isGlobal
-!   call dm_set_implicit(B,ierr)
-!   C=dm_nq1(A,B)
-!   call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_nq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 function dm_nq4(A,alpha) result(C)
@@ -1918,12 +2046,12 @@ function dm_nq4(A,alpha) result(C)
 	type(Matrix)                ::	B
 	type(Matrix)                ::	C
 	integer::	ierr
-!!!!call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
-!!!!call mat_constants(B%x,real(alpha,kind=8),ierr) 	
-!!!!B%isGlobal=A%isGlobal
-!!!!call dm_set_implicit(B,ierr)
-!!!!C=dm_nq1(A,B)
-!!!!call dm_set_implicit(C,ierr)
+	call mat_create(B%x,A%nrow,A%ncol,A%isGlobal,ierr) 	
+	call mat_constants(B%x,real(alpha,kind=8),ierr) 	
+	B%isGlobal=A%isGlobal
+    call dm_set_implicit(B,ierr)
+    C=dm_nq1(A,B)
+    call dm_set_implicit(C,ierr)
 end function 
 
 
@@ -1938,13 +2066,13 @@ function dm_sparse(Ind_i,Ind_j,A,m,n) result(B)
 	type(Matrix)				::  B 
 	integer						::	ierr
  
-!!!!if((Ind_i%isGlobal .neqv. Ind_j%isGlobal) .or. (A%isGlobal .neqv. Ind_i%isGlobal) ) then
-!!!!    call dm_printf("Error in dm_sparse: Matrix Ind_i, Ind_j and A should have the same distribution.",ierr)
-!!!!    stop
-!!!!endif
-!!!!B=dm_zeros(m,n,A%isGlobal)
-!!!!call mat_sparse(Ind_i%x,Ind_j%x,A%x,m,n,B%x,ierr)
-!!!!call dm_set_implicit(B,ierr)
+    if((Ind_i%isGlobal .neqv. Ind_j%isGlobal) .or. (A%isGlobal .neqv. Ind_i%isGlobal) ) then
+        call dm_printf("Error in dm_sparse: Matrix Ind_i, Ind_j and A should have the same distribution.",ierr)
+        stop
+    endif
+	B=dm_zeros(m,n,A%isGlobal)
+	call mat_sparse(Ind_i%x,Ind_j%x,A%x,m,n,B%x,ierr)
+	call dm_set_implicit(B,ierr)
 end function 
 
 
@@ -1957,10 +2085,10 @@ subroutine dm_cart2sph(A,B,ierr)
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(out)	::  B 
 	integer,		intent(out)	::	ierr
-
-!   B=dm_zeros(A%nrow,A%ncol,A%isGlobal)
-!   call mat_cart2sph(A%x,B%x,ierr)
-!   call dm_set_explicit(B,ierr)
+	
+	B=dm_zeros(A%nrow,A%ncol,A%isGlobal)
+	call mat_cart2sph(A%x,B%x,ierr)
+	call dm_set_explicit(B,ierr)
 end subroutine
 
 

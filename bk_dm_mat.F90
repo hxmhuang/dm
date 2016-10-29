@@ -111,7 +111,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! A=1. 
 ! -----------------------------------------------------------------------
-subroutine mat_constants(A,alpha,ierr)
+subroutine mat_ones(A,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -119,7 +119,6 @@ subroutine mat_constants(A,alpha,ierr)
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscScalar,	intent(in)	::  alpha	
 	PetscInt	    			::	nrow,ncol
 	PetscInt					::  ista,iend,nlocal
 	PetscInt,allocatable		::	idxm(:),idxn(:)
@@ -140,10 +139,92 @@ subroutine mat_constants(A,alpha,ierr)
 	do j=1,ncol
 		idxn(j)=j-1
 	enddo
+	row=1.0
+
+	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
+	!call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+	!call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+	deallocate(idxm,idxn,row)
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+! -----------------------------------------------------------------------
+! A=alpha. 
+! -----------------------------------------------------------------------
+subroutine mat_constants(A,alpha,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,			intent(out)	::	A
+	PetscScalar,	intent(in) 	:: 	alpha 
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt	    			::	nrow,ncol
+	PetscInt					::  ista,iend,nlocal
+	PetscInt,allocatable		::	idxm(:),idxn(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_constants",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+	call MatGetSize(A,nrow,ncol,ierr) 
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	nlocal=iend-ista
+	!print *,">ista=",ista,"iend=",iend,"ncol=",ncol
+	allocate(idxm(nlocal),idxn(ncol),row(nlocal*ncol))
+	do i=1,nlocal
+		idxm(i)=ista+i-1
+	enddo
+	do j=1,ncol
+		idxn(j)=j-1
+	enddo
 	row=alpha
 
 	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
 	deallocate(idxm,idxn,row)
+    
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
+
+! -----------------------------------------------------------------------
+! A=[1 2 3], This function is only used to generate the test data.
+!   [4 5 6]
+!   [7 8 9]
+! -----------------------------------------------------------------------
+subroutine mat_seqs(A,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	
+	Mat,			intent(out)	::	A
+	PetscErrorCode,	intent(out)	::	ierr
+	
+	PetscInt	    			::	m,n
+	PetscInt					::  ista,iend
+	PetscInt,allocatable		::	idxn(:)
+	PetscScalar,allocatable		::	row(:)
+	integer 					:: 	i,j
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_seqs",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	call MatGetSize(A,m,n,ierr)	
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+	!print *,">ista=",ista,"iend=",iend,">ncol=",ncol
+	allocate(idxn(n),row(n))
+	do i=ista,iend-1
+		do j=1,n
+			idxn(j)=j-1
+			row(j)=i*n+j-1
+		enddo
+		call MatSetValues(A,1,i,n,idxn,row,INSERT_VALUES,ierr)
+	enddo
+	deallocate(idxn,row)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -188,18 +269,18 @@ end subroutine
 
 ! -----------------------------------------------------------------------
 ! The eye function is used to generate the simple and complex identity matrixs. 
-! For example, if A is a 2*6 matrix, we can use mat_eye(A,ierr) to obtain 
-! A= [1 0 0 0 0 0]
-!	 [0 1 0 0 0 0]
-! if A is a 6*2 matrix, then mat_eye(A,ierr) will generate
+! For example, if A is a 2*6 matrix, we can use mat_eyes(A,2,6,ierr) to obtain 
+! A= [1 0 1 0 1 0]
+!	 [0 1 0 1 0 1]
+! if A is a 6*2 matrix, then mat_eyes(A,6,2,ierr) will generate
 ! A= [1 0]
 !	 [0 1]
-!	 [0 0]
-!    [0 0]
-!	 [0 0]
-!    [0 0]
+!	 [1 0]
+!    [0 1]
+!	 [1 0]
+!    [0 1]
 ! -----------------------------------------------------------------------
-subroutine mat_eye(A,m,n,k,ierr)
+subroutine mat_eyes(A,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -207,27 +288,38 @@ subroutine mat_eye(A,m,n,k,ierr)
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
-	PetscInt,		intent(in)	::	m,n,k	
-	PetscInt					::	nmin
-	PetscInt					::  ista,iend,xpos
-	PetscScalar					::	row
+	PetscInt					::	m,n	
+	PetscInt					::	nmax, nmin 
+	PetscInt					::  ista,iend,xpos,ypos
+	PetscInt,allocatable		::	idxn(:)
+	PetscScalar,allocatable		::	row(:)
 	integer 					:: 	i,j,counter
 	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_eye",0, ievent, ierr)
+	call PetscLogEventRegister("mat_eyes",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
-    call MatZeroEntries(A,ierr)
+	call mat_zeros(A,ierr)
+	call MatGetSize(A,m,n,ierr)		
     nmin=min(m,n)
-    row=1.0
-	call MatGetOwnershipRange(A,ista,iend,ierr)
+	nmax=max(m,n)
+ 	call MatGetOwnershipRange(A,ista,iend,ierr)
+	allocate(idxn(nmax/nmin),row(nmax/nmin))
     do i=ista,iend-1
-    	xpos=mod(i,m)
-		do j=0,nmin-1
-    		if(j==xpos) then
-    			call MatSetValue(A,i,j,row,INSERT_VALUES,ierr)
+    	xpos=mod(i,nmin)
+
+        counter=0	
+		do j=1,n
+    		ypos=mod(j-1,nmin)
+    		if(ypos==xpos) then
+                counter=counter+1
+    			row(counter)=1.0
+			    idxn(counter)=j-1
+    		    !print *,"i=",i,"j=",j,"xpos=",xpos,"ypos=",ypos,"idxn(",counter,")=",idxn(counter),"row(",j,")=",row(counter) 
     		endif
 		enddo
+	   	call MatSetValues(A,1,i,counter,idxn,row,INSERT_VALUES,ierr)
 	enddo
+	deallocate(idxn,row)
     
 	call PetscLogEventEnd(ievent,ierr)
 end subroutine
@@ -420,35 +512,35 @@ subroutine mat_vjoin(A,B,C,ierr)
 	PetscBool	    			::  isGlobal 
 	PetscScalar					::  alpha
 	PetscLogEvent	            ::  ievent
-!!!!call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
-!!!!call PetscLogEventBegin(ievent,ierr)
-!!!!
-!!!!alpha=1.0
-!!!!
-!!!!call mat_assemble(A,ierr)
-!!!!call mat_assemble(B,ierr)
-!!!!
-!!!!call MatGetSize(A,nrow1,ncol1,ierr)
-!!!!call MatGetSize(B,nrow2,ncol2,ierr)
-!!!!
-!!!!call mat_gettype(A,isGlobal,ierr)	
-!!!!call mat_create(W1,nrow1+nrow2,nrow1,isGlobal,ierr)
-!!!!call mat_create(W2,nrow1+nrow2,nrow2,isGlobal,ierr)
-!!!!call mat_veyezero(W1,nrow1,nrow2,ierr)
-!!!!call mat_vzeroeye(W2,nrow1,nrow2,ierr)
-!!!!call mat_assemble(W1,ierr)
-!!!!call mat_assemble(W2,ierr)
-!!!!
-!!!!call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr)    
-!!!!call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
-!!!!
-!!!!call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
-!!!!
-!!!!call mat_destroy(W1,ierr)
-!!!!call mat_destroy(W2,ierr)
-!!!!call mat_destroy(W3,ierr)
+	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	alpha=1.0
+	
+    call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+	
+	call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	
+	call mat_gettype(A,isGlobal,ierr)	
+	call mat_create(W1,nrow1+nrow2,nrow1,isGlobal,ierr)
+	call mat_create(W2,nrow1+nrow2,nrow2,isGlobal,ierr)
+    call mat_veyezero(W1,nrow1,nrow2,ierr)
+	call mat_vzeroeye(W2,nrow1,nrow2,ierr)
+	call mat_assemble(W1,ierr)
+	call mat_assemble(W2,ierr)
+	
+    call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr)    
+    call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
+	
+	call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
+	
+	call mat_destroy(W1,ierr)
+	call mat_destroy(W2,ierr)
+	call mat_destroy(W3,ierr)
 
-!!!!call PetscLogEventEnd(ievent,ierr)
+	call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
@@ -535,6 +627,7 @@ subroutine mat_emult(A,B,C,ierr)
         m=col1
 	    call MatRestoreRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 	    
+        call MatGetRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 		n=col2
 	    call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 	    
@@ -688,25 +781,25 @@ subroutine mat_rep(A,m,n,B,ierr)
 	PetscInt					::	nrow,ncol
 	PetscBool 		          	::	isGlobal
 	Mat							::  P,T,W
-!	PetscLogEvent	            ::  ievent
-!   call PetscLogEventRegister("mat_rep",0, ievent, ierr)
-!   call PetscLogEventBegin(ievent,ierr)
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_rep",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
 
-!   call MatGetSize(A,nrow,ncol,ierr)
-!   call mat_gettype(A,isGlobal,ierr)
-!   call mat_create(P,m*nrow,nrow,isGlobal,ierr)	
-!   call mat_eyes(P,ierr)
-!   call mat_mult(P,A,W,ierr) 
+	call MatGetSize(A,nrow,ncol,ierr)
+	call mat_gettype(A,isGlobal,ierr)
+	call mat_create(P,m*nrow,nrow,isGlobal,ierr)	
+    call mat_eyes(P,ierr)
+    call mat_mult(P,A,W,ierr) 
 
-!   call mat_create(T,ncol,n*ncol,isGlobal,ierr)
-!   call mat_eyes(T,ierr)
-!   call mat_mult(W,T,B,ierr) 
+	call mat_create(T,ncol,n*ncol,isGlobal,ierr)
+	call mat_eyes(T,ierr)
+    call mat_mult(W,T,B,ierr) 
 
-!   call mat_destroy(P,ierr)
-!   call mat_destroy(W,ierr)
-!   call mat_destroy(T,ierr)
-!   
-!   call PetscLogEventEnd(ievent,ierr)
+	call mat_destroy(P,ierr)
+	call mat_destroy(W,ierr)
+	call mat_destroy(T,ierr)
+	
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
@@ -731,30 +824,30 @@ subroutine mat_sum(A,ndim,B,ierr)
 	Mat				            ::	W
 	PetscBool      				::  isGlobal 
 	PetscInt					::	nrow,ncol	
-!	PetscLogEvent	            ::  ievent
-!   call PetscLogEventRegister("mat_sum",0, ievent, ierr)
-!   call PetscLogEventBegin(ievent,ierr)
-!   
-!	if((ndim<1) .or. (ndim>2)) then
-!   	print *, "Error in mat_sum: the dim should be 1 or 2"
-!   	stop	
-!   endif
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_sum",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+ 	if((ndim<1) .or. (ndim>2)) then
+		print *, "Error in mat_sum: the dim should be 1 or 2"
+		stop	
+	endif
 
-!   call MatGetSize(A,nrow,ncol,ierr)
-!   call mat_gettype(A,isGlobal,ierr)
-!   if(ndim==1) then
-!   	call mat_create(W,1,nrow,isGlobal,ierr)
-!       call mat_ones(W,ierr)
-!       call mat_mult(W,A,B,ierr)
-!       call mat_destroy(W,ierr)
-!   elseif(ndim==2) then
-!   	call mat_create(W,ncol,1,isGlobal,ierr)
-!       call mat_ones(W,ierr)
-!       call mat_mult(A,W,B,ierr)
-!       call mat_destroy(W,ierr)
-!   endif
+    call MatGetSize(A,nrow,ncol,ierr)
+    call mat_gettype(A,isGlobal,ierr)
+    if(ndim==1) then
+		call mat_create(W,1,nrow,isGlobal,ierr)
+        call mat_ones(W,ierr)
+        call mat_mult(W,A,B,ierr)
+        call mat_destroy(W,ierr)
+    elseif(ndim==2) then
+		call mat_create(W,ncol,1,isGlobal,ierr)
+        call mat_ones(W,ierr)
+        call mat_mult(A,W,B,ierr)
+        call mat_destroy(W,ierr)
+    endif
 
-!   call PetscLogEventEnd(ievent,ierr)
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
@@ -1124,27 +1217,27 @@ subroutine mat_vec2mat(v,isGlobal,A,ierr)
     Mat,    	intent(out)     ::  A 
 	PetscErrorCode              ::  ierr
 
-!	PetscInt	            	::  nrow	
-!   PetscInt					::  ista,iend
-!   PetscInt					::  ni
-!   PetscScalar					::  y 
-!   integer 					:: 	i
-!   
-!   call VecGetSize(v,nrow,ierr)
-!   call mat_create(A,nrow,1,isGlobal,ierr)
-!   call mat_zeros(A,ierr)
+	PetscInt	            	::  nrow	
+	PetscInt					::  ista,iend
+	PetscInt					::  ni
+	PetscScalar					::  y 
+	integer 					:: 	i
+    
+	call VecGetSize(v,nrow,ierr)
+	call mat_create(A,nrow,1,isGlobal,ierr)
+    call mat_zeros(A,ierr)
 
-!   call MatGetOwnershipRange(A,ista,iend,ierr)
-!   ni=iend-ista
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    ni=iend-ista
 
-!   do i=ista,iend-1
-!   	call VecGetValues(v,1,i,y,ierr)
-!   	if(y /= 0) then
-!   		call MatSetValues(A,1,i,1,0,y,INSERT_VALUES,ierr)
-!   	endif	
-!   enddo
-!   
-!   call mat_assemble(A,ierr)	
+	do i=ista,iend-1
+		call VecGetValues(v,1,i,y,ierr)
+		if(y /= 0) then
+    		call MatSetValues(A,1,i,1,0,y,INSERT_VALUES,ierr)
+		endif	
+    enddo
+	
+	call mat_assemble(A,ierr)	
 end subroutine
 
 
@@ -1168,32 +1261,32 @@ subroutine mat_load(filename,isGlobal,A,ierr)
  	PetscInt					    :: nrow,ncol
  	PetscInt					    :: ista,iend
     integer                         :: i,j,fid
-!   PetscLogEvent               ::  ievent
-!   call PetscLogEventRegister("mat_load",0, ievent, ierr) 
-!   call PetscLogEventBegin(ievent,ierr) 
-!   
-!   fid=1000
-!   open(fid,FILE=filename)
-!   call getfilerowcol(fid,nrow,ncol,ierr)
-!   !print *, "nrow=",nrow, "ncol=",ncol
-!   
-!   call mat_create(A,nrow,ncol,isGlobal,ierr)
-!   call MatGetOwnershipRange(A,ista,iend,ierr)
-!   allocate(x(ncol,nrow),row(ncol),idxn(ncol))
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_load",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+    
+    fid=1000
+    open(fid,FILE=filename)
+    call getfilerowcol(fid,nrow,ncol,ierr)
+    !print *, "nrow=",nrow, "ncol=",ncol
+    
+    call mat_create(A,nrow,ncol,isGlobal,ierr)
+    call MatGetOwnershipRange(A,ista,iend,ierr)
+    allocate(x(ncol,nrow),row(ncol),idxn(ncol))
 
-!   do i=1,nrow
-!      read(fid,*), x(:,i)
-!   enddo
-!   close(fid)
+    do i=1,nrow
+       read(fid,*), x(:,i)
+    enddo
+    close(fid)
 
-!   do i=ista,iend-1
-!   	do j=1,ncol
-!   		idxn(j)=j-1
-!   	enddo
-!   	call MatSetValues(A,1,i,ncol,idxn,x(:,i+1),INSERT_VALUES,ierr)
-!   enddo
-!   deallocate(x,row)
-!   call PetscLogEventEnd(ievent,ierr) 
+    do i=ista,iend-1
+		do j=1,ncol
+			idxn(j)=j-1
+		enddo
+		call MatSetValues(A,1,i,ncol,idxn,x(:,i+1),INSERT_VALUES,ierr)
+	enddo
+    deallocate(x,row)
+    call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
 
@@ -1277,43 +1370,43 @@ subroutine mat_getsub(A,rows,cols,B,ierr)
 	integer							:: 	i	
 	PetscBool						:: 	isGlobal	
 	integer,allocatable				::  vrow(:),vcol(:)	
-!   PetscLogEvent               	::  ievent
-!   call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
-!   call PetscLogEventBegin(ievent,ierr) 
-!   
-!   call mat_assemble(A,ierr)
-!   call mat_gettype(A,isGLobal,ierr)	
-!   
-!   call mat_create(W1,size(rows),1,isGlobal,ierr)
-!   call mat_create(W2,size(cols),1,isGlobal,ierr)
-!   call MatGetOwnershipRange(W1,ista1,iend1,ierr)
-!   call MatGetOwnershipRange(W2,ista2,iend2,ierr)
-!   c1=iend1-ista1
-!   c2=iend2-ista2
-!   allocate(vrow(c1),vcol(c2))	
-!   do i=ista1,iend1-1
-!   	vrow(i-ista1+1)=rows(i+1)	
-!   enddo	
-!   do i=ista2,iend2-1
-!   	vcol(i-ista2+1)=cols(i+1)	
-!   enddo	
+    PetscLogEvent               	::  ievent
+    call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+	
+	call mat_assemble(A,ierr)
+	call mat_gettype(A,isGLobal,ierr)	
+	
+	call mat_create(W1,size(rows),1,isGlobal,ierr)
+	call mat_create(W2,size(cols),1,isGlobal,ierr)
+    call MatGetOwnershipRange(W1,ista1,iend1,ierr)
+    call MatGetOwnershipRange(W2,ista2,iend2,ierr)
+	c1=iend1-ista1
+	c2=iend2-ista2
+	allocate(vrow(c1),vcol(c2))	
+	do i=ista1,iend1-1
+		vrow(i-ista1+1)=rows(i+1)	
+	enddo	
+	do i=ista2,iend2-1
+		vcol(i-ista2+1)=cols(i+1)	
+	enddo	
 
-!   if(isGlobal) then
-!   	call ISCreateGeneral(PETSC_COMM_WORLD,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
-!   	call ISCreateGeneral(PETSC_COMM_WORLD,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
-!   else
-!   	call ISCreateGeneral(PETSC_COMM_SELF,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
-!   	call ISCreateGeneral(PETSC_COMM_SELF,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
-!   endif
-!   deallocate(vrow,vcol)	
-!   !call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
-!   !call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
-!   call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
-!   call MatDestroy(W1,ierr)
-!   call MatDestroy(W2,ierr)
-!	call ISDestroy(ISRows,ierr)
-!	call ISDestroy(ISCols,ierr)
-!   call PetscLogEventEnd(ievent,ierr) 
+	if(isGlobal) then
+		call ISCreateGeneral(PETSC_COMM_WORLD,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
+		call ISCreateGeneral(PETSC_COMM_WORLD,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
+	else
+		call ISCreateGeneral(PETSC_COMM_SELF,c1,vrow,PETSC_COPY_VALUES,ISRows,ierr)
+		call ISCreateGeneral(PETSC_COMM_SELF,c2,vcol,PETSC_COPY_VALUES,ISCols,ierr)
+	endif
+	deallocate(vrow,vcol)	
+	!call ISView(ISRows,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	!call ISView(ISCols,PETSC_VIEWER_STDOUT_WORLD,ierr)
+	call MatGetSubMatrix(A,ISRows,ISCols,MAT_INITIAL_MATRIX,B,ierr)	
+	call MatDestroy(W1,ierr)
+	call MatDestroy(W2,ierr)
+ 	call ISDestroy(ISRows,ierr)
+ 	call ISDestroy(ISCols,ierr)
+    call PetscLogEventEnd(ievent,ierr) 
 end subroutine
 
 
@@ -1538,88 +1631,88 @@ subroutine mat_compare(A,B,opt,C,ierr)
 	PetscScalar					::  alpha 
 	integer						::	i
 	PetscBool             		::	isGlobal
-!	PetscLogEvent	            ::  ievent
-!   call PetscLogEventRegister("mat_compare",0, ievent, ierr)
-!   call PetscLogEventBegin(ievent,ierr)
-!   
-!   call mat_assemble(A,ierr)
-!   call mat_assemble(B,ierr)
-!   call mat_gettype(A,isGlobal,ierr)	
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_compare",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+	call mat_gettype(A,isGlobal,ierr)	
 
-!   call MatGetSize(A,nrow1,ncol1,ierr)
-!   call MatGetSize(B,nrow2,ncol2,ierr)
-! 	
-!   ! W=A-B 
-!   alpha=-1.0
-!   call MatDuplicate(A,MAT_COPY_VALUES,W,ierr)
-!   call MatAXPY(W,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
-!   
-!   !call mat_minus(A,B,W,ierr)
-!   call mat_create(C,nrow1,ncol1,isGlobal,ierr)
-!   call mat_zeros(C,ierr)
-!   call MatGetOwnershipRange(W,ista,iend,ierr)
+    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+  	
+	! W=A-B 
+    alpha=-1.0
+    call MatDuplicate(A,MAT_COPY_VALUES,W,ierr)
+	call MatAXPY(W,alpha,B,DIFFERENT_NONZERO_PATTERN,ierr)
+    
+	!call mat_minus(A,B,W,ierr)
+	call mat_create(C,nrow1,ncol1,isGlobal,ierr)
+    call mat_zeros(C,ierr)
+	call MatGetOwnershipRange(W,ista,iend,ierr)
 
-!   do i=ista,iend-1
-!       call MatGetRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-!       m=col
-!       call MatRestoreRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-!      
-!       allocate(idxn(m),idxntmp(m),row(m),rowtmp(m))
-!       
-!       call MatGetRow(W,i,col,idxntmp,rowtmp,ierr)
-!       m=col
-!       idxn=idxntmp
-!       row=rowtmp 
-!       !print *, "1===i=",i,"idxn=",idxn,"row=",row
-!       call MatRestoreRow(W,i,col,idxntmp,rowtmp,ierr)
-!       
-!       select case(opt)
-!           case (MAT_COMPARE_LT)
-!               where(row <  0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!           case (MAT_COMPARE_LE)
-!               where(row <= 0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!           case (MAT_COMPARE_GT)
-!               where(row >  0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!           case (MAT_COMPARE_GE)
-!               where(row >= 0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!           case (MAT_COMPARE_EQ)
-!               where(row == 0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!           case (MAT_COMPARE_NQ)
-!               where(row /= 0) 
-!                  row=1
-!               else where
-!                  row=0.0
-!               end where
-!   		case default
-!               row=0.0    
-!       end select
-!       !print *, "2=",i,"idxn=",idxn,"row=",row
-!   	call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
-!       deallocate(idxn,idxntmp,row,rowtmp)
-!   enddo
-!   call mat_assemble(C,ierr)
-!   call mat_destroy(W,ierr) 
-!   call PetscLogEventEnd(ievent,ierr)
+	do i=ista,iend-1
+	    call MatGetRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    m=col
+	    call MatRestoreRow(W,i,col,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+       
+        allocate(idxn(m),idxntmp(m),row(m),rowtmp(m))
+        
+        call MatGetRow(W,i,col,idxntmp,rowtmp,ierr)
+	    m=col
+        idxn=idxntmp
+        row=rowtmp 
+        !print *, "1===i=",i,"idxn=",idxn,"row=",row
+        call MatRestoreRow(W,i,col,idxntmp,rowtmp,ierr)
+        
+        select case(opt)
+            case (MAT_COMPARE_LT)
+                where(row <  0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+            case (MAT_COMPARE_LE)
+                where(row <= 0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+            case (MAT_COMPARE_GT)
+                where(row >  0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+            case (MAT_COMPARE_GE)
+                where(row >= 0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+            case (MAT_COMPARE_EQ)
+                where(row == 0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+            case (MAT_COMPARE_NQ)
+                where(row /= 0) 
+                   row=1
+                else where
+                   row=0.0
+                end where
+			case default
+                row=0.0    
+        end select
+        !print *, "2=",i,"idxn=",idxn,"row=",row
+		call MatSetValues(C,1,i,m,idxn,row,INSERT_VALUES,ierr)
+        deallocate(idxn,idxntmp,row,rowtmp)
+	enddo
+	call mat_assemble(C,ierr)
+    call mat_destroy(W,ierr) 
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
