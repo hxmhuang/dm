@@ -89,7 +89,12 @@ module dm
     interface operator (.ed.)
         module procedure dm_ediv
     end interface
-  
+   
+    ! join with x directory 
+    interface operator (.xj.)
+        module procedure dm_xjoin
+    end interface
+
     ! join horizontally
     interface operator (.hj.)
         module procedure dm_hjoin
@@ -427,23 +432,22 @@ function dm_add1(A,B) result(C)
     endif
     
 	if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
-		C%x=A%x
-		call mat_axpy(C%x,alpha,B%x,ierr)
+		call dm_copy(C,A)
+        call mat_axpy(C%x,alpha,B%x,ierr)
         call mat_destroy(B%x,ierr)
 	else if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
-		C%x=A%x
+		call dm_copy(C,A)
 		call mat_axpy(C%x,alpha,B%x,ierr)
 	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then	
-		C%x=B%x
+		call dm_copy(C,B)
 		call mat_axpy(C%x,alpha,A%x,ierr)
 	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
-		call mat_copy(A%x,C%x,ierr)
+		call dm_copy(C,A)
 		call mat_axpy(C%x,alpha,B%x,ierr)
 	else
 		call dm_printf("Error in dm_add: wrong xtype value in this funtion.",ierr)
         stop
 	endif 
-    C%isGlobal=A%isGlobal
 	
     call dm_set_implicit(C,ierr)
 end function 
@@ -528,22 +532,21 @@ function dm_minus1(A,B) result(C)
     endif
 
     if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
-		C%x=B%x
-		call mat_aypx(C%x,alpha,A%x,ierr)
-        call mat_destroy(A%x,ierr)
+		call dm_copy(C,A)
+		call mat_axpy(C%x,alpha,B%x,ierr)
+        call mat_destroy(B%x,ierr)
 	else if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
-		C%x=A%x
+		call dm_copy(C,A)
 		call mat_axpy(C%x,alpha,B%x,ierr)
 	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then	
-		C%x=B%x
+		call dm_copy(C,B)
 		call mat_aypx(C%x,alpha,A%x,ierr)
 	else if(A%xtype==MAT_XTYPE_EXPLICIT .and. B%xtype==MAT_XTYPE_EXPLICIT) then	
-		call mat_copy(A%x,C%x,ierr)
+		call dm_copy(C,A)
 		call mat_axpy(C%x,alpha,B%x,ierr)
 	else
 		print *,"Error in dm_minus: wrong xtype value in this funtion."
 	endif 
-    C%isGlobal=A%isGlobal
 	call dm_set_implicit(C,ierr)
 end function 
 
@@ -554,8 +557,8 @@ function dm_minus2(A,alpha) result(C)
 	type(Matrix)                ::	C
 	integer						::	ierr
 
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,A%nx,A%ny,A%nz,alpha,ierr) 
+ 	call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
+    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
     C=dm_minus1(A,C)
  	call dm_set_implicit(C,ierr)
 end function 
@@ -577,8 +580,8 @@ function dm_minus4(alpha,A) result(C)
 	type(Matrix)                ::	C
 	integer						::	ierr
    
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,A%nx,A%ny,A%nz,alpha,ierr) 
+ 	call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
+    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
     C=dm_minus1(C,A)
     call dm_set_implicit(C,ierr)
 end function 
@@ -626,6 +629,31 @@ end function
 ! -----------------------------------------------------------------------
 ! C=[A B] 
 ! -----------------------------------------------------------------------
+function dm_xjoin(A,B) result(C)
+	implicit none
+	type(Matrix),	intent(in)	::  A 
+	type(Matrix),	intent(in)	::  B 
+	type(Matrix)              	::	C
+	integer						::	ierr
+
+    if(A%nx/=B%nx .or. A%nz/=B%nz .or.  A%isGlobal .neqv. B%isGlobal) then
+        call dm_printf("Error in dm_xjoin: Matrix A and B should have the same distribution.",ierr)
+        stop
+    endif
+
+    call dm_create(C,A%nx,A%ny+B%ny,A%nz,A%isGlobal,ierr)
+    call mat_xjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
+    call dm_set_implicit(C,ierr)
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
+end function 
+
+
 function dm_hjoin(A,B) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 

@@ -310,6 +310,68 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=[A B] 
 ! -----------------------------------------------------------------------
+subroutine mat_xjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+	Mat,	        intent(in)	::  A,B 
+	PetscInt,	    intent(in)  ::  m1,n1,k1,m2,n2,k2
+	Mat,            intent(out)	::	C
+	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+	PetscInt					::	col1,col2,m,n
+	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:)
+	PetscScalar,allocatable		::	row1(:),row2(:),row3(:)
+	PetscInt					::  ista,iend
+	integer						::	i
+	PetscLogEvent	            ::  ievent
+	call PetscLogEventRegister("mat_xjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+	
+    call MatGetSize(A,nrow1,ncol1,ierr)
+	call MatGetSize(B,nrow2,ncol2,ierr)
+	if(nrow1/=nrow2)then
+		print *, "Error in mat_xjoin: Matrix A and Matrix B should have the same row size"
+		stop	
+	endif
+
+	call mat_assemble(A,ierr)
+	call mat_assemble(B,ierr)
+	call MatGetOwnershipRange(A,ista,iend,ierr)
+
+	do i=ista,iend-1
+	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+        m=col1
+	    call MatRestoreRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    
+        call MatGetRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+		n=col2
+	    call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
+	    
+	    allocate(idxn1(m),row1(m))
+	    allocate(idxn2(n),row2(n))
+	    allocate(idxn3(m+n),row3(m+n))
+        
+        call MatGetRow(A,i,col1,idxn1,row1,ierr)
+        idxn3(1:m)=i/m1*(n1+n2)+mod(idxn1,n1)
+        row3(1:m)=row1
+		call MatRestoreRow(A,i,col1,idxn1,row1,ierr)
+        
+        call MatGetRow(B,i,col2,idxn2,row2,ierr)
+        idxn3((m+1):(m+n))=i/m1*(n1+n2)+n1+mod(idxn2,n2)
+        row3((m+1):(m+n))=row2
+		call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
+		
+		!print *,">i=",i,"idxn1=",idxn1,"idxn2=",idxn2,"idxn3=",idxn3,"row3=",row3
+		call MatSetValues(C,1,i,(m+n),idxn3,row3,INSERT_VALUES,ierr)
+	    deallocate(idxn1,idxn2,idxn3,row1,row2,row3)
+	enddo
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+
 subroutine mat_hjoin(A,B,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
