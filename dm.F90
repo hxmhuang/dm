@@ -139,16 +139,33 @@ module dm
         module procedure dm_copy
     end interface
 
+	integer 		::  dm_nx
+	integer 		::	dm_ny
+	integer 		::	dm_nz
+	type(Matrix)	:: 	DM_ZERO
 contains
 
 ! -----------------------------------------------------------------------
 ! Initialize the distributed matrix environment 
 ! -----------------------------------------------------------------------
-subroutine dm_init(ierr)
+subroutine dm_init1(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     integer,intent(out)  ::  ierr 
     call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+end subroutine 
+
+subroutine dm_init2(m,n,k,ierr)
+	implicit none
+#include <petsc/finclude/petscsys.h>
+	integer,intent(in)	 ::  m,n,k
+    integer,intent(out)  ::  ierr 
+	dm_nx=m
+	dm_ny=n
+	dm_nz=k
+	call mat_create(DM_ZERO%x,m,n,k,.true.,ierr)
+	call mat_zeros(DM_ZERO%x,ierr)
+	call mat_assemble(DM_ZERO%x,ierr)
 end subroutine 
 
 
@@ -225,6 +242,7 @@ subroutine dm_finalize(ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
     integer,intent(out)			::  ierr 
+	call mat_destroy(DM_ZERO%x,ierr)
     call PetscFinalize(ierr)
 end subroutine 
 
@@ -278,7 +296,12 @@ subroutine dm_create(A,m,n,k,isGlobal,ierr)
     else
         A%isGlobal=.true.
     endif
-	call mat_create(A%x,m,n,k,isGlobal,ierr)
+	
+	if(m==dm_nx .and. n==dm_ny .and. k==dm_nz .and. (A%isGlobal .eqv. .true.)) then 
+        call mat_copy(DM_ZERO%x,A%x,ierr)
+    else
+		call mat_create(A%x,m,n,k,isGlobal,ierr)
+	endif	
 	A%nx=m
 	A%ny=n
 	A%nz=k
@@ -294,13 +317,13 @@ function dm_zeros(m,n,k,isGlobal) result(A)
     logical,    intent(in),optional ::  isGlobal 
     type(Matrix)                    ::  A
     integer					        ::  ierr
-    
+   
     if (present(isGlobal)) then
         call dm_create(A,m,n,k,isGlobal,ierr)
-    else
+   	else
         call dm_create(A,m,n,k,.true.,ierr)
-    endif
-    call mat_zeros(A%x,ierr)
+	endif
+	call mat_zeros(A%x,ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -320,35 +343,7 @@ function dm_ones(m,n,k,isGlobal) result(A)
     else
         call dm_create(A,m,n,k,.true.,ierr)
     endif
-    call mat_constants(A%x,real(1.0,8),ierr)
-    call dm_set_implicit(A,ierr)
-end function
-
-
-! -----------------------------------------------------------------------
-! A=[m], This function is only used to generate the test data.
-!   [m+1]
-!   [m+2]
-! -----------------------------------------------------------------------
-function dm_m2n(m,n,isGlobal) result(A)
-    implicit none
-    integer,    intent(in)  	        ::  m,n
-    logical,    intent(in),optional     ::  isGlobal 
-    type(Matrix)           	            ::  A
-    integer					            ::  ierr
-   
-    if(m>n) then
-        call dm_printf(">Error in dm_m2n: the m should not greater than the n",ierr)
-        stop
-    endif
-    
-    if (present(isGlobal)) then
-        call dm_create(A,n-m+1,1,1,isGlobal,ierr)
-    else
-        call dm_create(A,n-m+1,1,1,.true.,ierr)
-    endif
-	
-    call mat_m2n(A%x,m,n,ierr)	
+    call mat_constants(A%x,A%nx,A%ny,A%nz,real(1.0,8),ierr)
     call dm_set_implicit(A,ierr)
 end function
 
@@ -373,13 +368,6 @@ function dm_eye(m,n,k,isGlobal) result(A)
 	type(Matrix)			            ::	A
 	integer                             ::	nmax, nmin 
 	integer					            ::	ierr
-     
-    nmin=min(m,n)
- 	if(nmin <= 0) then
-		print *, "Error in dm_eye: the size of matrix A should be greater than zero" 
-		stop	
-	endif
-
     if (present(isGlobal)) then
         call dm_create(A,m,n,k,isGlobal,ierr)
     else
@@ -399,8 +387,11 @@ subroutine dm_copy(B,A)
     type(Matrix),  intent(inout) ::  B
     type(Matrix)                 ::  W
     integer						 ::  ierr
-    
+	
 	B%isGlobal=A%isGlobal
+	B%nx=A%nx
+	B%ny=A%ny
+	B%nz=A%nz
 	if(B%xtype==MAT_XTYPE_EXPLICIT) then
         W%x=B%x
     endif
@@ -463,8 +454,8 @@ function dm_add2(A,alpha) result(C)
 	real(kind=8),	intent(in)	::  alpha 
 	type(Matrix)                ::	C
 	integer						::	ierr
- 	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
+ 	call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
+    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
     C=dm_add1(A,C)
     call dm_set_implicit(C,ierr)
 end function 
@@ -564,7 +555,7 @@ function dm_minus2(A,alpha) result(C)
 	integer						::	ierr
 
  	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
+    call mat_constants(C%x,A%nx,A%ny,A%nz,alpha,ierr) 
     C=dm_minus1(A,C)
  	call dm_set_implicit(C,ierr)
 end function 
@@ -587,7 +578,7 @@ function dm_minus4(alpha,A) result(C)
 	integer						::	ierr
    
  	call dm_create(C,A%nrow,A%ncol,1,A%isGlobal,ierr)
-    call mat_constants(C%x,alpha,ierr) 
+    call mat_constants(C%x,A%nx,A%ny,A%nz,alpha,ierr) 
     C=dm_minus1(C,A)
     call dm_set_implicit(C,ierr)
 end function 
@@ -1973,8 +1964,8 @@ subroutine dm_set_implicit(A,ierr)
 	type(Matrix),	intent(inout)	::  A 
 	integer,		intent(out)		::	ierr
     A%xtype=MAT_XTYPE_IMPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+	!call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	!call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end subroutine
 
 
@@ -1986,8 +1977,8 @@ subroutine dm_set_explicit(A,ierr)
 	type(Matrix),	intent(inout)	::  A 
 	integer,		intent(out)		::	ierr
     A%xtype=MAT_XTYPE_EXPLICIT 
-	call mat_getsize(A%x,A%nrow,A%ncol,ierr)
-	call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
+	!call mat_getsize(A%x,A%nrow,A%ncol,ierr)
+	!call mat_getownershiprange(A%x,A%ista,A%iend,ierr) 
 end subroutine
 
 

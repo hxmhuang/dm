@@ -6,6 +6,16 @@ module dm_mat
 
 contains
 
+! -----------------------------------------------------------------------
+! Generate a logical 3D matrix with 2D Mat 
+! -----------------------------------------------------------------------
+! For example, suppose A is a 3*2*2 matrix, we will store A as 
+! A=[x11 x12   0   0 ]
+!	[x21 x22   0   0 ]
+!	[x31 x32   0   0 ]
+!	[  0   0 Y11 Y12 ]
+!	[  0   0 Y21 Y22 ]
+!	[  0   0 Y31 Y32 ]
 subroutine mat_create(A,m,n,k,isGlobal,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -18,18 +28,18 @@ subroutine mat_create(A,m,n,k,isGlobal,ierr)
 	PetscErrorCode,	intent(out)	::	ierr
 	
 	PetscInt					::	i		
-!  	PetscLogEvent	            ::  ievent
-! 	call PetscLogEventRegister("mat_create",0, ievent, ierr)
-!   call PetscLogEventBegin(ievent,ierr)
-	! generate matrix A with size m*n
-	if(isGlobal) then
-		call MatCreate(PETSC_COMM_WORLD,A,ierr)
-	else
-		call MatCreate(PETSC_COMM_SELF,A,ierr);
-	endif
-    call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*k,n,ierr)
-	call MatSetFromOptions(A,ierr)
-	call MatSetUp(A,ierr)
+!	PetscLogEvent	            ::  ievent
+!	call PetscLogEventRegister("mat_create",0, ievent, ierr)
+!    call PetscLogEventBegin(ievent,ierr)
+    ! generate matrix A with size m*n
+    if(isGlobal) then
+    	call MatCreate(PETSC_COMM_WORLD,A,ierr)
+    else
+    	call MatCreate(PETSC_COMM_SELF,A,ierr);
+    endif
+    call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*k,n*k,ierr)
+    call MatSetFromOptions(A,ierr)
+    call MatSetUp(A,ierr)
 !   call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -79,11 +89,11 @@ subroutine mat_assemble(A,ierr)
 	Mat,			intent(in)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscBool					::  assembled	
-	call MatAssembled(A,assembled,ierr)
-	if(.not. assembled) then
+!	call MatAssembled(A,assembled,ierr)
+!	if(.not. assembled) then
 		call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
 		call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
-	endif
+!	endif
 end subroutine
 
 
@@ -111,7 +121,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! A=1. 
 ! -----------------------------------------------------------------------
-subroutine mat_constants(A,alpha,ierr)
+subroutine mat_constants(A,m,n,k,alpha,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -119,69 +129,29 @@ subroutine mat_constants(A,alpha,ierr)
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(out)	::	A
 	PetscErrorCode,	intent(out)	::	ierr
+	PetscInt,		intent(in)	::  m,n,k 
 	PetscScalar,	intent(in)	::  alpha	
-	PetscInt	    			::	nrow,ncol
-	PetscInt					::  ista,iend,nlocal
+	PetscInt					::  ista,iend,ilocal
 	PetscInt,allocatable		::	idxm(:),idxn(:)
 	PetscScalar,allocatable		::	row(:)
 	integer 					:: 	i,j
 	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_ones",0, ievent, ierr)
+	call PetscLogEventRegister("mat_constants",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
    	
-	call MatGetSize(A,nrow,ncol,ierr) 
 	call MatGetOwnershipRange(A,ista,iend,ierr)
-	nlocal=iend-ista
-	allocate(idxm(nlocal),idxn(ncol),row(nlocal*ncol))
-
-	do i=1,nlocal
-		idxm(i)=ista+i-1
-	enddo
-	do j=1,ncol
-		idxn(j)=j-1
-	enddo
+	ilocal=iend-ista
+	allocate(idxm(1),idxn(n),row(n))
 	row=alpha
-
-	call MatSetValues(A,nlocal,idxm,ncol,idxn,row,INSERT_VALUES,ierr)
-	deallocate(idxm,idxn,row)
-    call PetscLogEventEnd(ievent,ierr)
-end subroutine
-
-
-! -----------------------------------------------------------------------
-! A=[m], This function is only used to generate the test data.
-!   [m+1]
-!   [m+2]
-subroutine mat_m2n(A,m,n,ierr)
-	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	
-	Mat,			intent(out)	::	A
-	PetscInt,	    intent(in)	::	m,n
-	PetscErrorCode,	intent(out)	::	ierr
-	
-	PetscInt					::  ista,iend,nlocal
-	PetscInt,allocatable		::	idxm(:)
-	PetscScalar,allocatable		::	row(:)
-	integer 					:: 	i
-	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_m2n",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
-	
-	call MatGetOwnershipRange(A,ista,iend,ierr)
-	nlocal=iend-ista
-	!print *,">ista=",ista,"iend=",iend,"nlocal=",nlocal
-	allocate(idxm(nlocal),row(nlocal))
 	do i=ista,iend-1
-		idxm(i-ista+1)=i
-		row(i-ista+1)=m+i
+		idxm(1)=i
+		do j=0,n-1
+			idxn(j+1)=(i/m)*n+j	
+		enddo
+		!print *,"i=",i,"idxm=",idxm,"idxn=",idxn
+		call MatSetValues(A,1,idxm,n,idxn,row,INSERT_VALUES,ierr)
 	enddo
-	!print *,">idxm=",idxm,"row=",row
-	call MatSetValues(A,nlocal,idxm,1,0,row,INSERT_VALUES,ierr)
-	deallocate(idxm,row)
+	deallocate(idxm,idxn,row)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
@@ -209,7 +179,7 @@ subroutine mat_eye(A,m,n,k,ierr)
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscInt,		intent(in)	::	m,n,k	
 	PetscInt					::	nmin
-	PetscInt					::  ista,iend,xpos
+	PetscInt					::  ista,iend,xpos,ypos
 	PetscScalar					::	row
 	integer 					:: 	i,j,counter
 	PetscLogEvent	            ::  ievent
@@ -220,13 +190,17 @@ subroutine mat_eye(A,m,n,k,ierr)
     nmin=min(m,n)
     row=1.0
 	call MatGetOwnershipRange(A,ista,iend,ierr)
-    do i=ista,iend-1
+    xpos=-1
+	ypos=-1
+	do i=ista,iend-1
     	xpos=mod(i,m)
-		do j=0,nmin-1
-    		if(j==xpos) then
-    			call MatSetValue(A,i,j,row,INSERT_VALUES,ierr)
-    		endif
-		enddo
+		if(xpos<n) then
+			ypos=i/m*n+xpos
+    		call MatSetValue(A,i,ypos,row,INSERT_VALUES,ierr)
+    	endif
+		!print *,"i=",i,"ista:iend=",ista,iend,"xpos=",xpos,"ypos=",ypos
+    	xpos=-1
+		ypos=-1
 	enddo
     
 	call PetscLogEventEnd(ievent,ierr)
@@ -327,10 +301,8 @@ subroutine mat_copy(A,B,ierr)
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_copy",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-   	
 	call mat_assemble(A,ierr)
     call MatDuplicate(A,MAT_COPY_VALUES,B,ierr)
-    
 	call PetscLogEventEnd(ievent,ierr)
 end subroutine
 

@@ -20,7 +20,7 @@ program main
 	real(kind=8),allocatable :: array(:)
     debug=.false.
 
-    call dm_init(ierr)
+    call dm_init1(ierr)
     
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
@@ -31,6 +31,7 @@ program main
 	call dm_option_real('-ep',ep,ierr)
     call dm_option_bool('-debug',debug,ierr)
     
+    call dm_init2(m,n,k,ierr)
     if(myrank==0) then 
        print *, "==============Input paramenters==========="
         print *, "m=",m,",n=",n,",k=",k,",ep=",ep,",debug=",debug
@@ -41,6 +42,7 @@ program main
     A=dm_zeros(m,n,k)
     B=dm_zeros(m,n,k,.true.)
     C=dm_zeros(m,n,k,.false.)
+    D=dm_zeros(m,m,m)
     if(debug) then
         if(myrank==0) print *, ">A=dm_zeros(m,n,k)"
         call dm_view(A,ierr)
@@ -48,16 +50,21 @@ program main
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=dm_zeros(m,n,k,.false.)"
         if(myrank==0) call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_zeros(m,m,m)"
+        call dm_view(D,ierr)
  	endif
     call dm_destroy(A,ierr)
     call dm_destroy(B,ierr)
     call dm_destroy(C,ierr)
+    call dm_destroy(D,ierr)
 
 
  	if(myrank==0) print *, "==============Test dm_ones================"
     A=dm_ones(m,n,k)
     B=dm_ones(m,n,k,.true.)
     C=dm_ones(m,n,k,.false.)
+    D=dm_ones(m,m,m)
+    E=dm_ones(n,n,m)
     if(debug) then
         if(myrank==0) print *, ">A=dm_ones(m,n,k)"
         call dm_view(A,ierr)
@@ -65,27 +72,16 @@ program main
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=dm_ones(m,n,k,.false.)"
         if(myrank==0) call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_ones(m,m,m)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=dm_ones(n,n,m)"
+        call dm_view(E,ierr)
  	endif
     call dm_destroy(A,ierr)
     call dm_destroy(B,ierr)
     call dm_destroy(C,ierr)
-
-
- 	if(myrank==0) print *, "==============Test dm_m2n================="
-    A=dm_m2n(0,4)
-    B=dm_m2n(0,3,.true.)
-    C=dm_m2n(0,2,.false.)
-    if(debug) then
-        if(myrank==0) print *, ">A=dm_m2n(0,4)"
-        call dm_view(A,ierr)
-        if(myrank==0) print *, ">B=dm_m2n(0,3,.true.)"
-        call dm_view(B,ierr)
-        if(myrank==0) print *, ">C=dm_m2n(0,2,.false.)"
-        if(myrank==0) call dm_view(C,ierr)
- 	endif
-    call dm_destroy(A,ierr)
-    call dm_destroy(B,ierr)
-    call dm_destroy(C,ierr)
+    call dm_destroy(D,ierr)
+    call dm_destroy(E,ierr)
 
 
     if(myrank==0) print *, "==============Test dm_eye================="
@@ -95,22 +91,25 @@ program main
     D=dm_eye(m,m*2,1,.true.)	
     E=dm_eye(2*m,m,1,.false.)	
     F=dm_eye(m,m*2,2)	
-    G=dm_eye(2*m,m,3)	
+    G=dm_eye(2*m,m,3)
+    H=dm_eye(m,m,m)	
     if(debug) then
         if(myrank==0) print *, ">A=dm_eye(m,n,k)"
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B=dm_eye(m,2m)"
+        if(myrank==0) print *, ">B=dm_eye(m,2m,1)"
         call dm_view(B,ierr)
-        if(myrank==0) print *, ">C=dm_eye(2*m,m)"
+        if(myrank==0) print *, ">C=dm_eye(2*m,m,1)"
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_eye(m,m*2,.true.)"
+        if(myrank==0) print *, ">D=dm_eye(m,m*2,1,.true.)"
         call dm_view(D,ierr)
-        if(myrank==0) print *, ">E=dm_eye(2*m,m,.false.)"
+        if(myrank==0) print *, ">E=dm_eye(2*m,m,1,.false.)"
         if(myrank==0) call dm_view(E,ierr)
         if(myrank==0) print *, ">F=dm_eye(m,2*m,2)"
         call dm_view(F,ierr)
         if(myrank==0) print *, ">G=dm_eye(2*m,m,3)"
         call dm_view(G,ierr)
+        if(myrank==0) print *, ">H=dm_eye(m,m,m)"
+        call dm_view(H,ierr)
  	endif
  	call dm_destroy(A,ierr)
  	call dm_destroy(B,ierr)
@@ -119,13 +118,14 @@ program main
  	call dm_destroy(E,ierr)
  	call dm_destroy(F,ierr)
  	call dm_destroy(G,ierr)
+ 	call dm_destroy(H,ierr)
 
 
  	if(myrank==0) print *, "==============Test dm_copy================"
- 	A=dm_eye(m,m,2)
+ 	A=dm_eye(m,n,k)
     B=A
     if(debug) then
-        if(myrank==0) print *, ">A=dm_eye(m,m,2)"
+        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
         call dm_view(A,ierr)
         if(myrank==0) print *, ">B=A"
         call dm_view(B,ierr)
@@ -144,8 +144,8 @@ program main
     G=A+A+A
     H=B+G
     X=A+2.0
-    Y=2+A
-    Z=real(2,8)+A
+!   Y=2+A
+!   Z=real(2,8)+A
 !   U=dm_eye(m,n,k,.true.)+dm_eye(m,n,k)
 !   V=dm_eye(m,n,k,.false.)+dm_eye(m,n,k,.false.)
 !   W=2+dm_eye(m,n,k,.false.)
@@ -168,33 +168,33 @@ program main
         call dm_view(H,ierr)
         if(myrank==0) print *, ">X=A+2.0"
         call dm_view(X,ierr)
-        if(myrank==0) print *, ">Y=2+A"
-        call dm_view(Y,ierr)
-        if(myrank==0) print *, ">Z=real(2,kind=8)+A"
-        call dm_view(Z,ierr)
+!       if(myrank==0) print *, ">Y=2+A"
+!       call dm_view(Y,ierr)
+!       if(myrank==0) print *, ">Z=real(2,kind=8)+A"
+!       call dm_view(Z,ierr)
 !       if(myrank==0) print *, ">U=dm_eye(m,n,k,.true.)+dm_eye(m,n,k)"
 !       call dm_view(U,ierr)
 !       if(myrank==0) print *, ">V=dm_eye(m,n,k,.false.)+dm_eye(m,n,k,.false.)"
 !       if(myrank==0) call dm_view(V,ierr)
 !       if(myrank==0) print *, ">W=2+dm_eye(m,n,k,.false.)"
 !       if(myrank==0) call dm_view(W,ierr)
-!	endif
+ 	endif
 !    A=A+A	
 !    if(debug) then
 !        if(myrank==0) print *, ">A=A+A"
 !       call dm_view(A,ierr)
- 	 endif
+!	 endif
     call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
  	call dm_destroy(C,ierr)
- 	call dm_destroy(D,ierr)
- 	call dm_destroy(E,ierr)
- 	call dm_destroy(F,ierr)
- 	call dm_destroy(G,ierr)
- 	call dm_destroy(H,ierr)
- 	call dm_destroy(X,ierr)
- 	call dm_destroy(Y,ierr)
- 	call dm_destroy(Z,ierr)
+!	call dm_destroy(D,ierr)
+!	call dm_destroy(E,ierr)
+!	call dm_destroy(F,ierr)
+!	call dm_destroy(G,ierr)
+!	call dm_destroy(H,ierr)
+!	call dm_destroy(X,ierr)
+!	call dm_destroy(Y,ierr)
+!	call dm_destroy(Z,ierr)
 !	call dm_destroy(U,ierr)
 !	call dm_destroy(V,ierr)
 !	call dm_destroy(W,ierr)
