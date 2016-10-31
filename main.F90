@@ -268,7 +268,7 @@ program main
 
     if(myrank==0) print *, "==============Test dm_xjoin==============="
   	A=dm_eye(m,n,k)
-    B=dm_eye(m,n,k)
+    B=dm_eye(m,2*n,k)
     C=A .xj. B
     D=dm_eye(m,n,k) .xj. dm_eye(m,n,k)
     E=dm_eye(m,n,k) .xj. B
@@ -279,7 +279,7 @@ program main
     if(debug) then
         if(myrank==0) print *, ">A=dm(m,n,k)"
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B=dm(m,n,k)"
+        if(myrank==0) print *, ">B=dm(m,2*n,k)"
         call dm_view(B,ierr)
         if(myrank==0) print *, ">C=A .xj. B"
         call dm_view(C,ierr)
@@ -307,39 +307,39 @@ program main
  	call dm_destroy(U,ierr)
 
 
-!   if(myrank==0) print *, "==============Test dm_vjoin==============="
-! 	A=dm_eye(m,n,k)
-!   B=dm_eye(m,n,k)
-!   C=A .vj. B
-!   D=dm_eye(m,n,k) .vj. dm_eye(m,n,k)
-!   E=dm_eye(m,n,k) .vj. B
-!   F=A .vj. dm_eye(m,n,k)
-!   G=A .vj. A .vj. A
-!   H=B .vj. G
-!   U=dm_eye(m,n,k,.false.) .vj. dm_eye(m,n,k,.false.)
-!   if(debug) then
-!       if(myrank==0) print *, ">A="
-!       call dm_view(A,ierr)
-!       if(myrank==0) print *, ">B="
-!       call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=A .vj. B"
+    if(myrank==0) print *, "==============Test dm.yj.in==============="
+  	A=dm_eye(m,n,k)
+    B=dm_eye(m,n,k)
+!   C=A .yj. B
+!   D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)
+!   E=dm_eye(m,n,k) .yj. B
+!   F=A .yj. dm_eye(m,n,k)
+!   G=A .yj. A .yj. A
+!   H=B .yj. G
+!   U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
+    if(debug) then
+        if(myrank==0) print *, ">A="
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B="
+        call dm_view(B,ierr)
+!       if(myrank==0) print *, ">C=A .yj. B"
 !       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=dm_eye(m,n,k) .vj. dm_eye(m,n,k)"
+!       if(myrank==0) print *, ">D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)"
 !       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=dm_eye(m,n,k) .vj. B"
+!       if(myrank==0) print *, ">E=dm_eye(m,n,k) .yj. B"
 !       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=A .vj. dm_eye(m,n,k)"
+!       if(myrank==0) print *, ">F=A .yj. dm_eye(m,n,k)"
 !       call dm_view(F,ierr)
-!       if(myrank==0) print *, ">G=A .vj. A .vj. A"
+!       if(myrank==0) print *, ">G=A .yj. A .yj. A"
 !       call dm_view(G,ierr)
-!       if(myrank==0) print *, ">H=B .vj. G"
+!       if(myrank==0) print *, ">H=B .yj. G"
 !       call dm_view(H,ierr)
-!       if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .vj. dm_eye(m,n,k,.false.)"
+!       if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
 !       if(myrank==0) call dm_view(U,ierr)
-!	endif
-!   call dm_destroy(A,ierr)
-! 	call dm_destroy(B,ierr)
-!	call dm_destroy(C,ierr)
+ 	endif
+    call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+ 	call dm_destroy(C,ierr)
 !	call dm_destroy(D,ierr)
 !	call dm_destroy(E,ierr)
 !	call dm_destroy(F,ierr)
@@ -1223,12 +1223,12 @@ program main
 
 
 !   if(myrank==0) print *, "==============Test dm_sparse=============="
-!   A=dm_m2n(1,3) .vj. dm_m2n(5,6)
-!   B=dm_m2n(0,2) .vj. dm_m2n(5,6)
+!   A=dm_m2n(1,3) .yj. dm_m2n(5,6)
+!   B=dm_m2n(0,2) .yj. dm_m2n(5,6)
 !   C=dm_m2n(100,104)
 !   D=dm_sparse(A,B,C,8,8)	
-!   E=dm_m2n(1,3,.false.) .vj. dm_m2n(5,6,.false.)
-!   F=dm_m2n(0,2,.false.) .vj. dm_m2n(5,6,.false.)
+!   E=dm_m2n(1,3,.false.) .yj. dm_m2n(5,6,.false.)
+!   F=dm_m2n(0,2,.false.) .yj. dm_m2n(5,6,.false.)
 !   G=dm_m2n(100,104,.false.)
 !   H=dm_sparse(E,F,G,8,8)	
 !   if(debug) then

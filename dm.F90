@@ -94,10 +94,10 @@ module dm
     interface operator (.xj.)
         module procedure dm_xjoin
     end interface
-
-    ! join horizontally
-    interface operator (.hj.)
-        module procedure dm_hjoin
+ 
+    ! join with y directory 
+    interface operator (.yj.)
+        module procedure dm_yjoin
     end interface
     
 	! join vertically
@@ -654,35 +654,36 @@ function dm_xjoin(A,B) result(C)
 end function 
 
 
-function dm_hjoin(A,B) result(C)
+! -----------------------------------------------------------------------
+! C=[A] 
+!   [B] 
+! -----------------------------------------------------------------------
+function dm_yjoin(A,B) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
 
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_hjoin: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
+    if(A%ny/=B%ny .or. A%nz/=B%nz .or.  A%isGlobal .neqv. B%isGlobal) then
+		print *, "Error in dm_yjoin: Matrix A and Matrix B should have the same distribution."
+		stop	
+	endif
+    
+    call dm_create(C,A%nx+B%nx,A%ny,A%nz,A%isGlobal,ierr)
+    call mat_yjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
+	call dm_set_implicit(C,ierr)
 
-!   call dm_create(C,A%nrow,A%ncol+B%ncol,A%isGlobal,ierr)
-!   call mat_hjoin(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
-
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
-! -----------------------------------------------------------------------
-! C=[A] 
-!   [B] 
-! -----------------------------------------------------------------------
+
+
 function dm_vjoin(A,B) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 

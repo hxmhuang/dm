@@ -372,74 +372,57 @@ subroutine mat_xjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 end subroutine
 
 
-subroutine mat_hjoin(A,B,C,ierr)
+! -----------------------------------------------------------------------
+! C=[A] 
+!   [B] 
+! -----------------------------------------------------------------------
+subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 	Mat,	        intent(in)	::  A,B 
+    PetscInt,	    intent(in)	::  m1,n1,k1,m2,n2,k2 
 	Mat,            intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
+	Mat							::	W1,W2,W3
 	PetscInt					::	nrow1,ncol1,nrow2,ncol2
-	PetscInt					::	col1,col2,m,n
-	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:)
-	PetscScalar,allocatable		::	row1(:),row2(:),row3(:)
-	PetscInt					::  ista,iend
-	integer						::	i
+	PetscBool	    			::  isGlobal 
+	PetscScalar					::  alpha
 	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_hjoin",0, ievent, ierr)
+    call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-	
-    call MatGetSize(A,nrow1,ncol1,ierr)
-	call MatGetSize(B,nrow2,ncol2,ierr)
-	if(nrow1/=nrow2)then
-		print *, "Error in mat_hjoin: Matrix A and Matrix B should have the same row size"
-		stop	
-	endif
-
-	call mat_assemble(A,ierr)
-	call mat_assemble(B,ierr)
-	call MatGetOwnershipRange(A,ista,iend,ierr)
-
-	do i=ista,iend-1
-	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-        m=col1
-	    call MatRestoreRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-	    
-        call MatGetRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-		n=col2
-	    call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
-	    
-	    allocate(idxn1(m),row1(m))
-	    allocate(idxn2(n),row2(n))
-	    allocate(idxn3(m+n),row3(m+n))
-        
-        call MatGetRow(A,i,col1,idxn1,row1,ierr)
-        idxn3(1:m)=idxn1
-        row3(1:m)=row1
-		call MatRestoreRow(A,i,col1,idxn1,row1,ierr)
-        
-        call MatGetRow(B,i,col2,idxn2,row2,ierr)
-        idxn3((m+1):(m+n))=ncol1+idxn2
-        row3((m+1):(m+n))=row2
-		call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
-		
-		!print *,">i=",i,"idxn3=",idxn3,"row3=",row3
-		call MatSetValues(C,1,i,(m+n),idxn3,row3,INSERT_VALUES,ierr)
-	    deallocate(idxn1,idxn2,idxn3,row1,row2,row3)
-	enddo
-
-	!call MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr)
-	!call MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr)
     
+    alpha=1.0
+    
+    call mat_assemble(A,ierr)
+    call mat_assemble(B,ierr)
+    
+    call MatGetSize(A,nrow1,ncol1,ierr)
+    call MatGetSize(B,nrow2,ncol2,ierr)
+    
+    call mat_gettype(A,isGlobal,ierr)	
+    call mat_create(W1,m1+m2,m2,k1,isGlobal,ierr)
+    call mat_create(W2,m+nrow2,nrow2,isGlobal,ierr)
+    call mat_veyezero(W1,nrow1,nrow2,ierr)
+    call mat_vzeroeye(W2,nrow1,nrow2,ierr)
+    call mat_assemble(W1,ierr)
+    call mat_assemble(W2,ierr)
+    
+    call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr)    
+    call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
+    
+    call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
+    
+    call mat_destroy(W1,ierr)
+    call mat_destroy(W2,ierr)
+    call mat_destroy(W3,ierr)
+
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
-! -----------------------------------------------------------------------
-! C=[A] 
-!   [B] 
-! -----------------------------------------------------------------------
+
 subroutine mat_vjoin(A,B,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
@@ -483,33 +466,6 @@ subroutine mat_vjoin(A,B,C,ierr)
 !!!!call mat_destroy(W3,ierr)
 
 !!!!call PetscLogEventEnd(ievent,ierr)
-end subroutine
-
-
-subroutine bk_mat_vjoin(A,B,C,ierr)
-	implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-	Mat,	        intent(in)	::  A,B 
-	Mat,            intent(out)	::	C
-	PetscErrorCode,	intent(out)	::	ierr
-	Mat							::	W1,W2,W3
-	PetscLogEvent	            ::  ievent
-	call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
-    
-	call mat_trans(A,W1,ierr)
-	call mat_trans(B,W2,ierr)
-	call mat_hjoin(W1,W2,W3,ierr)
-	call mat_trans(W3,C,ierr)
-	
-	call mat_destroy(W1,ierr)
-	call mat_destroy(W2,ierr)
-	call mat_destroy(W3,ierr)
-
-	call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
