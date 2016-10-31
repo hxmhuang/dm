@@ -375,8 +375,49 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=[A] 
 !   [B] 
-! -----------------------------------------------------------------------
+    ! -----------------------------------------------------------------------
 subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
+    implicit none 
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,            intent(in)  ::  A,B  
+    PetscInt,	    intent(in)	::  m1,n1,k1,m2,n2,k2 
+    Mat,            intent(out) ::  C
+    PetscErrorCode, intent(out) ::  ierr 
+    Mat                         ::  W1,W2,W3
+	PetscBool	    			::  isGlobal 
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    !call mat_assemble(A,ierr)
+    !call mat_assemble(B,ierr)
+ 
+    call mat_trans(A,W1,ierr)
+    call mat_trans(B,W2,ierr)
+    !print *, "W1="
+    !call mat_view(W1,ierr)
+    !print *, "W2="
+    !call mat_view(W2,ierr)
+    call mat_gettype(A,isGlobal,ierr)
+    call mat_create(W3,n1,m1+m2,k1,isGlobal,ierr)
+    call mat_zeros(W3,ierr)
+    call mat_xjoin(W1,n1,m1,k1,W2,n2,m2,k2,W3,ierr)
+    !print *, "W3="
+    !call mat_view(W3,ierr)
+    call mat_destroy(C,ierr)
+    call mat_trans(W3,C,ierr)
+
+    call mat_destroy(W1,ierr)
+    call mat_destroy(W2,ierr)
+    call mat_destroy(W3,ierr)
+
+    call PetscLogEventEnd(ievent,ierr)
+end subroutine
+
+subroutine bk_mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -404,7 +445,7 @@ subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
     
     call mat_gettype(A,isGlobal,ierr)	
     call mat_create(W1,m1+m2,m2,k1,isGlobal,ierr)
-    call mat_create(W2,m+nrow2,nrow2,isGlobal,ierr)
+    call mat_create(W2,m1+m2,m1,k1,isGlobal,ierr)
     call mat_veyezero(W1,nrow1,nrow2,ierr)
     call mat_vzeroeye(W2,nrow1,nrow2,ierr)
     call mat_assemble(W1,ierr)

@@ -670,7 +670,7 @@ function dm_yjoin(A,B) result(C)
 		stop	
 	endif
     
-    call dm_create(C,A%nx+B%nx,A%ny,A%nz,A%isGlobal,ierr)
+     call dm_create(C,A%nx+B%ny,A%ny,A%nz,A%isGlobal,ierr)
     call mat_yjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
 	call dm_set_implicit(C,ierr)
 

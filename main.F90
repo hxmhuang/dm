@@ -307,45 +307,45 @@ program main
  	call dm_destroy(U,ierr)
 
 
-    if(myrank==0) print *, "==============Test dm.yj.in==============="
+    if(myrank==0) print *, "==============Test dm_yjoin==============="
   	A=dm_eye(m,n,k)
     B=dm_eye(m,n,k)
-!   C=A .yj. B
-!   D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)
-!   E=dm_eye(m,n,k) .yj. B
-!   F=A .yj. dm_eye(m,n,k)
-!   G=A .yj. A .yj. A
-!   H=B .yj. G
-!   U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
+    C=A .yj. B
+    D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)
+    E=dm_eye(m,n,k) .yj. B
+    F=A .yj. dm_eye(m,n,k)
+    G=A .yj. A .yj. A
+    H=B .yj. G
+    U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
     if(debug) then
         if(myrank==0) print *, ">A="
         call dm_view(A,ierr)
         if(myrank==0) print *, ">B="
         call dm_view(B,ierr)
-!       if(myrank==0) print *, ">C=A .yj. B"
-!       call dm_view(C,ierr)
-!       if(myrank==0) print *, ">D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)"
-!       call dm_view(D,ierr)
-!       if(myrank==0) print *, ">E=dm_eye(m,n,k) .yj. B"
-!       call dm_view(E,ierr)
-!       if(myrank==0) print *, ">F=A .yj. dm_eye(m,n,k)"
-!       call dm_view(F,ierr)
-!       if(myrank==0) print *, ">G=A .yj. A .yj. A"
-!       call dm_view(G,ierr)
-!       if(myrank==0) print *, ">H=B .yj. G"
-!       call dm_view(H,ierr)
-!       if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
-!       if(myrank==0) call dm_view(U,ierr)
+        if(myrank==0) print *, ">C=A .yj. B"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=dm_eye(m,n,k) .yj. B"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=A .yj. dm_eye(m,n,k)"
+        call dm_view(F,ierr)
+        if(myrank==0) print *, ">G=A .yj. A .yj. A"
+        call dm_view(G,ierr)
+        if(myrank==0) print *, ">H=B .yj. G"
+        call dm_view(H,ierr)
+        if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
+        if(myrank==0) call dm_view(U,ierr)
  	endif
     call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
  	call dm_destroy(C,ierr)
-!	call dm_destroy(D,ierr)
-!	call dm_destroy(E,ierr)
-!	call dm_destroy(F,ierr)
-!	call dm_destroy(G,ierr)
-!	call dm_destroy(H,ierr)
-!	call dm_destroy(U,ierr)
+ 	call dm_destroy(D,ierr)
+ 	call dm_destroy(E,ierr)
+ 	call dm_destroy(F,ierr)
+ 	call dm_destroy(G,ierr)
+ 	call dm_destroy(H,ierr)
+ 	call dm_destroy(U,ierr)
 
 
 !   if(myrank==0) print *, "==============Test dm_mult================"
