@@ -158,14 +158,12 @@ end subroutine
 
 ! -----------------------------------------------------------------------
 ! The eye function is used to generate the simple and complex identity matrixs. 
-! For example, if A is a 2*6 matrix, we can use mat_eye(A,ierr) to obtain 
-! A= [1 0 0 0 0 0]
-!	 [0 1 0 0 0 0]
-! if A is a 6*2 matrix, then mat_eye(A,ierr) will generate
+! For example, if A is a 2*4 matrix, we can use mat_eye(A,ierr) to obtain 
+! A= [1 0 0 0]
+!	 [0 1 0 0]
+! if A is a 4*2 matrix, then mat_eye(A,ierr) will generate
 ! A= [1 0]
 !	 [0 1]
-!	 [0 0]
-!    [0 0]
 !	 [0 0]
 !    [0 0]
 ! -----------------------------------------------------------------------
@@ -325,6 +323,7 @@ subroutine mat_xjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:)
 	PetscScalar,allocatable		::	row1(:),row2(:),row3(:)
 	PetscInt					::  ista,iend
+	PetscBool					::	isGlobal
 	integer						::	i
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_xjoin",0, ievent, ierr)
@@ -340,7 +339,9 @@ subroutine mat_xjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	call mat_assemble(A,ierr)
 	call mat_assemble(B,ierr)
 	call MatGetOwnershipRange(A,ista,iend,ierr)
-
+    call mat_gettype(A,isGlobal,ierr)
+    call mat_create(C,m1,n1+n2,k1,isGlobal,ierr)
+    call mat_zeros(C,ierr)
 	do i=ista,iend-1
 	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
         m=col1
@@ -376,6 +377,7 @@ end subroutine
 ! C=[A] 
 !   [B] 
     ! -----------------------------------------------------------------------
+
 subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
     implicit none 
 #include <petsc/finclude/petscsys.h>
@@ -402,12 +404,12 @@ subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
     !print *, "W2="
     !call mat_view(W2,ierr)
     call mat_gettype(A,isGlobal,ierr)
-    call mat_create(W3,n1,m1+m2,k1,isGlobal,ierr)
-    call mat_zeros(W3,ierr)
+    !call mat_create(W3,n1,m1+m2,k1,isGlobal,ierr)
+    !call mat_zeros(W3,ierr)
     call mat_xjoin(W1,n1,m1,k1,W2,n2,m2,k2,W3,ierr)
     !print *, "W3="
     !call mat_view(W3,ierr)
-    call mat_destroy(C,ierr)
+    !call mat_destroy(C,ierr)
     call mat_trans(W3,C,ierr)
 
     call mat_destroy(W1,ierr)
@@ -418,95 +420,140 @@ subroutine mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 end subroutine
 
 subroutine bk_mat_yjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
-	implicit none
+    implicit none 
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-	Mat,	        intent(in)	::  A,B 
+    Mat,            intent(in)  ::  A,B  
     PetscInt,	    intent(in)	::  m1,n1,k1,m2,n2,k2 
-	Mat,            intent(out)	::	C
-	PetscErrorCode,	intent(out)	::	ierr
-	Mat							::	W1,W2,W3
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+    Mat,            intent(out) ::  C
+    PetscErrorCode, intent(out) ::  ierr 
+    Mat                         ::  W1
+    Mat                         ::  I1,I2
+	PetscInt					::  ista,iend
 	PetscBool	    			::  isGlobal 
-	PetscScalar					::  alpha
-	PetscLogEvent	            ::  ievent
-    call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
+	PetscScalar					::  alpha	
+	PetscInt					:: 	nrow,xpos1,ypos1,xpos2,ypos2
+	integer						:: 	i,j
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    
-    alpha=1.0
+	! Generate two block matrixs I1 and I2, where m1*m1 means that there are m1 rows and m1 cols in the block martrix.
+	! I1=[I(m1*m1) 0(m1*m1)]
+	!    [0(m2*m1) 0(m2*m1)]
+	!    [0(m1*m1) I(m1*m1)]
+	!    [0(m2*m1) 0(m2*m1)]
+	!	
+	! I2=[0(m1*m2) 0(m1*m2)]
+	!    [I(m2*m2) 0(m2*m2)]
+	!    [0(m1*m2) 0(m1*m2)]
+	!    [0(m2*m2) I(m2*m2)]
+    call mat_gettype(A,isGlobal,ierr)
+	nrow=m1+m2
+	call mat_create(I1,nrow,m1,k1,isGlobal,ierr)
+	call mat_create(I2,nrow,m2,k1,isGlobal,ierr)
+	call mat_zeros(I1,ierr)
+	call mat_zeros(I2,ierr)
+	call MatGetOwnershipRange(I1,ista,iend,ierr)
+	alpha=real(1.0,kind=8)
+	do i=ista,iend-1
+		xpos1=mod(i,nrow)
+		if(xpos1<m1)  then
+			ypos1=(i/nrow)*m1+xpos1
+	   		call MatSetValues(I1,1,i,1,ypos1,alpha,INSERT_VALUES,ierr)
+		endif
+
+		xpos2=mod(i,nrow)	
+		if(xpos2>=m1) then
+			ypos2=(i/nrow)*m2+mod(xpos2-m1,m2)
+	   		call MatSetValues(I2,1,i,1,ypos2,alpha,INSERT_VALUES,ierr)
+		endif	
+	enddo
+    call mat_assemble(I1,ierr)
+    call mat_assemble(I2,ierr)
+    !print *, "I1="
+    !call mat_view(I1,ierr)
+    !print *, "I2="
+    !call mat_view(I2,ierr)
     
     call mat_assemble(A,ierr)
     call mat_assemble(B,ierr)
+	call MatMatMult(I1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W1,ierr)    
+	!print *, "W1="
+    !call mat_view(W1,ierr)
+    !print *, "B1="
+    !call mat_view(B,ierr)
     
-    call MatGetSize(A,nrow1,ncol1,ierr)
-    call MatGetSize(B,nrow2,ncol2,ierr)
-    
-    call mat_gettype(A,isGlobal,ierr)	
-    call mat_create(W1,m1+m2,m2,k1,isGlobal,ierr)
-    call mat_create(W2,m1+m2,m1,k1,isGlobal,ierr)
-    call mat_veyezero(W1,nrow1,nrow2,ierr)
-    call mat_vzeroeye(W2,nrow1,nrow2,ierr)
-    call mat_assemble(W1,ierr)
-    call mat_assemble(W2,ierr)
-    
-    call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr)    
-    call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
-    
-    call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
-    
-    call mat_destroy(W1,ierr)
-    call mat_destroy(W2,ierr)
-    call mat_destroy(W3,ierr)
 
+    call MatMatMult(I2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
+    !print *, "C1="
+    !call mat_view(C,ierr)
+    call MatAXPY(C,alpha,W1,DIFFERENT_NONZERO_PATTERN,ierr)
+    
+    call mat_destroy(I1,ierr)
+    call mat_destroy(I2,ierr)
+    call mat_destroy(W1,ierr)
     call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 
-subroutine mat_vjoin(A,B,C,ierr)
-	implicit none
+! -----------------------------------------------------------------------
+! C=[A 0] 
+!   [0 B] 
+! -----------------------------------------------------------------------
+subroutine mat_zjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
+    implicit none 
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-	Mat,	        intent(in)	::  A,B 
-	Mat,            intent(out)	::	C
-	PetscErrorCode,	intent(out)	::	ierr
-	Mat							::	W1,W2,W3
-	PetscInt					::	nrow1,ncol1,nrow2,ncol2
+    Mat,            intent(in)  ::  A,B  
+    PetscInt,	    intent(in)	::  m1,n1,k1,m2,n2,k2 
+    Mat,            intent(out) ::  C
+    PetscErrorCode, intent(out) ::  ierr 
+    Mat                         ::  W1,W2,W3,W4
 	PetscBool	    			::  isGlobal 
-	PetscScalar					::  alpha
-	PetscLogEvent	            ::  ievent
-!!!!call PetscLogEventRegister("mat_vjoin",0, ievent, ierr)
-!!!!call PetscLogEventBegin(ievent,ierr)
-!!!!
-!!!!alpha=1.0
-!!!!
-!!!!call mat_assemble(A,ierr)
-!!!!call mat_assemble(B,ierr)
-!!!!
-!!!!call MatGetSize(A,nrow1,ncol1,ierr)
-!!!!call MatGetSize(B,nrow2,ncol2,ierr)
-!!!!
-!!!!call mat_gettype(A,isGlobal,ierr)	
-!!!!call mat_create(W1,nrow1+nrow2,nrow1,isGlobal,ierr)
-!!!!call mat_create(W2,nrow1+nrow2,nrow2,isGlobal,ierr)
-!!!!call mat_veyezero(W1,nrow1,nrow2,ierr)
-!!!!call mat_vzeroeye(W2,nrow1,nrow2,ierr)
-!!!!call mat_assemble(W1,ierr)
-!!!!call mat_assemble(W2,ierr)
-!!!!
-!!!!call MatMatMult(W1,A,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,W3,ierr)    
-!!!!call MatMatMult(W2,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT_REAL,C,ierr)
-!!!!
-!!!!call MatAXPY(C,alpha,W3,DIFFERENT_NONZERO_PATTERN,ierr)
-!!!!
-!!!!call mat_destroy(W1,ierr)
-!!!!call mat_destroy(W2,ierr)
-!!!!call mat_destroy(W3,ierr)
+    PetscLogEvent               ::  ievent
+    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
 
-!!!!call PetscLogEventEnd(ievent,ierr)
+    call mat_gettype(A,isGlobal,ierr)
+    call mat_create(W1,m1*k2,n1*k1,1,isGlobal,ierr)
+    call mat_create(W2,m1*k1,n1*k2,1,isGlobal,ierr)
+	call mat_zeros(W1,ierr)
+	call mat_zeros(W2,ierr)
+	 print *, "W1="
+     call mat_view(W1,ierr)
+     print *, "W2="
+     call mat_view(W2,ierr)
+	 print *, "A="
+     call mat_view(A,ierr)
+     print *, "B="
+     call mat_view(B,ierr)
+	 
+	call mat_yjoin(A,m1*k1,n1*k1,1,W1,m1*k2,n1*k1,1,W3,ierr)
+	call mat_yjoin(W2,m1*k1,n1*k2,1,B,m1*k2,n1*k2,1,W4,ierr)
+	 print *, "W3="
+     call mat_view(W3,ierr)
+     print *, "W4="
+     call mat_view(W4,ierr)
+	
+	call mat_xjoin(W3,m1*(k1+k2),n1*k1,1,W4,m1*k1,n1*k2,1,C,ierr)
+!!!!call mat_create(W3,n1,m1+m2,k1,isGlobal,ierr)
+!!!!call mat_zeros(W3,ierr)
+!!!!call mat_xjoin(W1,n1,m1,k1,W2,n2,m2,k2,W3,ierr)
+    !print *, "W3="
+    !call mat_view(W3,ierr)
+    !call mat_destroy(C,ierr)
+!   call mat_trans(W3,C,ierr)
+
+    call mat_destroy(W1,ierr)
+    call mat_destroy(W2,ierr)
+    call mat_destroy(W3,ierr)
+    call mat_destroy(W4,ierr)
+
+    call PetscLogEventEnd(ievent,ierr)
 end subroutine
 
 

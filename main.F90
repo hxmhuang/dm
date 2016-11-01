@@ -309,33 +309,39 @@ program main
 
     if(myrank==0) print *, "==============Test dm_yjoin==============="
   	A=dm_eye(m,n,k)
-    B=dm_eye(m,n,k)
-    C=A .yj. B
-    D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)
-    E=dm_eye(m,n,k) .yj. B
-    F=A .yj. dm_eye(m,n,k)
-    G=A .yj. A .yj. A
-    H=B .yj. G
-    U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
+    B=dm_eye(m+1,n,k)
+    C=dm_eye(m-1,n,k)
+    D=A .yj. B
+    E=A .yj. C
+    F=dm_eye(m,n,k) .yj. dm_eye(m,n,k)
+    G=dm_eye(m,n,k) .yj. B
+    H=A .yj. dm_eye(m,n,k)
+    U=A .yj. A .yj. A
+    V=A .yj. G
+    W=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
     if(debug) then
-        if(myrank==0) print *, ">A="
+        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
         call dm_view(A,ierr)
-        if(myrank==0) print *, ">B="
+        if(myrank==0) print *, ">B=dm_eye(m+1,n,k)"
         call dm_view(B,ierr)
-        if(myrank==0) print *, ">C=A .yj. B"
+        if(myrank==0) print *, ">C=dm_eye(m-1,n,k)"
         call dm_view(C,ierr)
-        if(myrank==0) print *, ">D=dm_eye(m,n,k) .yj. dm_eye(m,n,k)"
+        if(myrank==0) print *, ">D=A .yj. B"
         call dm_view(D,ierr)
-        if(myrank==0) print *, ">E=dm_eye(m,n,k) .yj. B"
+        if(myrank==0) print *, ">E=A .yj. C"
         call dm_view(E,ierr)
-        if(myrank==0) print *, ">F=A .yj. dm_eye(m,n,k)"
+        if(myrank==0) print *, ">F=dm_eye(m,n,k) .yj. dm_eye(m,n,k)"
         call dm_view(F,ierr)
-        if(myrank==0) print *, ">G=A .yj. A .yj. A"
+        if(myrank==0) print *, ">G=dm_eye(m,n,k) .yj. B"
         call dm_view(G,ierr)
-        if(myrank==0) print *, ">H=B .yj. G"
+        if(myrank==0) print *, ">H=A .yj. dm_eye(m,n,k)"
         call dm_view(H,ierr)
-        if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
-        if(myrank==0) call dm_view(U,ierr)
+        if(myrank==0) print *, ">U=A .yj. A .yj. A"
+        call dm_view(U,ierr)
+        if(myrank==0) print *, ">V=B .yj. G"
+        call dm_view(V,ierr)
+        if(myrank==0) print *, ">W=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
+        if(myrank==0) call dm_view(W,ierr)
  	endif
     call dm_destroy(A,ierr)
   	call dm_destroy(B,ierr)
@@ -346,6 +352,57 @@ program main
  	call dm_destroy(G,ierr)
  	call dm_destroy(H,ierr)
  	call dm_destroy(U,ierr)
+ 	call dm_destroy(V,ierr)
+ 	call dm_destroy(W,ierr)
+
+
+    if(myrank==0) print *, "==============Test dm_zjoin==============="
+  	A=dm_eye(m,n,k)
+    B=dm_eye(m,n,k+1)
+    C=dm_eye(m,n,k-1)
+    D=A .zj. B
+    E=A .zj. C
+    F=dm_eye(m,n,k) .zj. dm_eye(m,n,k)
+    G=dm_eye(m,n,k) .zj. B
+    H=A .zj. dm_eye(m,n,k)
+    U=A .zj. A .zj. A
+    V=A .zj. G
+    W=dm_eye(m,n,k,.false.) .zj. dm_eye(m,n,k,.false.)
+    if(debug) then
+        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
+        call dm_view(A,ierr)
+        if(myrank==0) print *, ">B=dm_eye(m,n,k+1)"
+        call dm_view(B,ierr)
+        if(myrank==0) print *, ">C=dm_eye(m,n,k-1)"
+        call dm_view(C,ierr)
+        if(myrank==0) print *, ">D=A .zj. B"
+        call dm_view(D,ierr)
+        if(myrank==0) print *, ">E=A .zj. C"
+        call dm_view(E,ierr)
+        if(myrank==0) print *, ">F=dm_eye(m,n,k) .zj. dm_eye(m,n,k)"
+        call dm_view(F,ierr)
+        if(myrank==0) print *, ">G=dm_eye(m,n,k) .zj. B"
+        call dm_view(G,ierr)
+        if(myrank==0) print *, ">H=A .zj. dm_eye(m,n,k)"
+        call dm_view(H,ierr)
+        if(myrank==0) print *, ">U=A .zj. A .zj. A"
+        call dm_view(U,ierr)
+        if(myrank==0) print *, ">V=B .zj. G"
+        call dm_view(V,ierr)
+        if(myrank==0) print *, ">W=dm_eye(m,n,k,.false.) .zj. dm_eye(m,n,k,.false.)"
+        if(myrank==0) call dm_view(W,ierr)
+ 	endif
+    call dm_destroy(A,ierr)
+  	call dm_destroy(B,ierr)
+ 	call dm_destroy(C,ierr)
+ 	call dm_destroy(D,ierr)
+ 	call dm_destroy(E,ierr)
+ 	call dm_destroy(F,ierr)
+ 	call dm_destroy(G,ierr)
+ 	call dm_destroy(H,ierr)
+ 	call dm_destroy(U,ierr)
+ 	call dm_destroy(V,ierr)
+ 	call dm_destroy(W,ierr)
 
 
 !   if(myrank==0) print *, "==============Test dm_mult================"

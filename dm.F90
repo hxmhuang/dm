@@ -90,21 +90,21 @@ module dm
         module procedure dm_ediv
     end interface
    
-    ! join with x directory 
+    ! join along with x direction 
     interface operator (.xj.)
         module procedure dm_xjoin
     end interface
  
-    ! join with y directory 
+    ! join along with y direction 
     interface operator (.yj.)
         module procedure dm_yjoin
     end interface
-    
-	! join vertically
-    interface operator (.vj.)
-        module procedure dm_vjoin
+  
+    ! join along z direction 
+    interface operator (.zj.)
+        module procedure dm_zjoin
     end interface
-
+  
 	! INV(A)*B
     interface operator (.inv.)
         module procedure dm_solve
@@ -636,14 +636,16 @@ function dm_xjoin(A,B) result(C)
 	type(Matrix)              	::	C
 	integer						::	ierr
 
-    if(A%nx/=B%nx .or. A%nz/=B%nz .or.  A%isGlobal .neqv. B%isGlobal) then
+    if((A%nx/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
         call dm_printf("Error in dm_xjoin: Matrix A and B should have the same distribution.",ierr)
         stop
     endif
 
-    call dm_create(C,A%nx,A%ny+B%ny,A%nz,A%isGlobal,ierr)
     call mat_xjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
     call dm_set_implicit(C,ierr)
+	C%ny=A%ny+B%ny
+    C%nx=A%nx
+	C%nz=A%nz
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
@@ -664,17 +666,19 @@ function dm_yjoin(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-
-    if(A%ny/=B%ny .or. A%nz/=B%nz .or.  A%isGlobal .neqv. B%isGlobal) then
+	!print *, "A%ny=",A%ny,"B%ny=",B%ny
+	!print *, "A%nx=",A%nx,"B%nx=",B%nx
+    if((A%ny/=B%ny) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
 		print *, "Error in dm_yjoin: Matrix A and Matrix B should have the same distribution."
 		stop	
 	endif
     
-     call dm_create(C,A%nx+B%ny,A%ny,A%nz,A%isGlobal,ierr)
     call mat_yjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
 	call dm_set_implicit(C,ierr)
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+	C%nx=A%nx+B%nx
+    C%ny=A%ny
+	C%nz=A%nz
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
     if (B%xtype==MAT_XTYPE_IMPLICIT) then
@@ -682,36 +686,35 @@ function dm_yjoin(A,B) result(C)
     endif
 end function 
 
-
-
-function dm_vjoin(A,B) result(C)
+! -----------------------------------------------------------------------
+! C=[A 0] 
+!   [0 B] 
+! -----------------------------------------------------------------------
+function dm_zjoin(A,B) result(C)
 	implicit none
 	type(Matrix),	intent(in)	::  A 
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
-
-    if(A%isGlobal .neqv. B%isGlobal) then
-        call dm_printf("Error in dm_vjoin: Matrix A and B should have the same distribution.",ierr)
-        stop
-    endif
-
-	if(A%ncol /= B%ncol)then
-		print *, "Error in dm_vjoin: Matrix A and Matrix B should have the same column size."
+    
+	if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or.  (A%isGlobal .neqv. B%isGlobal)) then
+		print *, "Error in dm_yjoin: Matrix A and Matrix B should have the same distribution."
 		stop	
 	endif
     
-    call mat_vjoin(A%x,B%x,C%x,ierr)
-    C%isGlobal=A%isGlobal
+    call mat_zjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
 	call dm_set_implicit(C,ierr)
-
-    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+	C%nx=A%nx
+    C%ny=A%ny
+	C%nz=A%nz+B%nz
+	if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
     if (B%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(B%x,ierr)
     endif
 end function 
+
 
 
 ! -----------------------------------------------------------------------
