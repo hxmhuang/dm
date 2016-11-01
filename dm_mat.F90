@@ -515,7 +515,7 @@ subroutine mat_zjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
     Mat                         ::  W1,W2,W3,W4
 	PetscBool	    			::  isGlobal 
     PetscLogEvent               ::  ievent
-    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
+    call PetscLogEventRegister("mat_zjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
     call mat_gettype(A,isGlobal,ierr)
@@ -523,30 +523,22 @@ subroutine mat_zjoin(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
     call mat_create(W2,m1*k1,n1*k2,1,isGlobal,ierr)
 	call mat_zeros(W1,ierr)
 	call mat_zeros(W2,ierr)
-	 print *, "W1="
-     call mat_view(W1,ierr)
-     print *, "W2="
-     call mat_view(W2,ierr)
-	 print *, "A="
-     call mat_view(A,ierr)
-     print *, "B="
-     call mat_view(B,ierr)
+	!print *, "W1="
+    !call mat_view(W1,ierr)
+    !print *, "W2="
+    !call mat_view(W2,ierr)
+	!print *, "A="
+    !call mat_view(A,ierr)
+    !print *, "B="
+    !call mat_view(B,ierr)
 	 
 	call mat_yjoin(A,m1*k1,n1*k1,1,W1,m1*k2,n1*k1,1,W3,ierr)
 	call mat_yjoin(W2,m1*k1,n1*k2,1,B,m1*k2,n1*k2,1,W4,ierr)
-	 print *, "W3="
-     call mat_view(W3,ierr)
-     print *, "W4="
-     call mat_view(W4,ierr)
-	
-	call mat_xjoin(W3,m1*(k1+k2),n1*k1,1,W4,m1*k1,n1*k2,1,C,ierr)
-!!!!call mat_create(W3,n1,m1+m2,k1,isGlobal,ierr)
-!!!!call mat_zeros(W3,ierr)
-!!!!call mat_xjoin(W1,n1,m1,k1,W2,n2,m2,k2,W3,ierr)
-    !print *, "W3="
+	!print *, "W3="
     !call mat_view(W3,ierr)
-    !call mat_destroy(C,ierr)
-!   call mat_trans(W3,C,ierr)
+    !print *, "W4="
+    !call mat_view(W4,ierr)
+	call mat_xjoin(W3,m1*(k1+k2),n1*k1,1,W4,m1*k1,n1*k2,1,C,ierr)
 
     call mat_destroy(W1,ierr)
     call mat_destroy(W2,ierr)
