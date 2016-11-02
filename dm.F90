@@ -727,20 +727,17 @@ function dm_mult1(A,B) result(C)
 	type(Matrix)              	::	C
 	integer						::	ierr
 
-    if(A%isGlobal .neqv. B%isGlobal) then
-        call dm_printf("Error in dm_mult: Matrix A and B should have the same distribution.",ierr)
-        stop
-    endif
-
-	if(A%ncol /= B%nrow)then
- 		print *, "Error in dm_mult: the column of A matrix should equal to the row of B matrix."
+    if((A%ny/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
+ 		print *, "Error in dm_mult: the column of A matrix should equal to the row of B matrix, and the number of z dimension should be same."
 		stop	
 	endif
     
     call mat_mult(A%x,B%x,C%x,ierr)
     C%isGlobal=A%isGlobal
     call dm_set_implicit(C,ierr)
-
+	C%nx=A%nx
+	C%ny=B%ny	
+	C%nz=A%nz
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
         call mat_destroy(A%x,ierr)
     endif
@@ -758,6 +755,9 @@ function dm_mult2(alpha,A) result(B)
     call mat_copy(A%x,B%x,ierr) 
     call mat_scale(B%x,alpha,ierr)
     B%isGlobal=A%isGlobal
+	B%nx=A%nx
+	B%ny=A%ny
+	B%nz=B%nz	
     call dm_set_implicit(B,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -824,6 +824,11 @@ function dm_emult(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+ 
+    if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
+ 		print *, "Error in dm_emult: the A matrix and B matrix should have the same distribution." 
+		stop	
+	endif
     
 !   if(A%isGlobal .neqv. B%isGlobal) then
 !       call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
