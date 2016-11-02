@@ -576,13 +576,14 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A.*B
 ! -----------------------------------------------------------------------
-subroutine mat_emult(A,B,C,ierr)
+subroutine mat_emult(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 	Mat,			intent(in)	::  A,B 
+	PetscInt,		intent(in)	::	m1,n1,k1,m2,n2,k2
 	Mat,			intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscInt					::	col1,col2,m,n
@@ -590,6 +591,7 @@ subroutine mat_emult(A,B,C,ierr)
 	PetscScalar,allocatable		::	row1(:),row2(:),row3(:),rowtmp(:)
 	PetscInt					::  ista,iend
     PetscInt                    ::  pos1,pos2,counter
+	PetscBool					::  isGlobal
 	integer						::	i
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_emult",0, ievent, ierr)
@@ -597,14 +599,15 @@ subroutine mat_emult(A,B,C,ierr)
 	
 	call mat_assemble(A,ierr)
 	call mat_assemble(B,ierr)
-    
 	call MatGetOwnershipRange(A,ista,iend,ierr)
-	
+    call mat_gettype(A,isGlobal,ierr)
+    call mat_create(C,m1,n1,k1,isGlobal,ierr)
     do i=ista,iend-1
 	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
         m=col1
 	    call MatRestoreRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 	    
+	    call MatGetRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 		n=col2
 	    call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 	    
@@ -612,8 +615,8 @@ subroutine mat_emult(A,B,C,ierr)
         allocate(idxtmp(m),rowtmp(m))
 	    allocate(idxn2(n),row2(n))
 	    allocate(idxn3(min(m,n)),row3(min(m,n)))
-    	
-        call MatGetRow(A,i,col1,idxn1,row1,ierr)
+        
+		call MatGetRow(A,i,col1,idxn1,row1,ierr)
         m=col1
         idxtmp=idxn1
         rowtmp=row1
@@ -650,7 +653,7 @@ end subroutine
 ! -----------------------------------------------------------------------
 ! C=A./B
 ! -----------------------------------------------------------------------
-subroutine mat_ediv(A,B,C,ierr)
+subroutine mat_ediv(A,m1,n1,k1,B,m2,n2,k2,C,ierr)
 	implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -660,10 +663,12 @@ subroutine mat_ediv(A,B,C,ierr)
 	Mat,			intent(out)	::	C
 	PetscErrorCode,	intent(out)	::	ierr
 	PetscInt					::	col1,col2,m,n
+	PetscInt					::  m1,n1,k1,m2,n2,k2
 	PetscInt,allocatable		::	idxn1(:),idxn2(:),idxn3(:),idxtmp(:)
 	PetscScalar,allocatable		::	row1(:),row2(:),row3(:),rowtmp(:)
 	PetscInt					::  ista,iend
     PetscInt                    ::  pos1,pos2,counter
+	PetscBool					:: 	isGlobal
 	integer						::	i
 	PetscLogEvent	            ::  ievent
 	call PetscLogEventRegister("mat_ediv",0, ievent, ierr)
@@ -673,6 +678,8 @@ subroutine mat_ediv(A,B,C,ierr)
 	call mat_assemble(B,ierr)
     
 	call MatGetOwnershipRange(A,ista,iend,ierr)
+    call mat_gettype(A,isGlobal,ierr)
+    call mat_create(C,m1,n1,k1,isGlobal,ierr)
 	    
     do i=ista,iend-1
 	    call MatGetRow(A,i,col1,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
@@ -701,7 +708,7 @@ subroutine mat_ediv(A,B,C,ierr)
         do while(pos1<=m .and. pos2<=n)
             if(idxtmp(pos1)<idxn2(pos2)) then
                 pos1=pos1+1
-            elseif(idxtmp(pos1)==idxn2(pos2))then
+            elseif((idxtmp(pos1)==idxn2(pos2)) .and. (row2(pos2)/=0))then
                 counter=counter+1
                 idxn3(counter)=idxn2(pos2)
                 row3(counter)=rowtmp(pos1)/row2(pos2)

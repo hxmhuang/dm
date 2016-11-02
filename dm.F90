@@ -757,7 +757,7 @@ function dm_mult2(alpha,A) result(B)
     B%isGlobal=A%isGlobal
 	B%nx=A%nx
 	B%ny=A%ny
-	B%nz=B%nz	
+	B%nz=A%nz	
     call dm_set_implicit(B,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -824,33 +824,25 @@ function dm_emult(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
- 
+	!print *, "(A%nx,A%ny,A%nz)=",A%nx,A%ny,A%nz,"(B%nx,B%ny,B%nz)=",B%nx,B%ny,B%nz 
     if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
  		print *, "Error in dm_emult: the A matrix and B matrix should have the same distribution." 
 		stop	
 	endif
+  
+    call mat_emult(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	C%nx=A%nx
+	C%ny=A%ny
+	C%nz=A%nz
+    call dm_set_implicit(C,ierr)
     
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
-
-!   if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
-!   	print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
-!   	stop	
-!   endif
-!  
-!   call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
-!   call mat_emult(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
-!   
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
 
@@ -863,28 +855,25 @@ function dm_ediv(A,B) result(C)
 	type(Matrix),	intent(in)	::  B 
 	type(Matrix)              	::	C
 	integer						::	ierr
+  	!print *, "(A%nx,A%ny,A%nz)=",A%nx,A%ny,A%nz,"(B%nx,B%ny,B%nz)=",B%nx,B%ny,B%nz 
+    if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
+ 		print *, "Error in dm_ediv: the A matrix and B matrix should have the same distribution." 
+		stop	
+	endif
   
-!   if(A%isGlobal .neqv. B%isGlobal) then
-!       call dm_printf("Error in dm_emult: Matrix A and B should have the same distribution.",ierr)
-!       stop
-!   endif
+    call mat_ediv(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
+    C%isGlobal=A%isGlobal
+	C%nx=A%nx
+	C%ny=A%ny
+	C%nz=A%nz
+    call dm_set_implicit(C,ierr)
 
-!   if(A%nrow /= B%nrow .or. A%ncol /= B%ncol)then
-!   	print *, "Error in dm_emult: Matrix A and Matrix B should have the same size."
-!   	stop	
-!   endif
-!  
-!   call dm_create(C,A%nrow,A%ncol,A%isGlobal,ierr) 
-!   call mat_ediv(A%x,B%x,C%x,ierr)
-!   C%isGlobal=A%isGlobal
-!   call dm_set_implicit(C,ierr)
-!   
-!   if (A%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(A%x,ierr)
-!   endif
-!   if (B%xtype==MAT_XTYPE_IMPLICIT) then
-!       call mat_destroy(B%x,ierr)
-!   endif
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(A%x,ierr)
+    endif
+    if (B%xtype==MAT_XTYPE_IMPLICIT) then
+        call mat_destroy(B%x,ierr)
+    endif
 end function 
 
 
