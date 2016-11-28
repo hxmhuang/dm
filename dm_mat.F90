@@ -1053,11 +1053,12 @@ contains
        call mat_trans(A, W1, ierr)
        call mat_sumx(W1, ny, nx, nz, W2, ierr)
        call mat_trans(W2, B, ierr)
+       
+       call mat_destroy(W1,ierr)
+       call mat_destroy(W2,ierr)
     else
        call mat_sumx(A, nx, ny, nz, B ,ierr)
     end if
-    call mat_destroy(W1,ierr)
-    call mat_destroy(W2,ierr)
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_sum
 
@@ -1503,58 +1504,220 @@ contains
     !call mat_assemble(A,ierr)
   end subroutine mat_vec2mat
 
+  subroutine nc_check(err, pre_msg)
+    use mpi
+    use pnetcdf
+    implicit none
+    integer err
+    character(len=*) pre_msg
+    ! It is a good idea to check returned value for possible error
+    if (err .NE. NF90_NOERR) then
+       write(6,*) trim(pre_msg), trim(nf90mpi_strerror(err))
+       call MPI_Abort(MPI_COMM_WORLD, -1, err)
+    end if
+  end subroutine 
 
-  ! -----------------------------------------------------------------------
-  ! Load a standard row-cloumn file into a matrix 
-  ! -----------------------------------------------------------------------
-  subroutine mat_load(filename,isGlobal,A,nx,ny,nz,ierr)
+  !----------------------------------------------------------------
+  !> Load a 3d matrix from a nc file
+  !----------------------------------------------------------------
+  subroutine mat_load(filename, varname, A, gnx, gny, gnz, &
+       isGlobal, rank, size, ierr)
+    use pnetcdf    
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
-    character(len=*),   intent(in)  ::  filename 
-    PetscBool,intent(in)::isGlobal
-    Mat,    intent(out)::A
+    
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    Mat, intent(out) :: A
+    integer, intent(out) :: gnx, gny, gnz
+    logical, intent(in) :: isGlobal    
+    integer, intent(in) :: rank, size    
     PetscErrorCode,    intent(out)::ierr
+    
+    PetscScalar,allocatable  :: row(:) 
+    PetscInt, allocatable    :: idxn(:)
+    PetscInt:: ista,iend
+    
+    integer :: i,j,fid,omode,ncid
+    integer :: dimid(2)
 
-    PetscScalar,allocatable         :: x(:,:)
-    PetscScalar,allocatable         :: row(:) 
-    PetscInt,allocatable    :: idxn(:)
-    PetscInt, intent(out)    :: nx, ny, nz
-    PetscInt    :: ista,iend,nrow, ncol
-    integer                         :: i,j,fid
+    real(kind=8),allocatable :: buf(:,:)
     character(len=1000) :: string
     PetscLogEvent       ::  ievent
+    integer :: m, n, k, col
+    integer :: varid,err, attrid
+    integer(kind=8) :: nx,ny,nz, global_nx, global_ny,global_nz
+    integer(kind=8) :: starts(2), counts(2)
+    integer(kind=8) :: malloc_size=1000000, sum_size=1000000
+    integer :: DD(3)
+    integer :: COMM_TYPE
+    
     call PetscLogEventRegister("mat_load",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
 
-    fid=1000
-    open(fid, FILE=filename)
-    call getfilerowcol(fid, nx, ny, nz, ierr)
-    print *, "nrow=", nrow, "ncol=",ncol
+    omode = NF90_NOWRITE + NF90_64BIT_OFFSET
 
-    call mat_create(A,nx, ny, nz, isGlobal,ierr)
-    nrow = nx * nz
-    ncol = ny * nz
-    call MatGetOwnershipRange(A,ista,iend,ierr)
-    allocate(x(ncol,nrow),row(ncol),idxn(ncol))
+    if(isGlobal) then
+       COMM_TYPE = MPI_COMM_WORLD
+    else
+       COMM_TYPE = MPI_COMM_SELF
+    endif
+    
+    ierr = nf90mpi_open(COMM_TYPE, trim(filename), omode, &
+         MPI_INFO_NULL, ncid)
+    
+    call nc_check(ierr, 'nf90mpi_open:')
 
-    read(fid, '(a)' ) string 
-    do i=1,nrow
-       read(fid,*), x(:,i)
+    ierr = nf90mpi_inq_varid(ncid, varname, varid)
+    call nc_check(ierr, 'In nf90mpi_inq_varid varname: ')
+
+    ierr = nf90mpi_get_att(ncid, varid, "DIM", DD)
+    call nc_check(ierr, "nf90mpi_get_att: ")
+    
+    gnx = DD(1)
+    gny = DD(2)
+    gnz = DD(3)
+    
+    call mat_create(A, gnx, gny, gnz, isGlobal, ierr)
+
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+    nx = iend - ista
+    ny = gny
+    
+    allocate(buf(ny, nx), idxn(ny))
+
+    starts(1) = 1
+    counts(1) = ny
+    starts(2) = ista+1
+    counts(2) = nx
+    
+    ierr = nf90mpi_get_var_all(ncid, varid, buf, starts, counts)
+    call nc_check(ierr, 'In nf90mpi_get_var_all: ')
+
+    ierr = nf90mpi_close(ncid)
+    call nc_check(ierr, 'In nf90mpi_close: ')
+    
+    do j=1,ny
+       idxn(j)=j-1
     enddo
-    close(fid)
-
+    
     do i=ista,iend-1
-       do j=1,ncol
-          idxn(j)=j-1
-       enddo
-       call MatSetValues(A,1,i,ncol,idxn,x(:,i+1),INSERT_VALUES,ierr)
+       k = i / gnx
+       call MatSetValues(A, 1, i, ny, idxn+k*gny, buf(:,i-ista+1), &
+            INSERT_VALUES, ierr)
     enddo
-    deallocate(x, row, idxn)
+    
+    deallocate(buf, idxn)
+    
     call PetscLogEventEnd(ievent,ierr) 
-  end subroutine mat_load
+  end subroutine
+
+
+  ! -----------------------------------------------------------------------
+  !> Save a standard row-cloumn file into a matrix 
+  ! -----------------------------------------------------------------------
+  subroutine mat_save(filename, varname, A, gnx, gny, gnz, isGlobal, &
+       rank, size, ierr)
+    use pnetcdf    
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    Mat,    intent(out)::A
+    integer, intent(in) :: gnx, gny, gnz
+    logical, intent(in) :: isGlobal
+    PetscErrorCode,    intent(out)::ierr
+    PetscScalar,allocatable         :: x(:,:)
+    PetscScalar,allocatable         :: row(:) 
+    PetscInt, allocatable    :: idxn(:)
+    PetscInt    :: my_nx, my_ny, my_nz
+    PetscInt    :: ista,iend
+    integer :: i,j,fid,cmode,ncid
+    integer :: dimid(2)
+    integer, intent(in) :: rank, size
+    real(kind=8),allocatable :: buf(:,:)
+    character(len=1000) :: string
+    PetscLogEvent       ::  ievent
+    integer :: m, n, k, col
+    integer :: varid,err
+    integer(kind=8) :: nx, ny,nz, global_nx, global_ny,global_nz
+    integer(kind=8) :: starts(2), counts(2)
+    integer(kind=8) :: malloc_size=1000000, sum_size=1000000
+    integer :: COMM_TYPE
+    
+    call PetscLogEventRegister("mat_save",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+    
+    call mat_assemble(A, ierr)
+    call MatGetOwnershipRange(A, ista, iend,ierr)
+    nx = iend - ista
+    ny = gny
+    nz = 1
+
+    allocate(buf(ny,  nx),row(ny), idxn(ny))
+
+    buf = 0
+    do i = ista,iend-1
+       k = i / gnx
+       call MatGetRow(A, i, col, idxn, row, ierr)
+       do j=1,col
+          buf(mod(idxn(j), ny)+1, i-ista+1) = real(row(j), kind=8)
+       enddo
+       call MatRestoreRow(A, i, col, idxn, row, ierr)
+    enddo
+
+    if(isGlobal) then
+       COMM_TYPE=MPI_COMM_WORLD
+    else
+       COMM_TYPE=MPI_COMM_SELF
+    endif
+    
+    cmode = IOR(NF90_CLOBBER, NF90_64BIT_DATA)
+    ierr = nf90mpi_create(COMM_TYPE, filename, cmode, &
+         MPI_INFO_NULL, ncid)
+    call nc_check(ierr, "nf90mpi_create: ")
+
+    global_nx = gnx*gnz
+    global_ny = gny
+    ierr = nf90mpi_def_dim(ncid, "y",  global_ny, dimid(1))    
+    ierr = nf90mpi_def_dim(ncid, "xz", global_nx, dimid(2))
+    
+    call nc_check(ierr, "nf90mpi_def_dim: ")
+    
+    ierr = nf90mpi_def_var(ncid, varname, NF90_FLOAT, dimid, varid)
+    call nc_check(ierr, "nf90mpi_def_var:")
+
+    ierr = nf90mpi_put_att(ncid, varid, "DIM", (/gnx,gny,gnz/))
+    ierr = nf90mpi_enddef(ncid)
+    call nc_check(ierr, "nf90mpi_enddef:")
+
+    starts(1) = 1
+    counts(1) = ny
+    starts(2) = ista+1
+    counts(2) = nx
+    
+    ierr = nf90mpi_put_var_all(ncid, varid, buf, starts, counts)
+    call nc_check(ierr, "nf90mpi_put_var_all: ")
+    
+    ierr = nf90mpi_close(ncid)
+    call nc_check(ierr, "nf90mpi_close: ")
+    
+    ! check if there is any PnetCDF internal malloc residue
+    ierr = nf90mpi_inq_malloc_size(malloc_size)
+    call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
+    
+    deallocate(buf,row, idxn)
+    call PetscLogEventEnd(ievent,ierr) 
+  end subroutine
+
+  
   
   subroutine getfilerowcol(fid, nx, ny, nz,ierr)
     implicit none

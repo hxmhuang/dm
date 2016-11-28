@@ -1,19 +1,23 @@
+MOD_PATH=libs/pnetcdf/include/
+
 CFLAGS	         =  
-FFLAGS	         =-Wno-tabs
+FFLAGS	         =-Wno-tabs -I ${MOD_PATH} 
 CPPFLAGS         =
 FPPFLAGS         =
 LOCDIR           = src/ksp/ksp/examples/tutorials/
 MANSEC           = KSP
 CLEANFILES       = main *.o *.mod 
 NP               = 1
-OBJ				 = dm_type.o dm_mat.o dm.o 
-OBJMAIN			 = ${OBJ} main.o 
+OBJ		 = dm_type.o dm_mat.o dm.o 
+
+OBJMAIN		 = ${OBJ} main.o 
+#
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 main: ${OBJMAIN}  chkopts
-	-${FLINKER} -o main ${OBJMAIN}  ${PETSC_KSP_LIB}
+	-${FLINKER} -o main ${OBJMAIN} ${PETSC_KSP_LIB} libs/pnetcdf/lib/libpnetcdf.a
 
 tiny:
 	make clean

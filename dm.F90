@@ -1357,16 +1357,39 @@ contains
   ! -----------------------------------------------------------------------
   ! Load a standard row-cloumn file into a matrix 
   ! -----------------------------------------------------------------------
-  subroutine dm_load(filename,isGlobal,A,ierr)
+  subroutine dm_load(filename,varname, A, isGlobal, ierr)
     implicit none
-    character(len=*),   intent(in)  ::  filename 
-    logical,   			intent(in)  ::  isGlobal 
-    type(Matrix),		intent(out)	::  A 
-    integer,			intent(out)	::	ierr
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    logical, intent(in) :: isGlobal 
+    type(Matrix), intent(out) :: A 
+    integer, intent(out) :: ierr
+    integer :: rank, size
 
-    A%isGlobal=isGlobal
-    call mat_load(filename,A%isGlobal,A%x,A%nx,A%ny,A%nz,ierr)
-    call dm_set_explicit(A,ierr)
+    call dm_comm_rank(rank, ierr)
+    call dm_comm_size(size, ierr)
+    call mat_load(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, &
+         rank,size,ierr)
+    call dm_set_explicit(A, ierr)
+  end subroutine
+  
+
+  subroutine dm_save(filename, varname, A, ierr)
+    implicit none
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    type(Matrix) :: A 
+    integer, intent(out) :: ierr
+    integer :: rank, size
+
+    call dm_comm_rank(rank, ierr)
+    call dm_comm_size(size, ierr)
+
+    call mat_save(filename, varname, A%x,A%nx,A%ny,A%nz,A%isGlobal,&
+         rank, size, ierr)
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x,ierr)
+    endif
   end subroutine 
 
 

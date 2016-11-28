@@ -583,6 +583,7 @@ program main
   B = dm_seqs(m, n, k, .false.)
   C = dm_sum(A, 1)
   D = dm_sum(A, 2)  
+
   if(debug) then
      if(myrank == 0) print*, ">A="
      call dm_view(A, ierr)
@@ -1406,6 +1407,36 @@ program main
   call dm_destroy(II,ierr)
   call dm_destroy(KK,ierr)
 
+  if(myrank == 0) print*, &
+       "=====================Test dm_save=================="
+  A = dm_seqs(4,3,3)
+  B = dm_ones(m, n, k)
+
+  call dm_save("Test_A.nc", "wind", A, ierr)
+  if(myrank==0) print*, "write to file Test_A.nc"
+  call dm_save("Test_B.nc", "wind", B, ierr)
+  if(myrank==0) print*, "write to file Test_B.nc"  
+  call dm_save("Test_C.nc", "water", dm_seqs(m, n, k, .false.), ierr)
+  if(myrank==0) print*, "write to file Test_C.nc"
+  
+  call dm_destroy(A, ierr)
+  call dm_destroy(B, ierr)
+
+  if(myrank == 0) &
+       print*, "====================Test dm_load=================="
+  
+  call dm_load("Test_A.nc", "wind", A, .true., ierr)
+  if(myrank==0) print '(A, I2, I2, I2)', ">dim(A)=", A%nx, A%ny, A%nz
+  call dm_view(A, ierr)
+
+  call dm_load("Test_C.nc", "water", B, .false., ierr)
+  !if(myrank==0) print*, "dim(A)=(",B%nx,B%ny,B%nz,")"
+  if(myrank==0) print '(A, I2, I2, I2)', ">dim(B)=", B%nx, B%ny, B%nz  
+  if(myrank==0) call dm_view(B, ierr)
+
+  call dm_destroy(A, ierr)
+  call dm_destroy(B, ierr)
+  
   ! if(myrank==0) print *, "==============Test dm_cart2sph============"
   ! filename="md001.00004"
   ! call dm_load(filename,.true., A, ierr)	
