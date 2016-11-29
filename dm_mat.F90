@@ -26,11 +26,10 @@ contains
     PetscBool, intent(in)  ::  isGlobal
     Mat,       intent(out) ::  A
     PetscErrorCode,  intent(out) :: ierr
-    PetscInt  ::  i               
-    PetscLogEvent               ::  ievent
 
-    call PetscLogEventRegister("mat_create",0, ievent, ierr)
-    call PetscLogEventBegin(ievent,ierr)
+    !PetscLogEvent               ::  ievent
+    !call PetscLogEventRegister("mat_create",0, ievent, ierr)
+    !call PetscLogEventBegin(ievent,ierr)
     
     ! generate matrix A with size m*n
     if(isGlobal) then
@@ -42,7 +41,8 @@ contains
     call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*k,n*k,ierr)
     call MatSetFromOptions(A,ierr)
     call MatSetUp(A,ierr)
-    call PetscLogEventEnd(ievent,ierr)
+    
+    !call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_create
 
   subroutine mat_destroy(A,ierr)
@@ -91,7 +91,7 @@ contains
     PetscBool::  isGlobal
     ! view matrix A
     call vec_assemble(A,ierr)
-    !call mat_gettype(A,isGlobal,ierr)
+    call mat_gettype(A,isGlobal,ierr)
     if(isGlobal) then
        call VecView(A,PETSC_VIEWER_STDOUT_WORLD, ierr)
     else
@@ -107,7 +107,7 @@ contains
 #include <petsc/finclude/petscmat.h>
     Mat,intent(in)::A
     PetscErrorCode,intent(out)::ierr
-    PetscBool::  assembled
+    !PetscBool::  assembled
     !call MatAssembled(A,assembled,ierr)
     !if(.not. assembled) then
     call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -115,7 +115,7 @@ contains
     !endif
   end subroutine mat_assemble
 
-    subroutine vec_assemble(A,ierr)
+  subroutine vec_assemble(A,ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -123,7 +123,7 @@ contains
 #include <petsc/finclude/petscmat.h>
     Vec,intent(in)::A
     PetscErrorCode,intent(out)::ierr
-    PetscBool::  assembled
+    !PetscBool::  assembled
     !call MatAssembled(A,assembled,ierr)
     !if(.not. assembled) then
     call VecAssemblyBegin(A,ierr)
@@ -143,7 +143,7 @@ contains
 #include <petsc/finclude/petscmat.h>
     Mat,intent(out)::A
     PetscErrorCode,intent(out)::ierr
-    PetscInt:: ista,iend
+    !PetscInt:: ista,iend
     !PetscLogEvent            ::  ievent
     !   call PetscLogEventRegister("mat_zeros",0, ievent, ierr)
     !   call PetscLogEventBegin(ievent,ierr)
@@ -213,7 +213,7 @@ contains
     PetscInt::nmin
     PetscInt::  ista,iend,xpos,ypos
     PetscScalar::row
-    integer :: i,j,counter
+    integer :: i
     PetscLogEvent            ::  ievent
     call PetscLogEventRegister("mat_eye",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
@@ -252,13 +252,11 @@ contains
     Mat,intent(out)::A
     PetscErrorCode,intent(out)::ierr
     PetscInt,intent(in)::m,n,k
-    PetscInt::nmin
     PetscInt::  ista,iend
     PetscInt, allocatable :: idxn(:), idxm(:)
     PetscScalar, allocatable ::row(:)
     integer :: ik
     PetscLogEvent            ::  ievent
-    PetscInt :: ncol, nrow
     integer :: i, j
     
     call PetscLogEventRegister("mat_seqs",0, ievent, ierr)
@@ -295,13 +293,11 @@ contains
     Mat,intent(out)::A
     PetscErrorCode,intent(out)::ierr
     PetscInt,intent(in)::m,n,k
-    PetscInt::nmin
     PetscInt::  ista,iend
     PetscInt, allocatable :: idxn(:), idxm(:)
     PetscScalar, allocatable ::row(:)
     integer :: ik
     PetscLogEvent            ::  ievent
-    PetscInt :: ncol, nrow
     integer :: i, j
     
     call PetscLogEventRegister("mat_seqs",0, ievent, ierr)
@@ -447,13 +443,14 @@ contains
     PetscBool::isGlobal
     integer::i
     PetscLogEvent            ::  ievent
-    call PetscLogEventRegister("mat_xjoin",0, ievent, ierr)
+    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
     call MatGetSize(A,nrow1,ncol1,ierr)
     call MatGetSize(B,nrow2,ncol2,ierr)
     if(nrow1/=nrow2)then
-       print *, "Error in mat_xjoin: Matrix A and Matrix B should have the same row size"
+       print *, "Error in mat_xjoin: Matrix A and Matrix B &
+            &should have the same row size"
        stop
     endif
 
@@ -511,7 +508,7 @@ contains
     Mat                         ::  W1,W2,W3
     PetscBool    ::  isGlobal 
     PetscLogEvent               ::  ievent
-    call PetscLogEventRegister("mat_yjoin",0, ievent, ierr)
+    call PetscLogEventRegister("mat_xjoin",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
     !call mat_assemble(A,ierr)
@@ -945,9 +942,6 @@ contains
     Mat,intent(out)::B
     Mat :: W1,W2,W3
     PetscErrorCode,intent(out)::ierr
-    PetscInt::nrow,ncol
-    PetscBool           ::isGlobal
-    Mat::  P,T,W
     PetscLogEvent            ::  ievent
     
     call PetscLogEventRegister("mat_rep",0, ievent, ierr)
@@ -983,7 +977,6 @@ contains
     PetscInt, intent(in) :: nx,ny,nz
     Mat,intent(out)::B
     PetscErrorCode,intent(out)::ierr
-    Mat            ::W
     PetscBool      ::  isGlobal 
     PetscInt::nrow,ncol
     PetscInt::ista,iend
@@ -1042,8 +1035,6 @@ contains
     Mat,intent(out)::B
     PetscErrorCode,intent(out)::ierr
     Mat            ::W1, W2
-    PetscBool      ::  isGlobal 
-    PetscInt::nrow,ncol
     PetscLogEvent            ::  ievent
 
     call PetscLogEventRegister("mat_sum",0, ievent, ierr)
@@ -1322,9 +1313,7 @@ contains
     PC                          ::  pc
     PetscReal                   ::  tol
     PetscBool::isGlobal
-    !PetscInt:: its
     PetscLogEvent            ::  ievent
-    PetscInt :: nrow, ncol
     call PetscLogEventRegister("mat_solve",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     !PetscInt                    ::  its
@@ -1404,7 +1393,6 @@ contains
     PetscInt, intent(in) :: m
     Vec,    intent(out)     :: v
     PetscErrorCode      ::ierr
-
     PetscInt            ::  nrow,ncol
     PetscInt::  ista,iend
     PetscInt::  ni
@@ -1427,7 +1415,6 @@ contains
     call MatGetOwnershipRange(A,ista,iend,ierr)
     ni=iend-ista
 
-    !print *, "ista=",ista,"iend=",iend,"ni=",ni,"==idx=",idx
     allocate(idx(ni),idy(1), y(ni))
     pre_ik = 0
     cnt = 0
@@ -1435,15 +1422,12 @@ contains
     if(ista/m .ne. (iend-1)/m) then
        do i=ista,iend-1
           ik = i / m
-
           if((pre_ik .ne. ik) .or. (i == iend-1)) then
-             print*,"pre_ik=",pre_ik, "ik=", ik
              call MatGetValues(A, cnt, idx, 1, ik, y, ierr)
              call VecSetValues(v, cnt, idx, y, INSERT_VALUES,ierr)  
              cnt = 0
              idx = 0
           endif
-          
           cnt = cnt + 1          
           idx(cnt) = i
           pre_ik = ik
@@ -1521,7 +1505,7 @@ contains
   !> Load a 3d matrix from a nc file
   !----------------------------------------------------------------
   subroutine mat_load(filename, varname, A, gnx, gny, gnz, &
-       isGlobal, rank, size, ierr)
+       isGlobal, ierr)
     use pnetcdf    
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -1534,24 +1518,18 @@ contains
     Mat, intent(out) :: A
     integer, intent(out) :: gnx, gny, gnz
     logical, intent(in) :: isGlobal    
-    integer, intent(in) :: rank, size    
     PetscErrorCode,    intent(out)::ierr
     
-    PetscScalar,allocatable  :: row(:) 
     PetscInt, allocatable    :: idxn(:)
     PetscInt:: ista,iend
     
-    integer :: i,j,fid,omode,ncid
-    integer :: dimid(2)
+    integer :: i,j,omode,ncid
 
     real(kind=8),allocatable :: buf(:,:)
-    character(len=1000) :: string
     PetscLogEvent       ::  ievent
-    integer :: m, n, k, col
-    integer :: varid,err, attrid
-    integer(kind=8) :: nx,ny,nz, global_nx, global_ny,global_nz
+    integer :: k,varid
+    integer(kind=8) :: nx,ny
     integer(kind=8) :: starts(2), counts(2)
-    integer(kind=8) :: malloc_size=1000000, sum_size=1000000
     integer :: DD(3)
     integer :: COMM_TYPE
     
@@ -1593,6 +1571,11 @@ contains
     counts(1) = ny
     starts(2) = ista+1
     counts(2) = nx
+
+    if(nx .le. 0) then
+       starts(2) = 1
+       counts(2) = 0
+    endif
     
     ierr = nf90mpi_get_var_all(ncid, varid, buf, starts, counts)
     call nc_check(ierr, 'In nf90mpi_get_var_all: ')
@@ -1600,7 +1583,7 @@ contains
     ierr = nf90mpi_close(ncid)
     call nc_check(ierr, 'In nf90mpi_close: ')
     
-    do j=1,ny
+    do j=1,int(ny,kind=4)
        idxn(j)=j-1
     enddo
     
@@ -1619,8 +1602,7 @@ contains
   ! -----------------------------------------------------------------------
   !> Save a standard row-cloumn file into a matrix 
   ! -----------------------------------------------------------------------
-  subroutine mat_save(filename, varname, A, gnx, gny, gnz, isGlobal, &
-       rank, size, ierr)
+  subroutine mat_save(filename, varname, A, gnx, gny, gnz, isGlobal, ierr)
     use pnetcdf    
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -1634,33 +1616,28 @@ contains
     integer, intent(in) :: gnx, gny, gnz
     logical, intent(in) :: isGlobal
     PetscErrorCode,    intent(out)::ierr
-    PetscScalar,allocatable         :: x(:,:)
     PetscScalar,allocatable         :: row(:) 
     PetscInt, allocatable    :: idxn(:)
-    PetscInt    :: my_nx, my_ny, my_nz
     PetscInt    :: ista,iend
-    integer :: i,j,fid,cmode,ncid
+    integer :: i,j,cmode,ncid
     integer :: dimid(2)
-    integer, intent(in) :: rank, size
     real(kind=8),allocatable :: buf(:,:)
-    character(len=1000) :: string
     PetscLogEvent       ::  ievent
-    integer :: m, n, k, col
-    integer :: varid,err
-    integer(kind=8) :: nx, ny,nz, global_nx, global_ny,global_nz
+    integer :: k, col
+    integer :: varid
+    integer(kind=8) :: nx, ny, global_nx, global_ny
     integer(kind=8) :: starts(2), counts(2)
-    integer(kind=8) :: malloc_size=1000000, sum_size=1000000
     integer :: COMM_TYPE
+    integer(kind=8) :: malloc_size
     
     call PetscLogEventRegister("mat_save",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
     
     call mat_assemble(A, ierr)
     call MatGetOwnershipRange(A, ista, iend,ierr)
-    nx = iend - ista
+    nx = iend-ista
     ny = gny
-    nz = 1
-
+    !print*, "dim(A)=", gnx, gny, gnz
     allocate(buf(ny,  nx),row(ny), idxn(ny))
 
     buf = 0
@@ -1678,6 +1655,7 @@ contains
     else
        COMM_TYPE=MPI_COMM_SELF
     endif
+
     
     cmode = IOR(NF90_CLOBBER, NF90_64BIT_DATA)
     ierr = nf90mpi_create(COMM_TYPE, filename, cmode, &
@@ -1688,10 +1666,10 @@ contains
     global_ny = gny
     ierr = nf90mpi_def_dim(ncid, "y",  global_ny, dimid(1))    
     ierr = nf90mpi_def_dim(ncid, "xz", global_nx, dimid(2))
-    
+
     call nc_check(ierr, "nf90mpi_def_dim: ")
-    
-    ierr = nf90mpi_def_var(ncid, varname, NF90_FLOAT, dimid, varid)
+
+    ierr = nf90mpi_def_var(ncid, varname, NF90_DOUBLE, dimid, varid)
     call nc_check(ierr, "nf90mpi_def_var:")
 
     ierr = nf90mpi_put_att(ncid, varid, "DIM", (/gnx,gny,gnz/))
@@ -1702,13 +1680,19 @@ contains
     counts(1) = ny
     starts(2) = ista+1
     counts(2) = nx
-    
+
+    if(nx .le. 0) then
+       starts(2) = 1
+       counts(2) = 0
+    endif
+
     ierr = nf90mpi_put_var_all(ncid, varid, buf, starts, counts)
+    !print*, "starts=", starts, "counts=", counts
     call nc_check(ierr, "nf90mpi_put_var_all: ")
-    
+
     ierr = nf90mpi_close(ncid)
     call nc_check(ierr, "nf90mpi_close: ")
-    
+
     ! check if there is any PnetCDF internal malloc residue
     ierr = nf90mpi_inq_malloc_size(malloc_size)
     call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
@@ -1719,30 +1703,30 @@ contains
 
   
   
-  subroutine getfilerowcol(fid, nx, ny, nz,ierr)
-    implicit none
-    integer, intent(in)     :: fid 
-    integer, intent(out)    :: nx, ny, nz
-    integer, intent(out)    :: ierr
-    character(len=1)        :: cdummy
-    character(len=1000)     :: string 
-    integer                 :: value
-    integer                 :: i,j
-    nx=0
-    ny=0
-    nz=0
-    read(fid, *) nx,ny,nz
-    if(nx == 0) nx = 1
-    if(ny == 0) ny = 1
-    if(nz == 0) nz = 1
-    ! print*, "nx=",nx,"ny=",ny,"nz=",nz
-    ! read(string,*, iostat=ierr ) (nx, j=1,i)
-    ! read(string,*, iostat=ierr ) (ny, j=1,i)
-    ! if ( ierr == 0 ) ny = 1
-    ! read(string,*, iostat=ierr ) (nz, j=1,i)
-    ! if ( ierr == 0 ) nz = 1
-    rewind(fid)
-  end subroutine getfilerowcol
+  ! subroutine getfilerowcol(fid, nx, ny, nz,ierr)
+  !   implicit none
+  !   integer, intent(in)     :: fid 
+  !   integer, intent(out)    :: nx, ny, nz
+  !   integer, intent(out)    :: ierr
+  !   character(len=1)        :: cdummy
+  !   character(len=1000)     :: string 
+  !   integer                 :: value
+  !   integer                 :: i,j
+  !   nx=0
+  !   ny=0
+  !   nz=0
+  !   read(fid, *) nx,ny,nz
+  !   if(nx == 0) nx = 1
+  !   if(ny == 0) ny = 1
+  !   if(nz == 0) nz = 1
+  !   ! print*, "nx=",nx,"ny=",ny,"nz=",nz
+  !   ! read(string,*, iostat=ierr ) (nx, j=1,i)
+  !   ! read(string,*, iostat=ierr ) (ny, j=1,i)
+  !   ! if ( ierr == 0 ) ny = 1
+  !   ! read(string,*, iostat=ierr ) (nz, j=1,i)
+  !   ! if ( ierr == 0 ) nz = 1
+  !   rewind(fid)
+  ! end subroutine getfilerowcol
 
   ! -----------------------------------------------------------------------
   ! A(m,n)=value. Note that the starting point of m and n is 1. 
@@ -1787,16 +1771,13 @@ contains
     PetscErrorCode,intent(out)::ierr
     Mat,intent(out):: B
     Vec :: V1, V2
-    Mat:: W
     IS:: ISRows,ISCols
     PetscInt::  ista1,iend1, ista2, iend2
-    integer:: i,k,x,ix,c1,c2
+    integer:: i,k,c1,c2
     PetscBool:: isGlobal
     PetscInt, allocatable :: row(:), col(:), vrow(:), vcol(:)
     integer ::  nxb, nyb, nzb
-    integer :: nvrow
     PetscLogEvent     ::  ievent
-    PetscInt :: nrow,ncol
     
     call PetscLogEventRegister("mat_getsub",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
@@ -2019,7 +2000,6 @@ contains
     PetscInt,intent(in):: idxm(:),idxn(:),idxk(:)
     PetscScalar,intent(in):: v(:)
     PetscInt, allocatable :: idxm1(:), idxn1(:), idxn2(:)
-    PetscScalar, allocatable :: vals(:)
     PetscInt:: m,n,k,ik,im,ista,iend,rid
     PetscErrorCode          :: ierr
     PetscLogEvent               :: ievent
@@ -2154,8 +2134,7 @@ contains
     Mat,            intent(out)::C
     PetscErrorCode,intent(out)::ierr
     Mat                         ::W
-    PetscInt::nrow1,ncol1,nrow2,ncol2
-    PetscInt::col,coltmp
+    PetscInt::col
     PetscInt,allocatable::idxn(:),idxntmp(:)
     PetscScalar,allocatable::row(:),rowtmp(:)
     PetscInt::  i,ista,iend
@@ -2273,13 +2252,13 @@ contains
     !call mat_view(A,ierr)
     if(nrow_m/=nrow_n .or. nrow_m/=nrow_k .or. nrow_n/=nrow_k) then
        print *, "Error in mat_sparse: matrix Ind_m, matrix Ind_n &
-            and matrix A should have the same row size"
+            &and matrix A should have the same row size"
        stop
     endif
 
     if(ncol_m/=1.or. ncol_m/=1 .or. ncol_m/=1 .or. ncol_k/=1) then
        print *, "Error in mat_sparse: matrix Ind_m, matrix Ind_n &
-            and matrix A should have only one column"
+            &and matrix A should have only one column"
        stop
     endif
     
@@ -2299,8 +2278,8 @@ contains
 
        call MatGetRow(A, i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row_a,ierr)
        call MatRestoreRow(A,i,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,row_a,ierr)
-       nrow = row_m + row_k * m
-       ncol = row_n + row_k * n
+       nrow = int(row_m) + int(row_k) * m
+       ncol = int(row_n) + int(row_k) * n
        !print *,">row1=",row1,"row2=",row2,"row3=",row3
        call MatSetValues(B,1,nrow,1,ncol,row_a, INSERT_VALUES, ierr)
     enddo
@@ -2443,7 +2422,7 @@ contains
     call MatGetSize(B,nrow2,ncol2,ierr)
     if(nrow1/=nrow2)then
        print *, "Error in mat_setcol: Matrix A and Matrix B &
-            should have the same row number"
+            &should have the same row number"
        stop
     endif
     if(ncol2/=1)then
@@ -2493,7 +2472,25 @@ contains
     else 
        isGlobal=.false.
     endif
-  end subroutine mat_gettype
+  end subroutine 
 
+  subroutine vec_gettype(A,isGlobal,ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Vec,intent(in)::A
+    PetscBool,intent(out)::isGlobal
+    PetscErrorCode,intent(out)::ierr
+    VecType                   ::  flag 
 
+    call VecGetType(A,flag,ierr)  
+    if(flag/= VECSEQ)then   
+       isGlobal=.true.
+    else 
+       isGlobal=.false.
+    endif
+  end subroutine 
+  
 end module dm_mat

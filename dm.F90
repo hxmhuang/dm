@@ -369,7 +369,6 @@ contains
     integer,    intent(in)  	        ::  m,n,k
     logical,    intent(in),optional     ::  isGlobal 
     type(Matrix)			            ::	A
-    integer                             ::	nmax, nmin 
     integer					            ::	ierr
     real(kind=8) :: value
     if (present(isGlobal)) then
@@ -400,7 +399,6 @@ contains
     integer,    intent(in)  	        ::  m,n,k
     logical,    intent(in),optional     ::  isGlobal 
     type(Matrix)			            ::	A
-    integer                             ::	nmax, nmin 
     integer					            ::	ierr
     if (present(isGlobal)) then
        call dm_create(A,m,n,k,isGlobal,ierr)
@@ -419,7 +417,6 @@ contains
     integer,    intent(in)  	        ::  m,n,k
     logical,    intent(in),optional     ::  isGlobal 
     type(Matrix)			            ::	A
-    integer                             ::	nmax, nmin 
     integer					            ::	ierr
     if (present(isGlobal)) then
        call dm_create(A,m,n,k,isGlobal,ierr)
@@ -437,8 +434,7 @@ contains
     implicit none
     integer,    intent(in)  	        ::  m,n,k
     logical,    intent(in),optional     ::  isGlobal 
-    type(Matrix)			            ::	A
-    integer                             ::	nmax, nmin 
+    type(Matrix)	                ::	A
     integer					            ::	ierr
     if (present(isGlobal)) then
        call dm_create(A,m,n,k,isGlobal,ierr)
@@ -493,7 +489,8 @@ contains
     alpha=1.0
 
     if(A%isGlobal .neqv. B%isGlobal) then
-       call dm_printf("Error in dm_add: Matrix A and B should have the same distribution.",ierr)
+       call dm_printf("Error in dm_add: Matrix A and B &
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -593,7 +590,8 @@ contains
     alpha=-1.0
 
     if(A%isGlobal .neqv. B%isGlobal) then
-       call dm_printf("Error in dm_minus: Matrix A and B should have the same distribution.",ierr)
+       call dm_printf("Error in dm_minus: Matrix A and B &
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -706,7 +704,7 @@ contains
     !print *, "A%nx=",A%nx,"B%nx=",B%nx
     if((A%ny/=B%ny) .or. (A%ny/=B%ny) .or.  (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_yjoin: Matrix A and Matrix B &
-            should have the same distribution."
+            &should have the same distribution."
        stop	
     endif
 
@@ -736,7 +734,7 @@ contains
 
     if((A%nx/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
        call dm_printf("Error in dm_xjoin: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -769,7 +767,7 @@ contains
 
     if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or.  (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_yjoin: Matrix A and Matrix B &
-            should have the same distribution."
+            &should have the same distribution."
        print*, A%nx,A%ny,A%nz,B%nx,B%ny,B%nz
        stop	
     endif
@@ -798,7 +796,9 @@ contains
     integer						::	ierr
 
     if((A%ny/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
-       print *, "Error in dm_mult: the column of A matrix should equal to the row of B matrix, and the number of z dimension should be same."
+       print *, "Error in dm_mult: the column of A matrix &
+            &should equal to the row of B matrix, and the &
+            &number of z dimension should be same."
        stop	
     endif
 
@@ -898,7 +898,7 @@ contains
     if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) &
          .or.  (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_emult: the A matrix &
-            and B matrix should have the same distribution." 
+            &and B matrix should have the same distribution." 
        stop	
     endif
 
@@ -930,7 +930,7 @@ contains
     if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) .or. &
          (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_ediv: the A matrix and B &
-            matrix should have the same distribution." 
+            &matrix should have the same distribution." 
        stop	
     endif
 
@@ -1154,13 +1154,13 @@ contains
 
     if(A%nx .ne. B%ny .or. A%nz.ne.B%nz) then
        call dm_printf("Error: dimension of A and B &
-            do not match for multiplication.", ierr)
+            &do not match for multiplication.", ierr)
        stop
     endif
     
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_xyt: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
     
@@ -1322,14 +1322,14 @@ contains
   ! -----------------------------------------------------------------------
   function dm_solve(A,B) result(X)
     implicit none
-    type(Matrix),	intent(in)	::  A 
-    type(Matrix),	intent(in)  ::	B
-    type(Matrix)            	::	X
-    integer						::	ierr
+    type(Matrix),intent(in)  ::  A 
+    type(Matrix),intent(in)  ::	B
+    type(Matrix)             ::	X
+    integer		     ::	ierr
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_solve: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1364,12 +1364,8 @@ contains
     logical, intent(in) :: isGlobal 
     type(Matrix), intent(out) :: A 
     integer, intent(out) :: ierr
-    integer :: rank, size
 
-    call dm_comm_rank(rank, ierr)
-    call dm_comm_size(size, ierr)
-    call mat_load(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, &
-         rank,size,ierr)
+    call mat_load(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, ierr)
     call dm_set_explicit(A, ierr)
   end subroutine
   
@@ -1380,13 +1376,8 @@ contains
     character(len=*), intent(in) :: varname
     type(Matrix) :: A 
     integer, intent(out) :: ierr
-    integer :: rank, size
 
-    call dm_comm_rank(rank, ierr)
-    call dm_comm_size(size, ierr)
-
-    call mat_save(filename, varname, A%x,A%nx,A%ny,A%nz,A%isGlobal,&
-         rank, size, ierr)
+    call mat_save(filename, varname, A%x,A%nx,A%ny,A%nz,A%isGlobal,ierr)
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
        call mat_destroy(A%x,ierr)
     endif
@@ -1628,7 +1619,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_lt: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1680,7 +1671,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
     
@@ -1706,7 +1696,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_le: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1758,7 +1748,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
 
@@ -1784,7 +1773,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_gt: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1836,7 +1825,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
 
@@ -1862,7 +1850,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_ge: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1914,7 +1902,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
 
@@ -1940,7 +1927,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_eq: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -1992,7 +1979,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
 
@@ -2018,7 +2004,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_nq: Matrix A and B &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -2070,7 +2056,6 @@ contains
     implicit none
     type(Matrix),	intent(in)	::  A 
     integer,	    intent(in)	::  alpha 
-    type(Matrix)                ::	B
     type(Matrix)                ::	C
     integer::	ierr
 
@@ -2096,7 +2081,7 @@ contains
          .or. (A%isGlobal .neqv. Ind_m%isGlobal) &
          .or. (A%isGlobal .neqv. Ind_k%isGlobal)) then
        call dm_printf("Error in dm_sparse: Matrix Ind_m, Ind_n, Ind_k and A &
-            should have the same distribution.",ierr)
+            &should have the same distribution.",ierr)
        stop
     endif
 
@@ -2104,7 +2089,7 @@ contains
          .or. Ind_m%ny.ne.1 .or. Ind_n%ny.ne.1 .or. Ind_k%ny.ne.1 &
          .or. Ind_m%nx.ne.Ind_n%nx .or. Ind_m%nx.ne.Ind_k%nx ) then
        call dm_printf("Error (dm_sparse): Ind_m, Ind_n and Ind_k &
-            must be a Nx1x1 matrix", ierr)
+            &must be a Nx1x1 matrix", ierr)
        stop
     endif
 
