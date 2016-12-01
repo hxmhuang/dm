@@ -1343,32 +1343,117 @@ program main
   call dm_destroy(II,ierr)
   call dm_destroy(KK,ierr)
 
-  if(myrank == 0) print*, "================Test dm_save============="
+
+  if(myrank == 0) print*, "==============Test dm_save================"
   A = dm_seqs(4,3,3)
   B = dm_ones(m, n, k)
 
-  call dm_save("Test_A1.nc", "wind", A, ierr)
-  if(myrank==0 .and. debug) print*, "write to file Test_A.nc"
-  call dm_save("Test_B1.nc", "wind", B, ierr)
-  if(myrank==0 .and. debug) print*, "write to file Test_B.nc"  
-  call dm_save("Test_C1.nc", "water", dm_seqs(m, n, k, .false.), ierr)
-  if(myrank==0 .and. debug) print*, "write to file Test_C.nc"
+  if(myrank==0 .and. debug) print*, ">>writing to file Test_A.nc"  
+  call dm_save("Test_A.nc", "wind", A, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing to file Test_B.nc"    
+  call dm_save("Test_B.nc", "wind", B, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing to file Test_C.nc"  
+  call dm_save("Test_C.nc", "wind", dm_seqs(m, n, k, .false.), ierr)
   
   call dm_destroy(A, ierr)
   call dm_destroy(B, ierr)
 
-  if(myrank == 0) print*, "================Test dm_load============="
-  
-  call dm_load("Test_A.nc", "wind", A, .true., ierr)
-  if(myrank==0 .and. debug) print '(A, I2, I2, I2)', ">dim(A)=", A%nx, A%ny, A%nz
-  if(debug) call dm_view(A, ierr)
-  
-  call dm_load("Test_C.nc", "water", B, .false., ierr)
-  if(myrank==0 .and. debug) print '(A, I2, I2, I2)', ">dim(B)=", B%nx, B%ny, B%nz  
-  if(myrank==0 .and. debug) call dm_view(B, ierr)
 
+  if(myrank == 0) print*, "==============Test dm_load================"
+  
+  call dm_load("Test_A.nc", "wind", A, .true.,  ierr)
+  call dm_load("Test_B.nc", "wind", B, .true.,  ierr)
+  call dm_load("Test_C.nc", "wind", C, .false., ierr)
+
+  if(debug) then
+     if(myrank==0) print '(A, I2, I2, I2)', ">dim(A)=", A%nx, A%ny, A%nz
+     call dm_view(A, ierr)
+
+     if(myrank==0) print '(A, I2, I2, I2)', ">dim(B)=", B%nx, B%ny, B%nz
+     call dm_view(B, ierr)
+
+     if(myrank==0) print '(A, I2, I2, I2)', ">dim(C)=", C%nx, C%ny, C%nz     
+     if(myrank==0) call dm_view(C, ierr)
+  endif
+  
   call dm_destroy(A, ierr)
   call dm_destroy(B, ierr)
+
+
+  if(myrank == 0) print*, "==============Test dm_save3d=============="
+
+  E = dm_seqs(m, n, k)
+  F = dm_seqs(m*2,n+1,k)
+  G = dm_seqs(m+1,n*2,k+1)
+  H = dm_seqs(m,n,k*2)
+  
+  if(myrank==0 .and. debug) print*, ">>writing data into Test_E.nc"
+  call dm_save3d("Test_E.nc", "wind", E, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing data into Test_F.nc"
+  call dm_save3d("Test_F.nc", "wind", F, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing data into Test_G.nc"
+  call dm_save3d("Test_G.nc", "wind", G, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing data into Test_H.nc"  
+  call dm_save3d("Test_H.nc", "wind", H, ierr)
+
+  if(myrank==0 .and. debug) print*, ">>writing data into Test_I.nc"  
+  call dm_save3d("Test_I.nc", "wind", dm_seqs(m,n,k, .false.), ierr)
+
+  call dm_destroy(E, ierr)
+  call dm_destroy(F, ierr)
+  call dm_destroy(G, ierr)
+  call dm_destroy(H, ierr)
+
+
+  if(myrank == 0) print*, "==============Test dm_load3d=============="
+
+  call dm_load3d("Test_E.nc", "wind", E, .true., ierr)
+  call dm_load3d("Test_F.nc", "wind", F, .true., ierr)
+  call dm_load3d("Test_G.nc", "wind", G, .true., ierr)
+  call dm_load3d("Test_H.nc", "wind", H, .false., ierr)
+
+  if(debug) then
+     if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(E) =", E%nx,",",E%ny,",",E%nz     
+     call dm_view(E, ierr)
+     if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(F) =", F%nx,",",F%ny,",",F%nz
+     call dm_view(F, ierr)
+     if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(G) =", G%nx,",",G%ny,",",G%nz
+     call dm_view(G, ierr)
+     if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(H) =", H%nx,",",H%ny,",",H%nz
+     if(myrank==0) call dm_view(H, ierr)     
+  endif
+  
+  call dm_destroy(E, ierr)
+  call dm_destroy(F, ierr)
+  call dm_destroy(G, ierr)
+  call dm_destroy(H, ierr)
+  
+  ! B = dm_seqs(12,10,3)
+  ! if(myrank==0) print*, ">>writing file into Test_D2.nc"
+  ! call dm_save3d("Test_D2.nc", "wind", B, ierr)
+
+  ! C = dm_seqs(12,9,3)
+  ! if(myrank==0) print*, ">>writing file into Test_D3.nc"
+  ! call dm_save3d("Test_D3.nc", "wind", C, ierr)
+
+  ! D = dm_seqs(11,10,3)
+  ! if(myrank==0) print*, ">>writing file into Test_D4.nc"  
+  ! call dm_save3d("Test_D4.nc", "wind", D, ierr)
+
+  ! E = dm_seqs(11,9,3)
+  ! if(myrank==0) print*, ">>writing file into Test_D5.nc"  
+  ! call dm_save3d("Test_D5.nc", "wind", E, ierr)
+
+  ! call dm_destroy(A, ierr)
+  ! call dm_destroy(B, ierr)
+  ! call dm_destroy(C, ierr)
+  ! call dm_destroy(D, ierr)
+  ! call dm_destroy(E, ierr)
   
   ! if(myrank==0) print *, "==============Test dm_cart2sph============"
   ! filename="md001.00004"

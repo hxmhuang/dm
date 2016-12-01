@@ -1501,6 +1501,7 @@ contains
     end if
   end subroutine 
 
+  
   !----------------------------------------------------------------
   !> Load a 3d matrix from a nc file
   !----------------------------------------------------------------
@@ -1519,12 +1520,9 @@ contains
     integer, intent(out) :: gnx, gny, gnz
     logical, intent(in) :: isGlobal    
     PetscErrorCode,    intent(out)::ierr
-    
     PetscInt, allocatable    :: idxn(:)
     PetscInt:: ista,iend
-    
     integer :: i,j,omode,ncid
-
     real(kind=8),allocatable :: buf(:,:)
     PetscLogEvent       ::  ievent
     integer :: k,varid
@@ -1599,6 +1597,178 @@ contains
   end subroutine
 
 
+  !----------------------------------------------------------------
+  !> Load a 3d matrix from a nc file
+  !----------------------------------------------------------------
+  subroutine mat_load3d(filename, varname, A, gnx, gny, gnz, &
+       isGlobal, ierr)
+    use pnetcdf    
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    Mat, intent(out) :: A
+    integer, intent(out) :: gnx, gny, gnz
+    logical, intent(in) :: isGlobal    
+    PetscErrorCode,    intent(out)::ierr
+    PetscInt, allocatable    :: idxn(:)
+    integer :: i,j,omode,ncid
+    real(kind=8),allocatable :: buf(:)
+    PetscLogEvent       ::  ievent
+    integer :: k,varid
+    integer(kind=8) :: starts(3), counts(3)
+    integer :: dimids(3)
+    integer(kind=8) :: dd(3)
+    integer :: ndims
+    integer :: COMM_TYPE
+    
+    character(len=1024) :: tmp_varname
+    character(len=128) :: dim_names(3)
+    integer :: datatype
+    integer :: num_attr
+    integer :: pnx, pny, pnz
+    integer :: bnx, bny, bnz
+    integer :: ibnx, ibny, ibnz
+    integer :: pidx, pidy, pidz
+    integer :: rank, size
+    integer :: psizes(3)
+    integer :: xx, yy, zz
+
+    
+    call PetscLogEventRegister("mat_load3d",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr) 
+
+    omode = NF90_NOWRITE + NF90_64BIT_OFFSET
+
+    if(isGlobal) then
+       COMM_TYPE = MPI_COMM_WORLD
+    else
+       COMM_TYPE = MPI_COMM_SELF
+    endif
+
+    call MPI_Comm_rank(COMM_TYPE, rank, ierr)
+    call MPI_Comm_size(COMM_TYPE, size, ierr)
+    
+    ierr = nf90mpi_open(COMM_TYPE, trim(filename), omode, &
+         MPI_INFO_NULL, ncid)
+    call nc_check(ierr, 'Error in nf90mpi_open:')
+
+    ierr = nf90mpi_inq_varid(ncid, varname, varid)
+    call nc_check(ierr, 'Error in nf90mpi_inq_varid varname: ')
+
+    ierr = nf90mpi_inquire_variable(ncid, varid, tmp_varname, datatype, &
+         ndims, dimids, num_attr)
+    call nc_check(ierr, 'Error in nf90mpi_inquire_variable: ')
+    
+    do i=1,ndims
+       ierr = nf90mpi_inquire_dimension(ncid, dimids(i), dim_names(i), dd(i))
+    enddo
+
+    gny = dd(1)
+    gnx = dd(2)
+    gnz = dd(3)
+
+    psizes=0
+    call MPI_Dims_create(size, ndims, psizes, ierr)
+
+    pnx = psizes(1)
+    pny = psizes(2)
+    pnz = psizes(3)
+
+    pidz = rank / (pnx*pnz)
+    pidy = mod(rank, pny)
+    pidx = rank / pny
+    
+    !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(pnx,pny,pnz)=", pnx, pny, pnz
+
+    !block size for x-, y- and z-direction
+    bny = gny / pny
+    bnx = gnx / pnx
+    bnz = gnz / pnz
+    
+    if(mod(gnx, pnx).ne.0) bnx = bnx + 1
+    if(mod(gny, pny).ne.0) bny = bny + 1    
+    if(mod(gnz, pnz).ne.0) bnz = bnz + 1
+
+    ibnx = min(bnx, gnx-pidx*bnx)          
+    ibny = min(bny, gny-pidy*bny)
+    ibnz = min(bnz, gnz-pidz*bnz)
+
+    starts = (/pidy, pidx, pidz/) * (/bny, bnx, bnz/) + 1
+    counts = (/ibny, ibnx, ibnz/)
+
+    if(starts(1).gt.gny .or. starts(2).gt.gnx .or. starts(3).gt.gnz) then
+       starts = 1
+       counts = 0
+    endif
+    
+    allocate(buf(ibnx*ibny*ibnz))
+    
+    ierr = nf90mpi_get_var_all(ncid, varid, buf, starts, counts)
+    call nc_check(ierr, 'In nf90mpi_get_var_all: ')
+
+    ierr = nf90mpi_close(ncid)
+    call nc_check(ierr, 'In nf90mpi_close: ')
+
+    !print*, buf
+    !print '(A,I3,I3,I3)', dd(1), dd(2), dd(3)
+    !print*, "ndims=", ndims, "dd=", dd, "dim_names=", dim_names
+       
+    !ierr = nf90mpi_get_att(ncid, varid, "DIM", DD)
+    ! call nc_check(ierr, "nf90mpi_get_att: ")
+    
+    call mat_create(A, gnx, gny, gnz, isGlobal, ierr)
+    do k=0,ibnz-1
+       do j=0,ibny-1
+          do i=0,ibnx-1
+             zz = starts(3)+k-1
+             xx = starts(2)+i-1             
+             yy = starts(1)+j-1
+             call MatSetValue(A, zz*gnx+xx, zz*gny+yy, &
+                  buf(j+i*ibny+k*ibnx*ibny+1), INSERT_VALUES, ierr)
+          enddo
+       enddo
+    enddo
+
+    deallocate(buf)
+    
+    ! call MatGetOwnershipRange(A, ista, iend, ierr)
+    ! nx = iend - ista
+    ! ny = gny
+    
+    ! allocate(buf(ny, nx), idxn(ny))
+
+    ! starts(1) = 1
+    ! counts(1) = ny
+    ! starts(2) = ista+1
+    ! counts(2) = nx
+
+    ! if(nx .le. 0) then
+    !    starts(2) = 1
+    !    counts(2) = 0
+    ! endif
+    
+    
+    ! do j=1,int(ny,kind=4)
+    !    idxn(j)=j-1
+    ! enddo
+    
+    ! do i=ista,iend-1
+    !    k = i / gnx
+    !    call MatSetValues(A, 1, i, ny, idxn+k*gny, buf(:,i-ista+1), &
+    !         INSERT_VALUES, ierr)
+    ! enddo
+    
+    ! deallocate(buf, idxn)
+    
+    call PetscLogEventEnd(ievent,ierr) 
+  end subroutine
+
+  
   ! -----------------------------------------------------------------------
   !> Save a standard row-cloumn file into a matrix 
   ! -----------------------------------------------------------------------
@@ -1701,7 +1871,262 @@ contains
     call PetscLogEventEnd(ievent,ierr) 
   end subroutine
 
+ 
+!   subroutine petsc_check_err(code)
+! #include <petsc/finclude/petscsys.h>
+! #include <petsc/finclude/petscvec.h>
+! #include <petsc/finclude/petscvec.h90>
+! #include <petsc/finclude/petscmat.h>
+! #include <petsc/finclude/petscdmda.h>
+! #include <petsc/finclude/petscdm.h>
+    
+!     PetscInt, intent(in) :: code
+!     character(len=1024) :: message
+!     PetscInt :: ierr
+    
+!     call PetscErrorMessage(code, message, 0, ierr)
+!     if(code .ne. 0) then
+!        print*, "err_code=", code
+!     endif
+!   end subroutine 
   
+  ! -----------------------------------------------------------------------
+  !> Save a 3d matrix to 3d nc file
+  ! -----------------------------------------------------------------------
+  subroutine mat_save3d(filename, varname, A, gnx, gny, gnz, isGlobal, ierr)
+    use pnetcdf
+
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscdmda.h>
+#include <petsc/finclude/petscdm.h>
+
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    Mat,    intent(out)::A
+    integer, intent(in) :: gnx, gny, gnz
+    logical, intent(in) :: isGlobal
+    integer ::rank, size
+    PetscErrorCode,    intent(out)::ierr
+    PetscScalar,allocatable  :: row(:) 
+    PetscInt, allocatable    :: idxn(:)
+    PetscInt:: ista,iend
+    integer :: i, j, k, ii, jj, col, cmode, ncid
+    integer :: dimid(3)
+    PetscScalar,pointer :: buf(:)
+    PetscLogEvent :: ievent
+    integer :: varid
+    integer(kind=8) :: nx, ny 
+    integer(kind=8) :: starts(3), counts(3)
+    integer :: COMM_TYPE
+    integer(kind=8) :: malloc_size
+    integer :: pny, pnx, pnz  ! number of processors in each dimension
+    integer :: bnx, bny, bnz  ! standard 3D block size for each process
+    integer :: ibnx, ibny, ibnz  ! standard 3D block size for each process
+    integer :: bidx,bidy,bidz    ! unstandard 3D block size for each process
+    integer :: inbx,inby,inbz   ! offset inside a block for each direction
+    integer(kind=8) :: base, offset, index
+    PetscInt :: vlow, vhigh !Vector's ownership range
+    !PetscInt :: ranges(3)
+    integer :: psizes(3)
+    integer :: bid
+    Vec :: arr
+    
+    !DM :: da
+    !real :: tmp
+    
+    call PetscLogEventRegister("mat_save3d",0, ievent, ierr) 
+    call PetscLogEventBegin(ievent,ierr)
+
+    if(isGlobal) then
+       COMM_TYPE=MPI_COMM_WORLD
+    else
+       COMM_TYPE=MPI_COMM_SELF
+    endif
+
+    call MPI_Comm_rank(COMM_TYPE, rank, ierr)
+    call MPI_Comm_size(COMM_TYPE, size, ierr)
+    
+    call mat_assemble(A, ierr)
+    call MatGetOwnershipRange(A, ista, iend,ierr)
+
+    !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(gnx,gny,gnz)=", gnx, gny, gnz
+    nx = iend - ista
+    ny = gny
+    
+    !create processers' grid-mesh (pny, pnx, pnz),
+    !i.e. number of processors in each direction
+    psizes=0
+    call MPI_Dims_create(size, 3, psizes, ierr)
+    pnx = psizes(1)
+    pny = psizes(2)
+    pnz = psizes(3)
+    
+    ! tmp = real(gny) / real(gny+gnx)
+    ! pny = dnint(tmp*size) + 1
+    ! pnx = size / pny
+    ! pnz = 1
+
+    !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(pnx,pny,pnz)=", pnx, pny, pnz
+    !block size for x-, y- and z-direction
+    bny = gny / pny
+    bnx = gnx / pnx
+    bnz = gnz / pnz
+    
+    if(mod(gnx, pnx).ne.0) bnx = bnx + 1
+    if(mod(gny, pny).ne.0) bny = bny + 1    
+    if(mod(gnz, pnz).ne.0) bnz = bnz + 1
+    
+    !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(bnx,bny,bnz)=", bnx, bny, bnz
+    
+    ! call VecCreateMPIWithArray(COMM_TYPE, bny*bnx*bnz, bny*bnx*bnz, &
+    !      pnx*pny*pnz*bny*bnx*bnz, buf, arr, ierr)
+    
+    call VecCreateMPI(COMM_TYPE, bny*bnx*bnz, &
+         pnx*pny*pnz*bny*bnx*bnz, arr, ierr)
+
+    ! call VecCreate(COMM_TYPE, arr, ierr)
+    ! call VecSetSizes(arr, PETSC_DECIDE, pnx*pny*pnz*bny*bnx*bnz, ierr)
+    ! call VecSetFromOptions(arr, ierr)
+    ! call mat_assemble(A, ierr)
+    allocate(row(ny), idxn(ny))
+    
+    do ii = ista,iend-1
+       i = mod(ii, gnx)       
+       k = ii / gnx
+       call MatGetRow(A, ii, col, idxn, row, ierr)
+       do jj = 1, col
+          j = mod(idxn(jj), gny) !now we have i, j, k
+          
+          bidx = i / bnx !block id for x-direction
+          bidy = j / bny !block id for y-direction
+          bidz = k / bnz !block id for z-direction
+          inbx=mod(i, bnx)
+          inby=mod(j, bny)
+          inbz=mod(k, bnz)
+
+          !the box maybe out of boundary, we have to adjust the box size here.
+          ibnx = min(bnx, gnx-bidx*bnx)          
+          ibny = min(bny, gny-bidy*bny)
+          ibnz = min(bnz, gnz-bidz*bnz)
+
+          offset = inby + inbx*ibny + inbz*ibnx*ibny
+          base = (bidy  + bidx*pny + bidz*pnx*pny) * bnx*bny*bnz
+          index = base + offset
+          
+          ! offset = inby + inbx*bny + inbz*bnx*bny
+          ! base = (bidy  + bidx*pny + bidz*pnx*pny) * bnx*bny*bnz
+          ! index = base + offset
+
+          call VecSetValue(arr, index, row(jj), INSERT_VALUES, ierr);
+       enddo
+      call MatRestoreRow(A, ii, col, idxn, row, ierr)       
+    enddo
+
+    deallocate(row, idxn)
+    
+    call vec_assemble(arr, ierr)
+    call VecGetArrayF90(arr, buf, ierr)
+    
+    !start = pidy * bny + pidx * bnx * gny + pidz * gnx * gny
+    !end = start + nx * ny
+    !call VecGetArray3d(arr, gny, gnx, gnz, 0, 0, 0, buf3d)
+    !call VecRestoreArray3d(arr, gny, gnx, gnz, 0, 0, 0, buf3d)    
+    !call DMDAGetCorners(arr, lx, ly, lz, lnx, lny, lnz)
+
+    !ranges = 0
+    ! call VecCreateMPIWithArray(PETSC_COMM_WORLD, nx*ny, nx*ny, &
+    !      gnx*gny*gnz, buf, arr, ierr)
+    ! call DMDACreate3d(COMM_TYPE, DM_BOUNDARY_NONE,&
+    !      DM_BOUNDARY_NONE,DM_BOUNDARY_NONE, 
+    !      DMDA_STENCIL_BOX, gny, gnx, gnz, pny, pnx, 1, &
+    !      1, 1, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,&
+    !      da, ierr)
+    ! call DMCreateGlobalVector(da, arr, ierr)
+    ! call DMDAGetOwnershipRanges(da, ly, lx, lz, ierr)
+    ! print*, "lx=",lx, "ly=",ly,"lz=",lz
+    ! call VecGetOwnershipRanges(arr,ranges, ierr)
+    ! print*, "ranges=", ranges
+    ! call petsc_check_err(ierr)
+    ! !call VecGetArrayF90(arr, buf2, ierr)
+    ! !call VecGetArray3dRead(arr, gny, gnx, gnz, 0, 0, 0, buf1)
+    ! print*, "buf2(1)=", buf2(1)
+    ! call petsc_check_err(ierr)
+    
+    cmode = IOR(NF90_CLOBBER, NF90_64BIT_DATA)
+    ierr = nf90mpi_create(MPI_COMM_WORLD, filename, cmode, &
+         MPI_INFO_NULL, ncid)
+    call nc_check(ierr, "nf90mpi_create: ")
+
+    ierr = nf90mpi_def_dim(ncid, "y", int(gny,kind=8), dimid(1))
+    ierr = nf90mpi_def_dim(ncid, "x", int(gnx,kind=8), dimid(2))
+    ierr = nf90mpi_def_dim(ncid, "z", int(gnz,kind=8), dimid(3))
+    
+    call nc_check(ierr, "nf90mpi_def_dim: ")
+    ierr = nf90mpi_def_var(ncid, varname, NF90_DOUBLE, dimid, varid)
+    call nc_check(ierr, "Error: nf90mpi_def_var:")
+    ierr = nf90mpi_enddef(ncid)
+    call nc_check(ierr, "Error: nf90mpi_enddef:")
+    
+    ! do i=1,240
+    !    buf(i) = rank
+    ! enddo
+    
+    ! pidx = rank/pny
+    ! pidy = mod(rank, pny)
+    ! pidz = 0
+    ! print '(A,I3,A,I3,I3,I3)',"rank=",rank,"(pidx,pidy,pidz)=",pidx,pidy,pidz
+
+    ! starts(1) = pidy * bny + 1
+    ! starts(2) = pidx * bnx + 1
+    ! starts(3) = pidz * bnz + 1
+    
+    ! counts(1) = min(bny, gny-pidy*bny)
+    ! counts(2) = min(bnx, gnx-pidx*bnx)
+    ! counts(3) = min(bnz, gnz-pidz*bnz)
+    ! strides = (/bny, bnx, bnz/)
+
+    call VecGetOwnershipRange(arr, vlow, vhigh, ierr)
+    
+    bid  = vlow / (bnx*bny*bnz)
+    bidx = mod(bid, pnx*pny) / pny
+    bidy = mod(bid, pny)
+    bidz = bid / (pny*pnx)
+
+    starts = (/bidy, bidx, bidz/)*(/bny, bnx, bnz/) + 1
+    
+    counts(1) = min(bny, gny-bidy*bny)
+    counts(2) = min(bnx, gnx-bidx*bnx)
+    counts(3) = min(bnz, gnz-bidz*bnz)
+    
+    if(starts(1).gt.gny .or. starts(2).gt.gnx .or. starts(3).gt.gnz) then
+       starts=1
+       counts=0
+    endif
+    
+    !buf(1:bnx*bny*bnz) = bid
+    
+    !print*, gny, gnx, gnz
+    !print *, "rank=", rank, "starts=", starts, "counts=", counts
+
+    ierr = nf90mpi_put_var_all(ncid, varid, buf, starts, counts)
+    call nc_check(ierr, "nf90mpi_put_var_all: ")
+
+    ierr = nf90mpi_close(ncid)
+    call nc_check(ierr, "nf90mpi_close: ")
+
+    ! check if there is any PnetCDF internal malloc residue
+    ierr = nf90mpi_inq_malloc_size(malloc_size)
+    call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
+
+    call VecRestoreArrayF90(arr, buf, ierr)
+    call VecDestroy(arr, ierr)
+    
+    call PetscLogEventEnd(ievent,ierr) 
+  end subroutine
   
   ! subroutine getfilerowcol(fid, nx, ny, nz,ierr)
   !   implicit none

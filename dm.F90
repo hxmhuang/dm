@@ -246,12 +246,19 @@ contains
   subroutine dm_finalize(ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
-    integer,intent(out)			::  ierr 
+    integer,intent(out)	::  ierr 
     call mat_destroy(DM_ZERO%x,ierr)
     call PetscFinalize(ierr)
   end subroutine dm_finalize
 
+  subroutine dm_abort(ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+    integer,intent(out)	 ::  ierr 
 
+    call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+    
+  end subroutine 
   ! -----------------------------------------------------------------------
   ! Destroy a matrix to free the memory
   ! -----------------------------------------------------------------------
@@ -1364,11 +1371,39 @@ contains
     logical, intent(in) :: isGlobal 
     type(Matrix), intent(out) :: A 
     integer, intent(out) :: ierr
+    logical :: file_exists = .false.
+    
+    inquire(file=filename, exist=file_exists)
+
+    if(.not. file_exists) then
+       print*, "Error: File ",filename," does not exists."
+       call dm_abort(ierr)
+    endif
 
     call mat_load(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, ierr)
     call dm_set_explicit(A, ierr)
   end subroutine
-  
+
+  subroutine dm_load3d(filename,varname, A, isGlobal, ierr)
+    implicit none
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    logical, intent(in) :: isGlobal 
+    type(Matrix), intent(out) :: A 
+    integer, intent(out) :: ierr
+    logical :: file_exists
+
+    inquire(file=filename, exist=file_exists)
+
+    if(.not. file_exists) then
+       print*, "Error: File ",filename," does not exists."
+       stop
+    endif
+    
+    call mat_load3d(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, ierr)
+    call dm_set_explicit(A, ierr)
+  end subroutine
+
 
   subroutine dm_save(filename, varname, A, ierr)
     implicit none
@@ -1383,6 +1418,21 @@ contains
     endif
   end subroutine 
 
+  subroutine dm_save3d(filename, varname, A, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: varname
+    type(Matrix) :: A 
+    integer, intent(out) :: ierr
+    integer :: size
+    
+    call mat_save3d(filename, varname, A%x,A%nx,A%ny,A%nz,A%isGlobal, ierr)
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x,ierr)
+    endif
+  end subroutine 
+  
 
   ! -----------------------------------------------------------------------
   ! A(m,n)=value 
