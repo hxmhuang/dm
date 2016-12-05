@@ -8,7 +8,7 @@ LOCDIR           = src/ksp/ksp/examples/tutorials/
 MANSEC           = KSP
 CLEANFILES       = main *.o *.mod 
 NP               = 1
-OBJ		 = dm_type.o dm_mat.o dm.o 
+OBJ		 = dm_type.o dm_mat.o dm.o dm_op.o dm_test.o
 
 OBJMAIN		 = ${OBJ} main.o 
 #

@@ -1786,7 +1786,7 @@ contains
     integer, intent(in) :: gnx, gny, gnz
     logical, intent(in) :: isGlobal
     PetscErrorCode,    intent(out)::ierr
-    PetscScalar,allocatable         :: row(:) 
+    PetscScalar,allocatable  :: row(:) 
     PetscInt, allocatable    :: idxn(:)
     PetscInt    :: ista,iend
     integer :: i,j,cmode,ncid

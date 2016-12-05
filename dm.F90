@@ -145,8 +145,8 @@ module dm
   end interface assignment(=)
 
   integer 		::  dm_nx
-  integer 		::	dm_ny
-  integer 		::	dm_nz
+  integer 		::  dm_ny
+  integer 		::  dm_nz
   type(Matrix)	:: 	DM_ZERO
 contains
 
@@ -2257,25 +2257,5 @@ contains
   end subroutine dm_setcol
 
 
-  subroutine dm_test(m,n,ierr)
-    implicit none
-#include <petsc/finclude/petscsys.h>
-#include <petsc/finclude/petscvec.h>
-#include <petsc/finclude/petscvec.h90>
-#include <petsc/finclude/petscmat.h>
-#include <petsc/finclude/petscksp.h>
-#include <petsc/finclude/petscpc.h>
-    PetscInt,		intent(in)	::	m,n	
-    PetscErrorCode,	intent(out)	::	ierr
-    !   Mat				            ::	A
-    !   Vec							:: 	b,x
-    !   KSP                         ::  ksp
-    !   PC                          ::  pc
-    !	PetscInt					::  ista1,iend1
-    !	PetscInt,allocatable		::	idxn(:)
-    !	PetscScalar,allocatable		::	row(:)
-    !	integer 					:: 	i,j
-    !	PetscScalar					:: 	alpha
-  end subroutine dm_test
 
 end module dm
