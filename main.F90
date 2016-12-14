@@ -83,25 +83,25 @@ program main
   call test_dm_save3d()
   call test_dm_load3d()
 
-  call test_OP_AXF()
-  call test_OP_AYF()
-  call test_OP_AZF()
+  ! call test_OP_AXF()
+  ! call test_OP_AYF()
+  ! call test_OP_AZF()
 
-  call test_OP_AXB()
-  call test_OP_AYB()  
-  call test_OP_AZB()
+  ! call test_OP_AXB()
+  ! call test_OP_AYB()  
+  ! call test_OP_AZB()
 
-  call test_OP_DXB()
-  call test_OP_DYB()
-  call test_OP_DZB()
+  ! call test_OP_DXB()
+  ! call test_OP_DYB()
+  ! call test_OP_DZB()
 
-  call test_OP_DXF()
-  call test_OP_DYF()
-  call test_OP_DZF()
+  ! call test_OP_DXF()
+  ! call test_OP_DYF()
+  ! call test_OP_DZF()
   
-  call test_OP_DXC()
-  call test_OP_DYC()
-  call test_OP_DZC()
+  ! call test_OP_DXC()
+  ! call test_OP_DYC()
+  ! call test_OP_DZC()
   
   ! if(myrank==0) print *, "==============Test dm_cart2sph============"
   ! filename="md001.00004"

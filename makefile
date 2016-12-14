@@ -6,7 +6,7 @@ CPPFLAGS         =
 FPPFLAGS         =
 LOCDIR           = src/ksp/ksp/examples/tutorials/
 MANSEC           = KSP
-CLEANFILES       = main *.o *.mod 
+CLEANFILES       = main *.o *.mod *.nc
 NP               = 1
 OBJ		 = dm_type.o dm_mat.o dm.o dm_op.o dm_test.o
 
@@ -27,7 +27,7 @@ tiny:
 small:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 2 ./main -m 3 -n 2 -k 2 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
+	-@${MPIEXEC} -n 8 ./main -m 3 -n 2 -k 2 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
 
 middle:
 	make clean

@@ -139,7 +139,7 @@ module dm
      module procedure dm_setdiag2
      module procedure dm_setdiag3
   end interface dm_setdiag
-
+  
   interface assignment(=)
      module procedure dm_copy
   end interface assignment(=)
@@ -1600,12 +1600,29 @@ contains
     real(kind=8),	intent(inout)	::	v(:)	
     integer,		intent(out)	::	ierr
 
-    call mat_getvalues(A%x,A%nx,A%ny,A%nz,idxm,idxn,idxk,v,ierr) 
+    call mat_getvalues(A%x,A%isGlobal,A%nx,A%ny,A%nz,idxm,idxn,idxk,v,ierr) 
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
        call mat_destroy(A%x,ierr)
     endif
   end subroutine dm_getvalues
+
+  ! ! -----------------------------------------------------------------------
+  ! ! Get local values in A.
+  ! ! -----------------------------------------------------------------------
+  ! subroutine dm_getvalues2(A,idxm,idxn,idxk,v,ierr)
+  !   implicit none
+  !   type(Matrix),	intent(in)	::	A
+  !   integer,		intent(in)	::	idxm(:),idxn(:),idxk(:)
+  !   real(kind=8),	intent(inout)	::	v(:)	
+  !   integer,		intent(out)	::	ierr
+
+  !   call mat_getvalues2(A%x,A%isGlobal,A%nx,A%ny,A%nz,idxm,idxn,idxk,v,ierr) 
+
+  !   if (A%xtype==MAT_XTYPE_IMPLICIT) then
+  !      call mat_destroy(A%x,ierr)
+  !   endif
+  ! end subroutine dm_getvalues
 
 
   ! -----------------------------------------------------------------------

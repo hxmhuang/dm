@@ -1585,32 +1585,48 @@ contains
 
     if(myrank==0) print *, "==============Test dm_getvalues==========="
     A=dm_seqs(2*m,2*m,1)
-    B=dm_seqs(2*m,2*m,2,.false.)
+    B=dm_seqs(2*m,2*m,2)
+    C=dm_seqs(2*m,2*m,2, .false.)
+    
     allocate(array(2))
     array=0
 
     call dm_getvalues(A,(/0/),(/1,2/),(/0/),array,ierr)	
     if(debug) then
-       if(myrank==0) print *, ">A=dm_getvalues(A,(/0/),(/1,2/),(/0/),array,ierr)"
+       if(myrank==0) print *,">A=dm_seqs(2*m,2*m,1)"
        call dm_view(A,ierr)
        if(myrank==0) &
-            print *, ">getvalues=dm_getvalues(A,idxm,idxn,array,ierr) ",array
+            print *, ">A=dm_getvalues(A,(/0/),(/1,2/),(/0/),array,ierr) : ",array
     endif
 
     deallocate(array)
+    
     allocate(array(8))
-
-    call dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr)	
+    call dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr)
+    
     if(debug) then
-       if(myrank==0) print *, ">B=dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr)"
-       if(myrank==0) call dm_view(B,ierr)
+       if(myrank==0) print *,">B=dm_seqs(2*m,2*m,2)" 
+       call dm_view(B,ierr)
        if(myrank==0) &
-            print *, ">getvalues=dm_getvalues(B,idxm,idxn,array,ierr)",array
+            print *, ">B=dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr) : ",array
     endif
-
+    deallocate(array)
+    
+    allocate(array(8))
+    call dm_getvalues(C,(/0,3/),(/3,2/),(/0,1/), array,ierr)
+    
+    if(debug) then
+       if(myrank==0) print*, ">C=dm_seqs(2*m,2*m,3,.false.)"
+       if(myrank==0) call dm_view(C,ierr)
+       if(myrank==0) then
+          print *, ">C=dm_getvalues(C,(/0,3/),(/3,2/),(/0,1/),array,ierr) : ", array
+       endif
+    endif
+    deallocate(array)
+    
     call dm_destroy(A, ierr)
     call dm_destroy(B, ierr)
-    deallocate(array)
+    call dm_destroy(C, ierr)
 
   end subroutine test_dm_getvalues
 
@@ -2086,7 +2102,8 @@ contains
     logical         		:: debug = .false.
     integer         		:: ierr
     real(kind=8),allocatable  :: array(:)
-
+    character(len=12) :: file_name
+    
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
     call dm_option_int('-m',m,ierr)
@@ -2105,8 +2122,10 @@ contains
     if(myrank==0 .and. debug) print*, ">>writing to file Test_B.nc"    
     call dm_save("Test_B.nc", "wind", B, ierr)
 
-    if(myrank==0 .and. debug) print*, ">>writing to file Test_C.nc"  
-    call dm_save("Test_C.nc", "wind", dm_seqs(m, n, k, .false.), ierr)
+    write(file_name, "(A,I3.3,A)") "Test_C", myrank, ".nc"
+    
+    if(myrank==0 .and. debug) print*, ">>writing to file ", file_name
+    call dm_save(file_name, "wind", dm_seqs(m, n, k, .false.), ierr)
 
     call dm_destroy(A, ierr)
     call dm_destroy(B, ierr)
@@ -2121,8 +2140,9 @@ contains
     real(kind=8)    		:: a1,a2,a3
     logical         		:: debug = .false.
     integer         		:: ierr
-    real(kind=8),allocatable  :: array(:)
-
+    real(kind=8),allocatable    :: array(:)
+    character(len=12) :: file_name
+    
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
     call dm_option_int('-m',m,ierr)
@@ -2130,13 +2150,14 @@ contains
     call dm_option_int('-k',k,ierr)
     call dm_option_real('-ep',ep,ierr)
     call dm_option_bool('-debug',debug,ierr)
-   
 
     if(myrank == 0) print*, "==============Test dm_load================"
 
     call dm_load("Test_A.nc", "wind", A, .true.,  ierr)
     call dm_load("Test_B.nc", "wind", B, .true.,  ierr)
-    call dm_load("Test_C.nc", "wind", C, .false., ierr)
+
+    write(file_name, "(A,I3.3,A)") "Test_C", myrank, ".nc"
+    call dm_load(file_name, "wind", C, .false., ierr)
 
     if(debug) then
        if(myrank==0) print '(A, I2, I2, I2)', ">dim(A)=", A%nx, A%ny, A%nz
@@ -2164,7 +2185,8 @@ contains
     logical         		:: debug = .false.
     integer         		:: ierr
     real(kind=8),allocatable  :: array(:)
-
+    character(len=12) :: file_name
+    
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
     call dm_option_int('-m',m,ierr)
@@ -2192,8 +2214,9 @@ contains
     if(myrank==0 .and. debug) print*, ">>writing data into Test_H.nc"  
     call dm_save3d("Test_H.nc", "wind", H, ierr)
 
-    if(myrank==0 .and. debug) print*, ">>writing data into Test_I.nc"  
-    call dm_save3d("Test_I.nc", "wind", dm_seqs(m,n,k, .false.), ierr)
+    write(file_name, "(A,I3.3,A)") "Test_I", myrank, ".nc"
+    if(debug) print*, ">>writing data into ",file_name
+    call dm_save3d(file_name, "wind", dm_seqs(m,n,k, .false.), ierr)
 
     call dm_destroy(E, ierr)
     call dm_destroy(F, ierr)
@@ -2202,16 +2225,17 @@ contains
   end subroutine test_dm_save3d
 
   subroutine test_dm_load3d()
-    type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
+    type(Matrix)    		:: A,B,C,D,E,F,G,H,II
     type(Matrix)    		:: X,Y,Z,U,V,W 
     integer         		:: m,n,k
-    integer :: myrank, mysize
+    integer                     :: myrank, mysize
     real(kind=8)    		:: ep,alpha
     real(kind=8)    		:: a1,a2,a3
     logical         		:: debug = .false.
     integer         		:: ierr
     real(kind=8),allocatable  :: array(:)
-
+    character(len=12) :: file_name
+    
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
     call dm_option_int('-m',m,ierr)
@@ -2225,7 +2249,8 @@ contains
     call dm_load3d("Test_E.nc", "wind", E, .true., ierr)
     call dm_load3d("Test_F.nc", "wind", F, .true., ierr)
     call dm_load3d("Test_G.nc", "wind", G, .true., ierr)
-    call dm_load3d("Test_H.nc", "wind", H, .false., ierr)
+    write(file_name, "(A,I3.3,A)") "Test_I",myrank,".nc"
+    call dm_load3d(file_name, "wind", II, .false., ierr)
 
     if(debug) then
        if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(E) =", E%nx,",",E%ny,",",E%nz     
@@ -2234,14 +2259,14 @@ contains
        call dm_view(F, ierr)
        if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(G) =", G%nx,",",G%ny,",",G%nz
        call dm_view(G, ierr)
-       if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(H) =", H%nx,",",H%ny,",",H%nz
-       if(myrank==0) call dm_view(H, ierr)     
+       if(myrank==0) print "(A,I3,A,I3,A,I3)", ">dim(II) =", II%nx,",",II%ny,",",II%nz
+       if(myrank==0) call dm_view(II, ierr)     
     endif
 
     call dm_destroy(E, ierr)
     call dm_destroy(F, ierr)
     call dm_destroy(G, ierr)
-    call dm_destroy(H, ierr)
+    call dm_destroy(II, ierr)
   end subroutine test_dm_load3d
 
   subroutine test_OP_AXF()
@@ -2281,9 +2306,11 @@ contains
     call dm_destroy(A, ierr)
     call dm_destroy(B, ierr)
     call dm_destroy(C, ierr)
-    
   end subroutine 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! The following test the operators
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine test_OP_AYF()
     type(Matrix)    		:: A,B,C
     integer         		:: m,n,k
@@ -2304,24 +2331,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_AYF=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_AYF(m*2, m*2, k)
+    call dm_save3d("operators.nc", "AYF", A, ierr)
+    call dm_load3d("operators.nc", "AYF", B, .true., ierr)
+    C = OP_AYF(m*2, m*2, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
 
   subroutine test_OP_AZF()

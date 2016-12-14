@@ -1637,7 +1637,6 @@ contains
     integer :: rank, size
     integer :: psizes(3)
     integer :: xx, yy, zz
-
     
     call PetscLogEventRegister("mat_load3d",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
@@ -1718,9 +1717,6 @@ contains
     !print '(A,I3,I3,I3)', dd(1), dd(2), dd(3)
     !print*, "ndims=", ndims, "dd=", dd, "dim_names=", dim_names
        
-    !ierr = nf90mpi_get_att(ncid, varid, "DIM", DD)
-    ! call nc_check(ierr, "nf90mpi_get_att: ")
-    
     call mat_create(A, gnx, gny, gnz, isGlobal, ierr)
     do k=0,ibnz-1
        do j=0,ibny-1
@@ -1735,35 +1731,6 @@ contains
     enddo
 
     deallocate(buf)
-    
-    ! call MatGetOwnershipRange(A, ista, iend, ierr)
-    ! nx = iend - ista
-    ! ny = gny
-    
-    ! allocate(buf(ny, nx), idxn(ny))
-
-    ! starts(1) = 1
-    ! counts(1) = ny
-    ! starts(2) = ista+1
-    ! counts(2) = nx
-
-    ! if(nx .le. 0) then
-    !    starts(2) = 1
-    !    counts(2) = 0
-    ! endif
-    
-    
-    ! do j=1,int(ny,kind=4)
-    !    idxn(j)=j-1
-    ! enddo
-    
-    ! do i=ista,iend-1
-    !    k = i / gnx
-    !    call MatSetValues(A, 1, i, ny, idxn+k*gny, buf(:,i-ista+1), &
-    !         INSERT_VALUES, ierr)
-    ! enddo
-    
-    ! deallocate(buf, idxn)
     
     call PetscLogEventEnd(ievent,ierr) 
   end subroutine
@@ -1825,7 +1792,6 @@ contains
     else
        COMM_TYPE=MPI_COMM_SELF
     endif
-
     
     cmode = IOR(NF90_CLOBBER, NF90_64BIT_DATA)
     ierr = nf90mpi_create(COMM_TYPE, filename, cmode, &
@@ -1864,8 +1830,8 @@ contains
     call nc_check(ierr, "nf90mpi_close: ")
 
     ! check if there is any PnetCDF internal malloc residue
-    ierr = nf90mpi_inq_malloc_size(malloc_size)
-    call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
+    !ierr = nf90mpi_inq_malloc_size(malloc_size)
+    !call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
     
     deallocate(buf,row, idxn)
     call PetscLogEventEnd(ievent,ierr) 
@@ -1935,9 +1901,6 @@ contains
     integer :: bid
     Vec :: arr
     
-    !DM :: da
-    !real :: tmp
-    
     call PetscLogEventRegister("mat_save3d",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr)
 
@@ -1982,16 +1945,9 @@ contains
     
     !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(bnx,bny,bnz)=", bnx, bny, bnz
     
-    ! call VecCreateMPIWithArray(COMM_TYPE, bny*bnx*bnz, bny*bnx*bnz, &
-    !      pnx*pny*pnz*bny*bnx*bnz, buf, arr, ierr)
-    
     call VecCreateMPI(COMM_TYPE, bny*bnx*bnz, &
          pnx*pny*pnz*bny*bnx*bnz, arr, ierr)
 
-    ! call VecCreate(COMM_TYPE, arr, ierr)
-    ! call VecSetSizes(arr, PETSC_DECIDE, pnx*pny*pnz*bny*bnx*bnz, ierr)
-    ! call VecSetFromOptions(arr, ierr)
-    ! call mat_assemble(A, ierr)
     allocate(row(ny), idxn(ny))
     
     do ii = ista,iend-1
@@ -2017,10 +1973,6 @@ contains
           base = (bidy  + bidx*pny + bidz*pnx*pny) * bnx*bny*bnz
           index = base + offset
           
-          ! offset = inby + inbx*bny + inbz*bnx*bny
-          ! base = (bidy  + bidx*pny + bidz*pnx*pny) * bnx*bny*bnz
-          ! index = base + offset
-
           call VecSetValue(arr, index, row(jj), INSERT_VALUES, ierr);
        enddo
       call MatRestoreRow(A, ii, col, idxn, row, ierr)       
@@ -2031,33 +1983,8 @@ contains
     call vec_assemble(arr, ierr)
     call VecGetArrayF90(arr, buf, ierr)
     
-    !start = pidy * bny + pidx * bnx * gny + pidz * gnx * gny
-    !end = start + nx * ny
-    !call VecGetArray3d(arr, gny, gnx, gnz, 0, 0, 0, buf3d)
-    !call VecRestoreArray3d(arr, gny, gnx, gnz, 0, 0, 0, buf3d)    
-    !call DMDAGetCorners(arr, lx, ly, lz, lnx, lny, lnz)
-
-    !ranges = 0
-    ! call VecCreateMPIWithArray(PETSC_COMM_WORLD, nx*ny, nx*ny, &
-    !      gnx*gny*gnz, buf, arr, ierr)
-    ! call DMDACreate3d(COMM_TYPE, DM_BOUNDARY_NONE,&
-    !      DM_BOUNDARY_NONE,DM_BOUNDARY_NONE, 
-    !      DMDA_STENCIL_BOX, gny, gnx, gnz, pny, pnx, 1, &
-    !      1, 1, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,&
-    !      da, ierr)
-    ! call DMCreateGlobalVector(da, arr, ierr)
-    ! call DMDAGetOwnershipRanges(da, ly, lx, lz, ierr)
-    ! print*, "lx=",lx, "ly=",ly,"lz=",lz
-    ! call VecGetOwnershipRanges(arr,ranges, ierr)
-    ! print*, "ranges=", ranges
-    ! call petsc_check_err(ierr)
-    ! !call VecGetArrayF90(arr, buf2, ierr)
-    ! !call VecGetArray3dRead(arr, gny, gnx, gnz, 0, 0, 0, buf1)
-    ! print*, "buf2(1)=", buf2(1)
-    ! call petsc_check_err(ierr)
-    
     cmode = IOR(NF90_CLOBBER, NF90_64BIT_DATA)
-    ierr = nf90mpi_create(MPI_COMM_WORLD, filename, cmode, &
+    ierr = nf90mpi_create(COMM_TYPE, filename, cmode, &
          MPI_INFO_NULL, ncid)
     call nc_check(ierr, "nf90mpi_create: ")
 
@@ -2070,10 +1997,6 @@ contains
     call nc_check(ierr, "Error: nf90mpi_def_var:")
     ierr = nf90mpi_enddef(ncid)
     call nc_check(ierr, "Error: nf90mpi_enddef:")
-    
-    ! do i=1,240
-    !    buf(i) = rank
-    ! enddo
     
     ! pidx = rank/pny
     ! pidy = mod(rank, pny)
@@ -2106,11 +2029,6 @@ contains
        starts=1
        counts=0
     endif
-    
-    !buf(1:bnx*bny*bnz) = bid
-    
-    !print*, gny, gnx, gnz
-    !print *, "rank=", rank, "starts=", starts, "counts=", counts
 
     ierr = nf90mpi_put_var_all(ncid, varid, buf, starts, counts)
     call nc_check(ierr, "nf90mpi_put_var_all: ")
@@ -2119,8 +2037,8 @@ contains
     call nc_check(ierr, "nf90mpi_close: ")
 
     ! check if there is any PnetCDF internal malloc residue
-    ierr = nf90mpi_inq_malloc_size(malloc_size)
-    call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
+    ! ierr = nf90mpi_inq_malloc_size(malloc_size)
+    ! call nc_check(ierr, "nf90mpi_inq_malloc_size: ")
 
     call VecRestoreArrayF90(arr, buf, ierr)
     call VecDestroy(arr, ierr)
@@ -2468,21 +2386,32 @@ contains
   ! -----------------------------------------------------------------------
   ! Get local array from A.
   ! -----------------------------------------------------------------------
-  subroutine mat_getvalues(A,nx,ny,nz,idxm,idxn,idxk,v,ierr)
+  subroutine mat_getvalues(A,isGlobal,nx,ny,nz,idxm,idxn,idxk,v,ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscdmda.h>
+#include <petsc/finclude/petscdm.h>
+    
     Mat,       intent(in)      :: A 
     PetscInt,intent(in) :: idxm(:),idxn(:),idxk(:)
     PetscInt,intent(in)  :: nx,ny,nz
+    logical, intent(in) :: isGlobal
     PetscInt,allocatable :: idxm1(:), idxn1(:), idxn2(:)
     PetscScalar, intent(inout):: v(:)
     PetscScalar, allocatable    :: val(:)
     PetscErrorCode              :: ierr
     PetscInt:: m,n,k,i,ik,im,ista,iend
     PetscLogEvent               :: ievent
+    PetscScalar,allocatable :: local_v(:)
+    PetscScalar, POINTER :: v1(:)
+    integer :: COMM_TYPE
+    integer :: cnt
+    Vec :: global_vec, local_vec
+    DM :: dm_obj
+    VecScatter :: scatter
     
     call PetscLogEventRegister("mat_getvalues",0, ievent, ierr) 
     call PetscLogEventBegin(ievent,ierr) 
@@ -2491,8 +2420,8 @@ contains
     n=size(idxn)
     k=size(idxk)
 
-    allocate(idxm1(m*k), idxn1(n*k), idxn2(n), val(n))
-
+    allocate(idxm1(m*k), idxn1(n*k), idxn2(n), val(n), local_v(m*n*k))
+    
     !map the indicies to 2d matrix
     do ik=1,k
        idxm1((ik-1)*m+1:ik*m) = idxm + idxk(ik) * nx
@@ -2500,25 +2429,52 @@ contains
     enddo
 
     call mat_assemble(A,ierr)
-    call MatGetOwnershipRange(A, ista, iend, ierr)
 
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+    cnt = 0
     do i=1,m*k
        im = idxm1(i)
-       if(im.ge.ista .and. im<iend) then
-          !ik = im / nx
+       if(im.ge.ista .and. im.lt.iend) then
           ik = (i-1)/m
           idxn2 = idxn1(ik*n+1:(ik+1)*n) 
           call MatGetValues(A,1,im, n,idxn2,val,ierr)
-          v((i-1)*n+1 : i*m*n) = val
+          !v((i-1)*n+1 : i*m*n) = val
+          local_v(cnt*n+1:(cnt+1)*n) = val 
+          cnt = cnt + 1
        endif
     enddo
+    
+    if(isGlobal) then
+       COMM_TYPE = MPI_COMM_WORLD
+    else
+       COMM_TYPE = MPI_COMM_SELF
+    endif
 
-    !call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-    !call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
-    deallocate(idxm1, idxn1, val)
+    call VecCreateMPIWithArray(COMM_TYPE, n, n*cnt, m*n*k, local_v, global_vec, ierr)
+    call vec_assemble(global_vec, ierr)
+    
+    call VecScatterCreateToAll(global_vec, scatter, local_vec, ierr)
+    
+    call VecScatterBegin(scatter, global_vec, local_vec, &
+         INSERT_VALUES,SCATTER_FORWARD,ierr)
+    
+    call VecScatterEnd(scatter, global_vec, local_vec, &
+         INSERT_VALUES,SCATTER_FORWARD, ierr)
+
+    call VecScatterDestroy(scatter, ierr)
+    
+    call VecGetArrayF90(local_vec, v1, ierr)
+
+    v(1:m*n*k)=v1(1:m*n*k)
+    
+    call VecRestoreArrayF90(local_vec, v1, ierr)
+    
+    call VecDestroy(local_vec, ierr)
+    call VecDestroy(global_vec, ierr)
+    
+    deallocate(idxm1, idxn1, idxn2, val, local_v)
     call PetscLogEventEnd(ievent,ierr) 
   end subroutine 
-
 
 
   ! -----------------------------------------------------------------------

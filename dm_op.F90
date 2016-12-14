@@ -15,15 +15,15 @@ contains
     integer :: i
 
     if(present(isGlobal)) is_global = isGlobal
-    L1 = dm_eye(m, n, k, is_global)
+    res = dm_eye(m, n, k, is_global)
     L2 = dm_zeros(m, 1, k, is_global) .yj. dm_eye(m, n-1, k, is_global)
 
-    call dm_setvalues(L1, [(m-1)], [(n-1)], [(i, i=0,k-1)], [(2,i=0,k-1)], ierr)
+    call dm_setvalues(res, [(m-1)], [(n-1)], [(i, i=0,k-1)], [(2,i=0,k-1)], ierr)
 
-    res = L1 + L2
+    res = (res + L2) * .5
+    
     call dm_destroy(L1, ierr)
     call dm_destroy(L2, ierr)
-
     call dm_set_implicit(res, ierr)
   end function OP_AXF
 
@@ -37,15 +37,15 @@ contains
     integer :: i
 
     if(present(isGlobal)) is_global = isGlobal
-    ! L1 = dm_eye(m, n, k, is_global)
-    ! L2 = dm_zeros(m, 1, k, is_global) .yj. dm_eye(m, n-1, k, is_global)
+    L1 = dm_eye(m, n,   k, is_global)
+    L2 = dm_zeros(1, n, k, is_global) .xj. dm_eye(m-1, n, k, is_global)
 
-    ! call dm_setvalues(L1, [(m-1)], [(n-1)], [(i, i=0,k-1)], [(2,i=0,k-1)], ierr)
+    call dm_setvalues(L1, [(m-1)], [(n-1)], [(i, i=0,k-1)], [(2,i=0,k-1)], ierr)
 
-    ! res = L1 + L2
-    ! call dm_destroy(L1, ierr)
-    ! call dm_destroy(L2, ierr)
+    res = (L1 + L2) * 0.5
 
+    call dm_destroy(L1, ierr)
+    call dm_destroy(L2, ierr)
     call dm_set_implicit(res, ierr)
   end function OP_AYF
 
