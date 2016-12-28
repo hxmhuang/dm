@@ -37,7 +37,13 @@ program main
      print *, "==============Input paramenters==========="
      print *, "m=",m,",n=",n,",k=",k,",ep=",ep,",debug=",debug
   endif
-  
+
+  if(myrank==0) then
+     print *, "****************************************"     
+     print *, "*         Test Normal Operations       *"
+     print *, "****************************************"
+  endif
+
   call test_dm_zeros()
   call test_dm_ones()
   call test_dm_eye()
@@ -77,49 +83,45 @@ program main
   call test_dm_eq()
   call test_dm_nq()
   call test_dm_sparse()
-  ! call test_dm_save()
-  ! call test_dm_load()
-  ! call test_dm_save3d()
-  ! call test_dm_load3d()
+  call test_dm_save()
+  call test_dm_load()
+  call test_dm_save3d()
+  call test_dm_load3d()
 
+  if(myrank==0) then
+     print *, "****************************************"     
+     print *, "*         Test Operator Matrices       *"
+     print *, "****************************************"
+  endif
+  
   call test_OP_AXF()
   call test_OP_AXB()
   
   call test_OP_AYF()
   call test_OP_AYB()
-  
-  !call test_OP_AZF()
-  !call test_OP_AZB()
 
   call test_OP_DXF()  
   call test_OP_DXB()
 
   call test_OP_DYF()  
   call test_OP_DYB()
-  
-  ! call test_OP_DZB()  
-  ! call test_OP_DZF()
-
-  print *,""
 
   if(myrank==0) then
      print *, "****************************************"     
-     print *, "*                                      *"
      print *, "*            Test Operator Module      *"
-     print *, "*                                      *"
      print *, "****************************************"
   endif
   
-  call CreateOperators(2*m+1, 2*n+1, k)
-
+  call InitOperatorModule(2*m+1, 2*n+1, k)
+  
   call test_AXF()
   call test_AXB()
 
   call test_AYF()
   call test_AYB()
 
-  ! call test_AZF()
-  ! call test_AZB()
+  call test_AZF()
+  call test_AZB()
   
   call test_DXF()
   call test_DXB()
@@ -129,35 +131,11 @@ program main
   call test_DYB()
   call test_DYC()
   
-  ! call test_DZF()
-  ! call test_DZB()
-  ! call test_DZC()
-
+  call test_DZF()
+  call test_DZB()
+  call test_DZC()
   
-  ! if(myrank==0) print *, "==============Test dm_cart2sph============"
-  ! filename="md001.00004"
-  ! call dm_load(filename,.true., A, ierr)	
-  ! call dm_load(filename,.false.,C, ierr)
-  
-  ! call dm_cart2sph(A,B,ierr)
-  ! call dm_cart2sph(C,D,ierr)
-  
-  ! if(debug) then
-  !    if(myrank==0) print *, ">A=dm_load(filename,A,.true.ierr) "
-  !    call dm_view(A,ierr)
-  !    if(myrank==0) print *, ">B=dm_cart2sph(A)"
-  !    call dm_view(B,ierr)
-  !    if(myrank==0) print *, ">C=dm_load(filename,A,.false.ierr) "
-  !    if(myrank==0) call dm_view(C,ierr)
-  !    if(myrank==0) print *, ">D=dm_cart2sph(A)"
-  !    if(myrank==0) call dm_view(D,ierr)
-  ! endif
-  
-  ! call dm_destroy(A,ierr)
-  ! call dm_destroy(B,ierr)
-  ! call dm_destroy(C,ierr)
-  ! call dm_destroy(D,ierr)
-
+  call FinalizeOperatorModule()  
   
   call dm_finalize(ierr)
 end program main

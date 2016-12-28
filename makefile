@@ -27,7 +27,7 @@ tiny:
 small:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -k 2 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
+	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -k 3 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
 
 middle:
 	make clean

@@ -3041,6 +3041,93 @@ contains
     ! call dm_destroy(B1, ierr)
   end subroutine 
 
+  subroutine test_AZF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AZF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AZF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_AZB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AZB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AZB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  
   subroutine test_DXF()
     use dm_op
     type(Matrix)    		:: A, B, C
@@ -3084,6 +3171,7 @@ contains
     ! call dm_destroy(B1, ierr)
   end subroutine 
 
+  
   subroutine test_DXB()
     use dm_op
     type(Matrix)    		:: A, B, C
@@ -3279,6 +3367,136 @@ contains
 
     A = dm_seqs(2*m+1, 2*n+1, k)
     A1 = DYC(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DZF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DZF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DZF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DZB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DZB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DZB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DZC()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DZC=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DZC(A)
 
     ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
     ! B1 = AYF(B)
