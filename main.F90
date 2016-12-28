@@ -11,15 +11,14 @@ program main
 #include <petsc/finclude/petscksp.h>
   type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
   type(Matrix)    		:: X,Y,Z,U,V,W
-  type(Matrix)                  :: AXB,AYB,AZB,AXF,AYF,AZF
-  type(Matrix)                  :: DXB,DYB,DZB,DXF,DYF,DZF,DXC,DYC,DZC
+
   integer         		:: myrank, mysize 
   integer         		:: m,n,k
   real(kind=8)    		:: ep,alpha
   real(kind=8)    		:: a1,a2,a3
   logical         		:: debug 
   integer         		:: ierr
-  real(kind=8),allocatable :: array(:)
+  real(kind=8),allocatable      :: array(:)
   debug=.false.
 
   call dm_init1(ierr)
@@ -78,30 +77,62 @@ program main
   call test_dm_eq()
   call test_dm_nq()
   call test_dm_sparse()
-  call test_dm_save()
-  call test_dm_load()
-  call test_dm_save3d()
-  call test_dm_load3d()
+  ! call test_dm_save()
+  ! call test_dm_load()
+  ! call test_dm_save3d()
+  ! call test_dm_load3d()
 
-  ! call test_OP_AXF()
-  ! call test_OP_AYF()
-  ! call test_OP_AZF()
-
-  ! call test_OP_AXB()
-  ! call test_OP_AYB()  
-  ! call test_OP_AZB()
-
-  ! call test_OP_DXB()
-  ! call test_OP_DYB()
-  ! call test_OP_DZB()
-
-  ! call test_OP_DXF()
-  ! call test_OP_DYF()
-  ! call test_OP_DZF()
+  call test_OP_AXF()
+  call test_OP_AXB()
   
-  ! call test_OP_DXC()
-  ! call test_OP_DYC()
-  ! call test_OP_DZC()
+  call test_OP_AYF()
+  call test_OP_AYB()
+  
+  !call test_OP_AZF()
+  !call test_OP_AZB()
+
+  call test_OP_DXF()  
+  call test_OP_DXB()
+
+  call test_OP_DYF()  
+  call test_OP_DYB()
+  
+  ! call test_OP_DZB()  
+  ! call test_OP_DZF()
+
+  print *,""
+
+  if(myrank==0) then
+     print *, "****************************************"     
+     print *, "*                                      *"
+     print *, "*            Test Operator Module      *"
+     print *, "*                                      *"
+     print *, "****************************************"
+  endif
+  
+  call CreateOperators(2*m+1, 2*n+1, k)
+
+  call test_AXF()
+  call test_AXB()
+
+  call test_AYF()
+  call test_AYB()
+
+  ! call test_AZF()
+  ! call test_AZB()
+  
+  call test_DXF()
+  call test_DXB()
+  call test_DXC()
+  
+  call test_DYF()
+  call test_DYB()
+  call test_DYC()
+  
+  ! call test_DZF()
+  ! call test_DZB()
+  ! call test_DZC()
+
   
   ! if(myrank==0) print *, "==============Test dm_cart2sph============"
   ! filename="md001.00004"

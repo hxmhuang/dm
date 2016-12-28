@@ -144,10 +144,10 @@ module dm
      module procedure dm_copy
   end interface assignment(=)
 
-  integer 		::  dm_nx
-  integer 		::  dm_ny
-  integer 		::  dm_nz
-  type(Matrix)	:: 	DM_ZERO
+  integer 	::  dm_nx
+  integer 	::  dm_ny
+  integer 	::  dm_nz
+  type(Matrix)	::  DM_ZERO
 contains
 
   ! -----------------------------------------------------------------------
@@ -710,7 +710,7 @@ contains
     !print *, "A%ny=",A%ny,"B%ny=",B%ny
     !print *, "A%nx=",A%nx,"B%nx=",B%nx
     if((A%ny/=B%ny) .or. (A%ny/=B%ny) .or.  (A%isGlobal .neqv. B%isGlobal)) then
-       print *, "Error in dm_yjoin: Matrix A and Matrix B &
+       print *, "Error in dm_xjoin: Matrix A and Matrix B &
             &should have the same distribution."
        stop	
     endif
@@ -740,7 +740,7 @@ contains
     integer						::	ierr
 
     if((A%nx/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
-       call dm_printf("Error in dm_xjoin: Matrix A and B &
+       call dm_printf("Error in dm_yjoin: Matrix A and B &
             &should have the same distribution.",ierr)
        stop
     endif

@@ -29,14 +29,14 @@ contains
     if(myrank==0) print *, "==============Test dm_zeros==============="
     A=dm_zeros(m,n,k)
     B=dm_zeros(m,n,k,.true.)
-    C=dm_zeros(m,n,k,.false.)
+    C=dm_zeros(m,n,2,.false.)
     D=dm_zeros(m,m,m)
     if(debug) then
        if(myrank==0) print *, ">A=dm_zeros(m,n,k)"
        call dm_view(A,ierr)
        if(myrank==0) print *, ">B=dm_zeros(m,n,k,.true.)"
        call dm_view(B,ierr)
-       if(myrank==0) print *, ">C=dm_zeros(m,n,k,.false.)"
+       if(myrank==0) print *, ">C=dm_zeros(m,n,2,.false.)"
        if(myrank==0) call dm_view(C,ierr)
        if(myrank==0) print *, ">D=dm_zeros(m,m,m)"
        call dm_view(D,ierr)
@@ -69,15 +69,15 @@ contains
     if(myrank==0) print *, "==============Test dm_ones================"
     A=dm_ones(m,n,k)
     B=dm_ones(m,n,k,.true.)
-    C=dm_ones(m,n,k,.false.)
-    D=dm_ones(m,m,m)
-    E=dm_ones(n,n,m)
+    C=dm_ones(m,n,1,.false.)
+    D=dm_ones(m,m,k)
+    E=dm_ones(n,n,k)
     if(debug) then
        if(myrank==0) print *, ">A=dm_ones(m,n,k)"
        call dm_view(A,ierr)
        if(myrank==0) print *, ">B=dm_ones(m,n,k,.true.)"
        call dm_view(B,ierr)
-       if(myrank==0) print *, ">C=dm_ones(m,n,k,.false.)"
+       if(myrank==0) print *, ">C=dm_ones(m,n,2,.false.)"
        if(myrank==0) call dm_view(C,ierr)
        if(myrank==0) print *, ">D=dm_ones(m,m,m)"
        call dm_view(D,ierr)
@@ -117,7 +117,7 @@ contains
     E=dm_eye(2*m,m,1,.false.)	
     F=dm_eye(m,m*2,2)	
     G=dm_eye(2*m,m,3)
-    H=dm_eye(m,m,m)	
+    H=dm_eye(m,m,1)	
     if(debug) then
        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
        call dm_view(A,ierr)
@@ -133,7 +133,7 @@ contains
        call dm_view(F,ierr)
        if(myrank==0) print *, ">G=dm_eye(2*m,m,3)"
        call dm_view(G,ierr)
-       if(myrank==0) print *, ">H=dm_eye(m,m,m)"
+       if(myrank==0) print *, ">H=dm_eye(m,m,1)"
        call dm_view(H,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -211,8 +211,8 @@ contains
     Y=2+A
     Z=real(2,8)+A
     U=dm_eye(m,n,k,.true.)+dm_eye(m,n,k)
-    V=dm_eye(m,n,k,.false.)+dm_eye(m,n,k,.false.)
-    W=2+dm_eye(m,n,k,.false.)
+    V=dm_eye(m,n,2,.false.)+dm_eye(m,n,2,.false.)
+    W=2+dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
        call dm_view(A,ierr)
@@ -238,9 +238,9 @@ contains
        call dm_view(Z,ierr)
        if(myrank==0) print *, ">U=dm_eye(m,n,k,.true.)+dm_eye(m,n,k)"
        call dm_view(U,ierr)
-       if(myrank==0) print *, ">V=dm_eye(m,n,k,.false.)+dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">V=dm_eye(m,n,2,.false.)+dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(V,ierr)
-       if(myrank==0) print *, ">W=2+dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">W=2+dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(W,ierr)
     endif
     A=A+A	
@@ -297,8 +297,8 @@ contains
     Y=2-A
     Z=real(2,8)-A
     U=(0-A)+2
-    V=dm_eye(m,n,k,.false.)-dm_eye(m,n,k,.false.)
-    W=2-dm_eye(m,n,k,.false.)
+    V=dm_eye(m,n,2,.false.)-dm_eye(m,n,2,.false.)
+    W=2-dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_ones(m,n,k)"
        call dm_view(A,ierr)
@@ -324,9 +324,9 @@ contains
        call dm_view(Z,ierr)
        if(myrank==0) print *, ">U=(0-A)+2"
        call dm_view(U,ierr)
-       if(myrank==0) print *, ">V=dm_eye(m,n,k,.false.)-dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">V=dm_eye(m,n,2,.false.)-dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(V,ierr)
-       if(myrank==0) print *, ">W=2-dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">W=2-dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(W,ierr)
     endif
     A=-A	
@@ -381,7 +381,7 @@ contains
     H=A .xj. dm_eye(m,n,k)
     U=A .xj. A .xj. A
     V=A .xj. G
-    W=dm_eye(m,n,k,.false.) .xj. dm_eye(m,n,k,.false.)
+    W=dm_eye(m,n,2,.false.) .xj. dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
        call dm_view(A,ierr)
@@ -403,7 +403,7 @@ contains
        call dm_view(U,ierr)
        if(myrank==0) print *, ">V=B .xj. G"
        call dm_view(V,ierr)
-       if(myrank==0) print *, ">W=dm_eye(m,n,k,.false.) .xj. dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">W=dm_eye(m,n,2,.false.) .xj. dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(W,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -448,7 +448,7 @@ contains
     F=A .yj. dm_eye(m,n,k)
     G=A .yj. A .yj. A
     H=B .yj. G
-    U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)
+    U=dm_eye(m,n,2,.false.) .yj. dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm(m,n,k)"
        call dm_view(A,ierr)
@@ -466,7 +466,7 @@ contains
        call dm_view(G,ierr)
        if(myrank==0) print *, ">H=B .yj. G"
        call dm_view(H,ierr)
-       if(myrank==0) print *, ">U=dm_eye(m,n,k,.false.) .yj. dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">U=dm_eye(m,n,2,.false.) .yj. dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(U,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -510,7 +510,7 @@ contains
     H=A .zj. dm_eye(m,n,k)
     U=A .zj. A .zj. A
     V=A .zj. G
-    W=dm_eye(m,n,k,.false.) .zj. dm_eye(m,n,k,.false.)
+    W=dm_eye(m,n,2,.false.) .zj. dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_eye(m,n,k)"
        call dm_view(A,ierr)
@@ -532,7 +532,7 @@ contains
        call dm_view(U,ierr)
        if(myrank==0) print *, ">V=B .zj. G"
        call dm_view(V,ierr)
-       if(myrank==0) print *, ">W=dm_eye(m,n,k,.false.) .zj. dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">W=dm_eye(m,n,2,.false.) .zj. dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(W,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -579,8 +579,8 @@ contains
     alpha=3.0
     Z=alpha*A
     U=A*alpha
-    V=dm_seqs(m,n,k,.false.)*dm_seqs(n,n,k,.false.)
-    W=3*dm_seqs(m,n,k,.false.)
+    V=dm_seqs(m,n,2,.false.)*dm_seqs(n,n,2,.false.)
+    W=3*dm_seqs(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_seqs(m,n,k)"
        call dm_view(A,ierr)
@@ -602,9 +602,9 @@ contains
        call dm_view(Y,ierr)
        if(myrank==0) print *, ">U=A*alpha"
        call dm_view(Y,ierr)
-       if(myrank==0) print *, ">V=dm_seqs(m,n,k,.false.)*dm_seqs(n,n,k,.false.)"
+       if(myrank==0) print *, ">V=dm_seqs(m,n,2,.false.)*dm_seqs(n,n,2,.false.)"
        if(myrank==0) call dm_view(V,ierr)
-       if(myrank==0) print *, ">W=3*dm_seqs(m,n,k,.false.)"
+       if(myrank==0) print *, ">W=3*dm_seqs(m,n,2,.false.)"
        if(myrank==0) call dm_view(W,ierr)
     endif
 
@@ -650,7 +650,7 @@ contains
     E=dm_seqs(m,n,k) .em. B
     F=dm_seqs(m,n,k) .em. dm_seqs(m,n,k) 
     G=A .em. A
-    H=dm_seqs(m,n,k,.false.) .em. dm_seqs(m,n,k,.false.)
+    H=dm_seqs(m,n,2,.false.) .em. dm_seqs(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=dm_seqs(m,n,k)"
        call dm_view(A,ierr)
@@ -666,7 +666,7 @@ contains
        call dm_view(F,ierr)
        if(myrank==0) print *, ">G=A.*A"
        call dm_view(G,ierr)
-       if(myrank==0) print *, ">H=dm_seqs(m,n,k,.false.) .em. dm_seqs(m,n,k,.false.)"
+       if(myrank==0) print *, ">H=dm_seqs(m,n,2,.false.) .em. dm_seqs(m,n,2,.false.)"
        if(myrank==0) call dm_view(H,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -706,7 +706,7 @@ contains
     E=dm_eye(m,n,k) .ed. B
     F=dm_eye(m,n,k) .ed. dm_eye(m,n,k) 
     G=A .ed. A
-    H=dm_eye(m,n,k,.false.) .ed. dm_eye(m,n,k,.false.)
+    H=dm_eye(m,n,2,.false.) .ed. dm_eye(m,n,2,.false.)
     if(debug) then
        if(myrank==0) print *, ">A=2*dm_eye(m,n,k)"
        call dm_view(A,ierr)
@@ -722,7 +722,7 @@ contains
        call dm_view(F,ierr)
        if(myrank==0) print *, ">G=A./A"
        call dm_view(G,ierr)
-       if(myrank==0) print *, ">H=dm_eye(m,n,k,.false.) .ed. dm_eye(m,n,k,.false.)"
+       if(myrank==0) print *, ">H=dm_eye(m,n,2,.false.) .ed. dm_eye(m,n,2,.false.)"
        if(myrank==0) call dm_view(H,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -758,7 +758,7 @@ contains
     A=dm_seqs(m,n,k)
     B=dm_rep(A,1,2) 
     C=dm_rep(dm_seqs(m,n,k),2,3)
-    D=dm_rep(dm_seqs(m,n,k,.false.),3,2) 
+    D=dm_rep(dm_seqs(m,n,1,.false.),3,2) 
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -766,7 +766,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_rep(dm_seqs(m,n,k),2,3)"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_rep(dm_seqs(m,n,k,.false.),3,2)"
+       if(myrank==0) print *, ">D=dm_rep(dm_seqs(m,n,2,.false.),3,2)"
        if(myrank==0) call dm_view(D,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -828,11 +828,11 @@ contains
 
     if(myrank == 0) print*, "==============Test dm_rand================"
     A = dm_rand(m, n, k)
-    B = dm_rand(m, n, k, .false.)
+    B = dm_rand(m, n, 2, .false.)
     if(debug) then
-       if(myrank == 0) print*, ">A="
+       if(myrank == 0) print*, ">A=dm_rand(m, n, k)"
        call dm_view(A, ierr)
-       if(myrank == 0) print*, ">B="
+       if(myrank == 0) print*, ">B=dm_rand(m, n, 2, .false.)"
        if(myrank == 0) call dm_view(B, ierr)
     end if
     call dm_destroy(A, ierr)
@@ -861,7 +861,7 @@ contains
 
     if(myrank == 0) print*, "==============Test dm_sum================"
     A = dm_seqs(m, n, k)
-    B = dm_seqs(m, n, k, .false.)
+    B = dm_seqs(m, n, 2, .false.)
     C = dm_sum(A, 1)
     D = dm_sum(A, 2)  
 
@@ -905,7 +905,7 @@ contains
     A=dm_seqs(m, n, k)
     B=dm_eye(m,n,k)
     C=dm_eye(m,n,k) 
-    D=dm_eye(m,n,k,.false.) 
+    D=dm_eye(m,n,2,.false.) 
 
     if(debug) then
        if(myrank==0) print *, ">A="
@@ -930,9 +930,9 @@ contains
        call dm_view(C,ierr)
     endif
 
-    call dm_axpy(D,2,dm_seqs(m,n,k,.false.),ierr)
+    call dm_axpy(D,2,dm_seqs(m,n,2,.false.),ierr)
     if(debug) then
-       if(myrank==0) print *, "dm_axpy(D,2,dm_seqs(m,n,k,.false.),ierr)"
+       if(myrank==0) print *, "dm_axpy(D,2,dm_seqs(m,n,2,.false.),ierr)"
        if(myrank==0) call dm_view(D,ierr)
     endif
 
@@ -965,7 +965,7 @@ contains
     A=dm_seqs(m, n, k)
     B=dm_eye(m,n,k)
     C=dm_eye(m,n,k) 
-    D=dm_eye(m,n,k,.false.) 
+    D=dm_eye(m,n,2,.false.) 
 
     if(debug) then
        if(myrank==0) print *, ">A="
@@ -990,9 +990,9 @@ contains
        call dm_view(C,ierr)
     endif
 
-    call dm_aypx(D,2,dm_seqs(m,n,k,.false.),ierr)
+    call dm_aypx(D,2,dm_seqs(m,n,2,.false.),ierr)
     if(debug) then
-       if(myrank==0) print *, "dm_aypx(D,2,dm_seqs(m,n,k,.false.),ierr)"
+       if(myrank==0) print *, "dm_aypx(D,2,dm_seqs(m,n,2,.false.),ierr)"
        if(myrank==0) call dm_view(D,ierr)
     endif
 
@@ -1025,7 +1025,7 @@ contains
     A=dm_seqs(m,n,k)	
     B=dm_trans(A)
     C=dm_trans(dm_seqs(m,n,k))
-    D=dm_trans(dm_seqs(m,n,k,.false.))
+    D=dm_trans(dm_seqs(m,n,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -1033,7 +1033,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_trans(dm_seqs(m,n,k))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_trans(dm_seqs(m,n,k,.false.))"
+       if(myrank==0) print *, ">D=dm_trans(dm_seqs(m,n,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
     endif
 
@@ -1071,7 +1071,7 @@ contains
     E=dm_xyt(B, dm_seqs(m,m,k))
     F=dm_xyt(dm_seqs(m,m,k),dm_ones(m,m,k))
     G=dm_xyt(A,A)
-    H=dm_xyt(dm_seqs(m,m,k,.false.),dm_ones(m,m,k,.false.))
+    H=dm_xyt(dm_seqs(m,m,2,.false.),dm_ones(m,m,2,.false.))
 
     if(debug) then
        if(myrank==0) print *, ">A=dm_seqs(m,m)"
@@ -1128,7 +1128,7 @@ contains
     E=dm_xty(dm_seqs(m,m,k),B)
     F=dm_xty(dm_seqs(m,m,k),dm_ones(m,m,k))
     G=dm_xty(A,A)
-    H=dm_xty(dm_seqs(m,m,k,.false.),dm_ones(m,m,k,.false.))
+    H=dm_xty(dm_seqs(m,m,2,.false.),dm_ones(m,m,2,.false.))
 
     if(debug) then
        if(myrank==0) print *, ">A="
@@ -1183,7 +1183,7 @@ contains
     A=dm_seqs(m,n,k)
     B=dm_exp(A)
     C=dm_exp(dm_seqs(m,n,k))
-    D=dm_exp(dm_seqs(m,n,k,.false.))
+    D=dm_exp(dm_seqs(m,n,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -1191,7 +1191,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_exp(dm_seqs(m,n,k))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_exp(dm_seqs(m,n,k,.false.))"
+       if(myrank==0) print *, ">D=dm_exp(dm_seqs(m,n,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -1225,7 +1225,7 @@ contains
     A=dm_seqs(m,m,k)
     B=dm_log(A)
     C=dm_log(dm_seqs(m,m,k))
-    D=dm_log(dm_seqs(m,m,k,.false.))
+    D=dm_log(dm_seqs(m,m,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -1233,7 +1233,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_log(dm_seqs(m,m,k))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_log(dm_seqs(m,m,k,.false.))"
+       if(myrank==0) print *, ">D=dm_log(dm_seqs(m,m,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -1265,7 +1265,7 @@ contains
     A=dm_seqs(m,m,k)
     B=dm_sqrt(A)
     C=dm_sqrt(dm_seqs(m,m,k))
-    D=dm_sqrt(dm_seqs(m,m,k,.false.))
+    D=dm_sqrt(dm_seqs(m,m,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -1273,7 +1273,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_sqrt(dm_seqs(m,m,k))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_sqrt(dm_seqs(m,m,k,.false.))"
+       if(myrank==0) print *, ">D=dm_sqrt(dm_seqs(m,m,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -1305,7 +1305,7 @@ contains
     A=dm_seqs(m,m,k)
     B=dm_squ(A)
     C=dm_squ(dm_seqs(m,m,k))
-    D=dm_squ(dm_seqs(m,m,k,.false.))
+    D=dm_squ(dm_seqs(m,m,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
@@ -1313,7 +1313,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_squ(dm_seqs(m,m,k))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_squ(dm_seqs(m,m,k,.false.))"
+       if(myrank==0) print *, ">D=dm_squ(dm_seqs(m,m,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
     endif
     call dm_destroy(A,ierr)
@@ -1345,14 +1345,14 @@ contains
     A=dm_seqs(m,m,k)
     B=dm_cube(A)
     C=dm_cube(dm_seqs(m,m,k))
-    D=dm_cube(dm_seqs(m,m,k,.false.))
+    D=dm_cube(dm_seqs(m,m,2,.false.))
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
        if(myrank==0) print *, ">B=dm_cube(A)"
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_cube(dm_seqs(m,m,k))"
-       if(myrank==0) print *, ">D=dm_cube(dm_seqs(m,m,k,.false.))"
+       if(myrank==0) print *, ">D=dm_cube(dm_seqs(m,m,2,.false.))"
        if(myrank==0) call dm_view(D,ierr)
        call dm_view(C,ierr)
     endif
@@ -1401,9 +1401,9 @@ contains
        if(myrank==0) print *, ">D=A .inv. B"
        call dm_view(D,ierr)
 
-       if(myrank==0) print *, ">E=dm_rand(m,m,k,.false.)"
+       if(myrank==0) print *, ">E=dm_rand(m,m,2,.false.)"
        call dm_view(E,ierr)
-       if(myrank==0) print *, ">F=3*dm_rand(m,1,k,.false.)"
+       if(myrank==0) print *, ">F=3*dm_rand(m,1,2,.false.)"
        call dm_view(F,ierr)
        if(myrank==0) print *, ">G=dm_solve(E,F)"
        call dm_view(G,ierr)
@@ -1444,7 +1444,7 @@ contains
     A=dm_eye(m,n,k)
     B=dm_eye(m,n,k)
     C=dm_eye(m,n,k)
-    D=dm_eye(m,n,k,.false.)
+    D=dm_eye(m,n,2,.false.)
     call dm_setvalue(A,1,1,0,5,ierr)
     call dm_setvalue(B,1,1,0,6.1,ierr)
     call dm_setvalue(C,1,1,0,real(7,kind=8),ierr)
@@ -1491,7 +1491,7 @@ contains
     ! call dm_view(B, ierr)
     ! print*, B%nx, B%ny, B%nz
     C=dm_getsub(A,(/0,2,1/),(/1,0/),(/0,1/))
-    D=dm_seqs(m,m,k,.false.)
+    D=dm_seqs(m,m,2,.false.)
     E=dm_getsub(D,(/0,1,2/),(/0,1/),(/0/))
     F=dm_getsub(D,(/0,2,1/),(/1,0/),(/0/))
     if(debug) then
@@ -1501,7 +1501,7 @@ contains
        call dm_view(B,ierr)
        if(myrank==0) print *, ">C=dm_getsub(A,(/0,2,1/),(/1,0/),(/0,1/))"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_seqs(m,m,k,.false.)"
+       if(myrank==0) print *, ">D=dm_seqs(m,m,2,.false.)"
        if(myrank==0) call dm_view(D,ierr)
        if(myrank==0) print *, ">E=dm_getsub(D,(/0,1,2/),(/0,1/),(/0/))"
        if(myrank==0) call dm_view(E,ierr)
@@ -2269,6 +2269,9 @@ contains
     call dm_destroy(II, ierr)
   end subroutine test_dm_load3d
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! The following test the operators
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine test_OP_AXF()
     type(Matrix)    		:: A,B,C
     integer         		:: m,n,k
@@ -2289,10 +2292,10 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_AXF=============="
 
-    A = OP_AXF(m*2, m*2, k)
+    A = OP_AXF(m*2+1, m*2+1, k)
     call dm_save3d("operators.nc", "AXF", A, ierr)
     call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    C = OP_AXF(m*2, m*2, k, .false.)
+    C = OP_AXF(m*2+1, m*2+1, k, .false.)
     
     if(debug) then
        if(myrank==0) print*, ">A="
@@ -2308,9 +2311,7 @@ contains
     call dm_destroy(C, ierr)
   end subroutine 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! The following test the operators
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
   subroutine test_OP_AYF()
     type(Matrix)    		:: A,B,C
     integer         		:: m,n,k
@@ -2331,10 +2332,10 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_AYF=============="
 
-    A = OP_AYF(m*2, m*2, k)
+    A = OP_AYF(m*2+1, n*2+1, k)
     call dm_save3d("operators.nc", "AYF", A, ierr)
     call dm_load3d("operators.nc", "AYF", B, .true., ierr)
-    C = OP_AYF(m*2, m*2, k, .false.)
+    C = OP_AYF(m*2+1, n*2, k, .false.)
     
     if(debug) then
        if(myrank==0) print*, ">A="
@@ -2410,24 +2411,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_AXB=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_AXB(m*2+1, n*2+1, k)
+    call dm_save3d("operators.nc", "AXB", A, ierr)
+    call dm_load3d("operators.nc", "AXB", B, .true., ierr)
+    C = OP_AXB(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
 
   subroutine test_OP_AYB()
@@ -2450,24 +2450,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_AYB=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_AYB(m*2+1, m*2+1, k)
+    call dm_save3d("operators.nc", "AYB", A, ierr)
+    call dm_load3d("operators.nc", "AYB", B, .true., ierr)
+    C = OP_AYB(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
 
   subroutine test_OP_AZB()
@@ -2531,26 +2530,24 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_DXB=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_DXB(m*2+1, n*2+1, k)
+    call dm_save3d("operators.nc", "DXB", A, ierr)
+    call dm_load3d("operators.nc", "DXB", B,.true., ierr)
+    C = OP_DXB(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
-
 
   subroutine test_OP_DYB()
     type(Matrix)    		:: A,B,C
@@ -2572,24 +2569,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_DYB=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_DYB(m*2+1, m*2+1, k)
+    call dm_save3d("operators.nc", "DYB", A, ierr)
+    call dm_load3d("operators.nc", "DYB", B,.true., ierr)
+    C = OP_DYB(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
 
 
@@ -2653,24 +2649,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_DXF=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_DXF(m*2+1, n*2+1, k)
+    call dm_save3d("operators.nc", "DXF", A, ierr)
+    call dm_load3d("operators.nc", "DXF", B, .true., ierr)
+    C = OP_DXF(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
   end subroutine 
 
   subroutine test_OP_DYF()
@@ -2693,23 +2688,23 @@ contains
 
     if(myrank == 0) print*, "==============Test OP_DYF=============="
 
-    ! A = OP_AXF(m*2, m*2, k)
-    ! call dm_save3d("operators.nc", "AXF", A, ierr)
-    ! call dm_load3d("operators.nc", "AXF", B,.true., ierr)
-    ! C = OP_AXF(m*2, m*2, k, .false.)
+    A = OP_DYF(m*2+1, n*2+1, k)
+    call dm_save3d("operators.nc", "DYF", A, ierr)
+    call dm_load3d("operators.nc", "DYF", B,.true., ierr)
+    C = OP_DYF(m*2+1, n*2+1, k, .false.)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">B="       
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    if(myrank==0) call dm_view(C, ierr)
-    ! end if
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="       
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       if(myrank==0) call dm_view(C, ierr)
+    end if
 
-    ! call dm_destroy(A, ierr)
-    ! call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
     
   end subroutine 
 
@@ -2872,6 +2867,436 @@ contains
     ! call dm_destroy(B, ierr)
     ! call dm_destroy(C, ierr)
     
+  end subroutine 
+
+  subroutine test_AXF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AXF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AXF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AXF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_AXB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AXB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AXB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AXF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+  
+  subroutine test_AYF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AYF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AYF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_AYB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test AYB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = AYB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DXF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DXF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DXF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DXB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DXB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DXB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DXC()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DXC=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DXC(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+  
+  subroutine test_DYF()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DYF=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DYF(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DYB()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DYB=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DYB(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_DYC()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1,B1,C1    
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test DYC=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = DYC(A)
+
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
   end subroutine 
   
 end module dm_test

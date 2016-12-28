@@ -170,6 +170,7 @@ contains
     PetscScalar,allocatable::row(:)
     integer :: i,j
     PetscLogEvent            ::  ievent
+    
     call PetscLogEventRegister("mat_constants",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
@@ -177,6 +178,7 @@ contains
     ilocal=iend-ista
     allocate(idxm(1),idxn(n),row(n))
     row=alpha
+    
     do i=ista,iend-1
        idxm(1)=i
        do j=0,n-1
@@ -300,7 +302,7 @@ contains
     PetscLogEvent            ::  ievent
     integer :: i, j
     
-    call PetscLogEventRegister("mat_seqs",0, ievent, ierr)
+    call PetscLogEventRegister("mat_rand",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     call MatGetOwnershipRange(A,ista,iend,ierr)
 
@@ -1678,15 +1680,15 @@ contains
     pny = psizes(2)
     pnz = psizes(3)
 
-    pidz = rank / (pnx*pnz)
+    pidz = rank / (pnx*pny)
     pidy = mod(rank, pny)
-    pidx = rank / pny
+    pidx = mod(rank, pnx*pny) / pny
     
     !print '(A,I3,A,I3,I3,I3)', "rank=",rank,"(pnx,pny,pnz)=", pnx, pny, pnz
 
     !block size for x-, y- and z-direction
+    bnx = gnx / pnx    
     bny = gny / pny
-    bnx = gnx / pnx
     bnz = gnz / pnz
     
     if(mod(gnx, pnx).ne.0) bnx = bnx + 1
@@ -1700,6 +1702,8 @@ contains
     starts = (/pidy, pidx, pidz/) * (/bny, bnx, bnz/) + 1
     counts = (/ibny, ibnx, ibnz/)
 
+    !print *, "rank=",rank, "starts=",starts, "counts=", counts
+    
     if(starts(1).gt.gny .or. starts(2).gt.gnx .or. starts(3).gt.gnz) then
        starts = 1
        counts = 0
