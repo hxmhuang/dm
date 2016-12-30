@@ -134,6 +134,8 @@ program main
   call test_DZF()
   call test_DZB()
   call test_DZC()
+
+  call test_CSUM() !for cumulative sum type 1,2,3
   
   call FinalizeOperatorModule()  
   

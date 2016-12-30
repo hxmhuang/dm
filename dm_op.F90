@@ -20,9 +20,11 @@ module dm_op
   type(Matrix)  :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
   type(Matrix)  :: HF_MASK_Z1, HF_MASK_Z2
   type(Matrix)  :: ZEROS, ONES
-
+  
   Mat  :: MAT_P, MAT_Q !used for shift a matrix in diagonal direction.
   Mat  :: MAT_R, MAT_T !used for shift a matrix in diagonal direction.
+  Mat  :: UTI1, UTI2 !upper triangle I
+  Mat  :: MAT_ALIGN_ROW
   
   public :: OP_AXF, OP_AXB, OP_AYF, OP_AYB
   public :: OP_DXF, OP_DXB, OP_DYF, OP_DYB
@@ -31,6 +33,7 @@ module dm_op
   public :: AXF, AXB, AYF, AYB, AZF, AZB
   public :: DXF, DXB, DYF, DYB, DZF, DZB
   public :: DXC, DYC, DZC
+  public :: CSUM
   
 contains
 
@@ -164,9 +167,75 @@ contains
 
     call mat_assemble(MAT_R, ierr)
     call mat_assemble(MAT_T, ierr)
-    
+
     ! call mat_view(MAT_P, ierr)
-    ! call mat_view(MAT_Q, ierr)    
+    ! call mat_view(MAT_Q, ierr)
+    ! call mat_view(MAT_R, ierr)
+    ! call mat_view(MAT_T, ierr)
+    
+    !**********************************************************
+    ! [I I I 0]   [A 0 0 0]   [A B C 0]
+    ! [0 I I 0] * [0 B 0 0] = [0 B C 0]
+    ! [0 0 I 0]   [0 0 C 0]   [0 0 C 0]
+    ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
+    !**********************************************************    
+    call MatCreate(COMM_TYPE, UTI1, ierr)
+    call MatSetSizes(UTI1, PETSC_DECIDE, PETSC_DECIDE, m*k, m*k, ierr)
+    call MatSetFromOptions(UTI1, ierr)
+    call MatSetUp(UTI1, ierr)    
+    
+    call MatGetOwnershipRange(UTI1, ista, iend, ierr)
+    do im = ista, iend-1
+       ik = im / m
+       do in = 0,k-ik-2
+          call MatSetValue(UTI1, im, im + in * m, val, INSERT_VALUES, ierr)
+       enddo
+    enddo
+    call mat_assemble(UTI1, ierr)
+    ! call mat_view(UTI1, ierr)
+    
+    !**********************************************************
+    ! [0 I I I]   [A 0 0 0]   [0 B C D]
+    ! [0 0 I I] * [0 B 0 0] = [0 0 C D]
+    ! [0 0 0 I]   [0 0 C 0]   [0 0 0 D]
+    ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
+    !**********************************************************    
+    call MatCreate(COMM_TYPE, UTI2, ierr)
+    call MatSetSizes(UTI2, PETSC_DECIDE, PETSC_DECIDE, m*k, m*k, ierr)
+    call MatSetFromOptions(UTI2, ierr)
+    call MatSetUp(UTI2, ierr)    
+    
+    call MatGetOwnershipRange(UTI2, ista, iend, ierr)
+    do im = ista, iend-1
+       ik = im / m
+       do in = 1,k-ik-1
+          call MatSetValue(UTI2, im, im + in * m, val, INSERT_VALUES, ierr)
+       enddo
+    enddo
+    call mat_assemble(UTI2, ierr)
+    ! call mat_view(UTI2, ierr)
+    
+    !**********************************************************    
+    ! [I I I I]   [A 0 0 0]   [A B C D]
+    ! [0 0 0 0] * [0 B 0 0] = [0 0 0 0]
+    ! [0 0 0 0]   [0 0 C 0]   [0 0 0 0]
+    ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
+    !**********************************************************    
+    call MatCreate(COMM_TYPE, MAT_ALIGN_ROW, ierr)
+    call MatSetSizes(MAT_ALIGN_ROW, PETSC_DECIDE, PETSC_DECIDE,m*k,m*k,ierr)
+    call MatSetFromOptions(MAT_ALIGN_ROW, ierr)
+    call MatSetUp(MAT_ALIGN_ROW, ierr)
+
+    call MatGetOwnershipRange(MAT_ALIGN_ROW, ista, iend, ierr)
+    do im = ista, iend-1
+       ik = im / m
+       if(ik .gt. 0) exit
+       do in = 0,k-ik-1
+          call MatSetValue(MAT_ALIGN_ROW, im, im + in*m, val, INSERT_VALUES, ierr)
+       enddo
+    enddo
+    call mat_assemble(MAT_ALIGN_ROW, ierr)
+    !call mat_view(MAT_ALIGN_ROW, ierr)
     
   end subroutine 
 
@@ -211,7 +280,11 @@ contains
     call mat_destroy(MAT_Q, ierr)
     call mat_destroy(MAT_R, ierr)
     call mat_destroy(MAT_T, ierr)
+
+    call mat_destroy(UTI1, ierr)
+    call mat_destroy(UTI2, ierr)
     
+    call mat_destroy(MAT_ALIGN_ROW, ierr)
   end subroutine 
 
   !****************************************
@@ -700,6 +773,89 @@ contains
     endif
     
     call dm_set_implicit(res, ierr)
+  end function 
+
+  !< Cumulative summation
+  function CSUM(A, type) result(res)
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: res
+    integer :: type
+    Mat :: W
+    integer      :: ierr
+    integer :: im, in, ik, ista, iend, j, in1
+    integer :: from, to, count
+    integer :: m, n, k, col
+    PetscInt, allocatable :: idxn(:)
+    PetscScalar, allocatable :: row(:)
+
+    res = ZEROS
+
+    m = A%nx
+    n = A%ny
+    k = A%nz
+    
+    call mat_assemble(A%x, ierr)
+
+    if(type == 1) then
+       call MatMatMult(UTI1, A%x, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, W, ierr)
+    else if(type == 2) then
+       call MatMatMult(UTI2, A%x, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, W, ierr)
+    else if(type == 3) then
+       call MatMatMult(MAT_ALIGN_ROW, A%x, MAT_INITIAL_MATRIX, &
+            PETSC_DEFAULT_REAL, W, ierr)
+    else
+       call dm_printf("Error: Unknown sum type.", ierr)
+       stop
+    endif
+       
+    call MatGetOwnershipRange(W, ista, iend, ierr)
+
+    allocate(row(A%ny * A%nz), idxn(n*k))
+
+    res%nx = A%nx
+    res%ny = A%ny
+    res%nz = A%nz
+
+    idxn = 0
+    
+    do im = ista, iend-1
+       ik = im / m
+
+       if(type.eq.3 .and. ik .gt. 0) exit
+       
+       call MatGetRow(W, im, col, idxn, row, ierr)
+
+       from = 1
+       count = 1
+       
+       do j = 2,col
+          in= idxn(j)
+          in1 = idxn(j-1)
+          if( (in/n .ne. in1/n) .or. (j == col)) then
+
+             if(j==col) count = count + 1
+             to = from + count - 1
+
+             call MatSetValues(res%x, 1, im, count, ik*n + mod(idxn(from:to), n), &
+                  row(from:to), ADD_VALUES, ierr)
+
+             from = from + count
+             count = 0
+          endif
+          count = count + 1
+       enddo
+       
+       call MatRestoreRow(W, im, col, idxn, row, ierr)
+    enddo
+    
+    deallocate(row, idxn)
+    call mat_destroy(W, ierr)
+    call dm_set_implicit(res, ierr)
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+    
   end function 
   
   end module dm_op

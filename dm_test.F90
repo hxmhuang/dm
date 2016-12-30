@@ -3516,5 +3516,56 @@ contains
     ! call dm_destroy(B, ierr)
     ! call dm_destroy(B1, ierr)
   end subroutine 
+
+  subroutine test_CSUM()
+    use dm_op
+    type(Matrix)    		:: A, B, C
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test CSUM=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    A1 = CSUM(A, 1) !type 1, corresponding to SUM1 in matlab code
+    A2 = CSUM(A, 2) !type 2, corresponding to SUM2 in matlab code
+    A3 = CSUM(A, 3) !type 3
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">A1="
+       call dm_view(A1, ierr)
+       if(myrank==0) print*, ">A2="
+       call dm_view(A2, ierr)
+       if(myrank==0) print*, ">A3="
+       call dm_view(A3, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(A1, ierr)
+    call dm_destroy(A2, ierr)
+    call dm_destroy(A3, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
   
 end module dm_test

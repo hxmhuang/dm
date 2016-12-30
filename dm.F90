@@ -989,7 +989,7 @@ contains
   ! -----------------------------------------------------------------------
   function dm_sum(A,ndim) result(B)
     implicit none
-    type(Matrix),	intent(in)	::  A 
+    type(Matrix),   intent(in)	::  A 
     integer,	    intent(in)	::  ndim 
     type(Matrix)              	::	B
     integer						::	ierr
@@ -1004,7 +1004,11 @@ contains
        B%nx = A%nx
        B%ny = 1
        B%nz = A%nz
-    else
+    else if ( ndim == 3 ) then
+       B%nx = A%nx
+       B%ny = A%ny
+       B%nz = 1
+    else 
        print*, "Error: ndim can be only 1 or 2"
        stop
     endif
