@@ -9,11 +9,7 @@ module dm_op
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 
-  private
   
-  type(Matrix)  :: MAT_AXF, MAT_AXB, MAT_AYF, MAT_AYB, MAT_AZF, MAT_AZB
-  type(Matrix)  :: MAT_DXF, MAT_DXB, MAT_DYF, MAT_DYB, MAT_DZF, MAT_DZB
-
   type(Matrix)  :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
   type(Matrix)  :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
   type(Matrix)  :: REV_MASK_Z1, REV_MASK_Z2
@@ -21,10 +17,17 @@ module dm_op
   type(Matrix)  :: HF_MASK_Z1, HF_MASK_Z2
   type(Matrix)  :: ZEROS, ONES
   
+  private
+  
+  type(Matrix)  :: MAT_AXF, MAT_AXB, MAT_AYF, MAT_AYB, MAT_AZF, MAT_AZB
+  type(Matrix)  :: MAT_DXF, MAT_DXB, MAT_DYF, MAT_DYB, MAT_DZF, MAT_DZB
+  
   Mat  :: MAT_P, MAT_Q !used for shift a matrix in diagonal direction.
   Mat  :: MAT_R, MAT_T !used for shift a matrix in diagonal direction.
   Mat  :: UTI1, UTI2 !upper triangle I
   Mat  :: MAT_ALIGN_ROW
+  Mat  :: MAT_SXD, MAT_SXU !left shift matrix, right shift matrix
+  Mat  :: MAT_SYL, MAT_SYR !left shift matrix, right shift matrix
   
   public :: OP_AXF, OP_AXB, OP_AYF, OP_AYB
   public :: OP_DXF, OP_DXB, OP_DYF, OP_DYB
@@ -33,8 +36,8 @@ module dm_op
   public :: AXF, AXB, AYF, AYB, AZF, AZB
   public :: DXF, DXB, DYF, DYB, DZF, DZB
   public :: DXC, DYC, DZC
-  public :: CSUM
-  
+  public :: CSUM , SHIFT
+
 contains
 
   subroutine InitOperatorModule(m, n, k, isGlobal)
@@ -48,7 +51,7 @@ contains
     real(kind=8), allocatable :: zeros_mn(:), zeros_mk(:), zeros_nk(:)
     real(kind=8), allocatable :: ones_mn(:),  ones_mk(:),  ones_nk(:)
     integer :: COMM_TYPE
-    integer :: ista, iend
+    integer :: ista, iend, num
     integer :: im, in, ik
     PetscScalar :: val
     
@@ -133,15 +136,9 @@ contains
        COMM_TYPE = PETSC_COMM_SELF
     endif
 
-    call MatCreate(COMM_TYPE, MAT_P, ierr)
-    call MatCreate(COMM_TYPE, MAT_Q, ierr)
-    call MatSetSizes(MAT_P, PETSC_DECIDE, PETSC_DECIDE, m*k, m*k, ierr)
-    call MatSetSizes(MAT_Q, PETSC_DECIDE, PETSC_DECIDE, n*k, n*k, ierr)
-    call MatSetFromOptions(MAT_P, ierr)
-    call MatSetFromOptions(MAT_Q, ierr)    
-    call MatSetUp(MAT_P, ierr)
-    call MatSetUp(MAT_Q, ierr)    
-
+    call mat_create(MAT_P, m, m, k, is_global, ierr)
+    call mat_create(MAT_Q, n, n, k, is_global, ierr)
+    
     val = 1
     call MatGetOwnershipRange(MAT_P, ista, iend, ierr)
     do im = ista, iend - 1
@@ -179,11 +176,7 @@ contains
     ! [0 0 I 0]   [0 0 C 0]   [0 0 C 0]
     ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
     !**********************************************************    
-    call MatCreate(COMM_TYPE, UTI1, ierr)
-    call MatSetSizes(UTI1, PETSC_DECIDE, PETSC_DECIDE, m*k, m*k, ierr)
-    call MatSetFromOptions(UTI1, ierr)
-    call MatSetUp(UTI1, ierr)    
-    
+    call mat_create(UTI1, m, m, k, is_global, ierr)
     call MatGetOwnershipRange(UTI1, ista, iend, ierr)
     do im = ista, iend-1
        ik = im / m
@@ -200,11 +193,7 @@ contains
     ! [0 0 0 I]   [0 0 C 0]   [0 0 0 D]
     ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
     !**********************************************************    
-    call MatCreate(COMM_TYPE, UTI2, ierr)
-    call MatSetSizes(UTI2, PETSC_DECIDE, PETSC_DECIDE, m*k, m*k, ierr)
-    call MatSetFromOptions(UTI2, ierr)
-    call MatSetUp(UTI2, ierr)    
-    
+    call mat_create(UTI2, m, m, k, is_global, ierr)
     call MatGetOwnershipRange(UTI2, ista, iend, ierr)
     do im = ista, iend-1
        ik = im / m
@@ -221,21 +210,98 @@ contains
     ! [0 0 0 0]   [0 0 C 0]   [0 0 0 0]
     ! [0 0 0 0]   [0 0 0 D]   [0 0 0 0]
     !**********************************************************    
-    call MatCreate(COMM_TYPE, MAT_ALIGN_ROW, ierr)
-    call MatSetSizes(MAT_ALIGN_ROW, PETSC_DECIDE, PETSC_DECIDE,m*k,m*k,ierr)
-    call MatSetFromOptions(MAT_ALIGN_ROW, ierr)
-    call MatSetUp(MAT_ALIGN_ROW, ierr)
-
+    call mat_create(MAT_ALIGN_ROW, m, m, k, is_global, ierr)
     call MatGetOwnershipRange(MAT_ALIGN_ROW, ista, iend, ierr)
     do im = ista, iend-1
        ik = im / m
        if(ik .gt. 0) exit
        do in = 0,k-ik-1
-          call MatSetValue(MAT_ALIGN_ROW, im, im + in*m, val, INSERT_VALUES, ierr)
+          call MatSetValue(MAT_ALIGN_ROW, im, im + in*m, &
+               val, INSERT_VALUES, ierr)
        enddo
     enddo
     call mat_assemble(MAT_ALIGN_ROW, ierr)
     !call mat_view(MAT_ALIGN_ROW, ierr)
+
+    !***********************************************************
+    ! [0 1 0 0]
+    ! [0 0 1 0] 
+    ! [0 0 0 1]
+    ! [0 0 0 0]
+    ! MAT_SXD * A ==> Shift downward
+    !***********************************************************
+    call mat_create(MAT_SXD, m, m, k, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_SXD, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / m
+       if(mod(im, m) .lt. m-1) then
+          call MatSetValue(MAT_SXD, im, mod(im,m) + 1 + ik * m, val, &
+               INSERT_VALUES, ierr)
+       endif
+    enddo
+    call mat_assemble(MAT_SXD, ierr)
+    !call mat_view(MAT_SXD, ierr)
+    
+    !***********************************************************
+    ! [0 0 0 0]
+    ! [1 0 0 0] 
+    ! [0 1 0 0]
+    ! [0 0 1 0]
+    ! MAT_SXU * A ==> Shift upward
+    !***********************************************************
+    call mat_create(MAT_SXU, m, m, k, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_SXU, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / m
+       if(mod(im, m) .gt. 0) then
+          call MatSetValue(MAT_SXU, im, mod(im,m) - 1 + ik * m, val, &
+               INSERT_VALUES, ierr)
+       endif
+    enddo
+    call mat_assemble(MAT_SXU, ierr)
+    !call mat_view(MAT_SXU, ierr)
+
+    !***********************************************************
+    ! [0 1 0 0]
+    ! [0 0 1 0] 
+    ! [0 0 0 1]
+    ! [0 0 0 0]
+    ! A * MAT_SYR ==> Shift to right
+    !***********************************************************
+    call mat_create(MAT_SYR, n, n, k, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_SYR, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / n
+       if(mod(im, n) .lt. n-1) then
+          call MatSetValue(MAT_SYR, im, mod(im,n) + 1 + ik * n, val, &
+               INSERT_VALUES, ierr)
+       endif
+    enddo
+    call mat_assemble(MAT_SYR, ierr)
+    !call mat_view(MAT_SYR, ierr)
+
+    !***********************************************************
+    ! [0 0 0 0]
+    ! [1 0 0 0] 
+    ! [0 1 0 0]
+    ! [0 0 1 0]
+    ! A * MAT_SYL ==> Shift to left
+    !***********************************************************
+    call mat_create(MAT_SYL, n, n, k, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_SYL, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / n
+       if(mod(im, n) .gt. 0) then
+          call MatSetValue(MAT_SYL, im, mod(im,n) - 1 + ik * n, val, &
+               INSERT_VALUES, ierr)
+       endif
+    enddo
+    call mat_assemble(MAT_SYL, ierr)
+    !call mat_view(MAT_SYL, ierr)
     
   end subroutine 
 
@@ -244,16 +310,12 @@ contains
 
     call dm_destroy(MAT_AXF, ierr)
     call dm_destroy(MAT_AXB, ierr)
-
     call dm_destroy(MAT_AYF, ierr)
     call dm_destroy(MAT_AYB, ierr)
-
     call dm_destroy(MAT_DXF, ierr)
     call dm_destroy(MAT_DXB, ierr)
-
     call dm_destroy(MAT_DYF, ierr)
     call dm_destroy(MAT_DYB, ierr)
-
     call dm_destroy(MASK_X1, ierr)
     call dm_destroy(MASK_X2, ierr)
     call dm_destroy(MASK_Y1, ierr)
@@ -283,6 +345,11 @@ contains
 
     call mat_destroy(UTI1, ierr)
     call mat_destroy(UTI2, ierr)
+
+    call mat_destroy(MAT_SXD, ierr)
+    call mat_destroy(MAT_SXU, ierr)
+    call mat_destroy(MAT_SYL, ierr)
+    call mat_destroy(MAT_SYR, ierr)
     
     call mat_destroy(MAT_ALIGN_ROW, ierr)
   end subroutine 
@@ -752,11 +819,14 @@ contains
     call MatMatMatMult(MAT_P, A%x, MAT_Q, MAT_INITIAL_MATRIX, &
          PETSC_DEFAULT_REAL, res%x, ierr)
 
-    W = ZEROS;
-    
     call MatMatMatMult(MAT_R, A%x, MAT_T, MAT_INITIAL_MATRIX, &
          PETSC_DEFAULT_REAL, W%x, ierr)
 
+    W%nx = A%nx
+    W%ny = A%ny
+    W%nz = A%nz
+    W%isGlobal = A%isGlobal
+    
     res%nx = A%nx
     res%ny = A%ny
     res%nz = A%nz
@@ -766,8 +836,6 @@ contains
 
     res = (res .em. HF_REV_MASK_Z1) + (A .em. HF_MASK_Z2)
 
-    call dm_destroy(W, ierr)
-
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
@@ -775,6 +843,48 @@ contains
     call dm_set_implicit(res, ierr)
   end function 
 
+  function SHIFT(A, axis, direction) result(res)
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: res
+    integer, intent(in) :: axis
+    integer, intent(in) :: direction
+    integer :: ierr
+
+    res%nx = A%nx
+    res%ny = A%ny
+    res%nz = A%nz
+    res%isGlobal = A%isGlobal
+    
+    call mat_assemble(A%x, ierr)
+    
+    if(axis .eq. 1) then
+       if(direction .eq. 1) then
+          call MatMatMult(MAT_SXD, A%x, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       else if(direction .eq. -1) then
+          call MatMatMult(MAT_SXU, A%x, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       endif
+    else if(axis .eq. 2) then
+       if(direction .eq. 1) then
+          call MatMatMult(A%x, MAT_SYR, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       else if(direction .eq. -1) then
+          call MatMatMult(A%x, MAT_SYL, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       endif
+    else
+       if(direction .eq. 1) then
+          call MatMatMatMult(MAT_R, A%x, MAT_T, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       else if(direction .eq. -1) then
+          call MatMatMatMult(MAT_P, A%x, MAT_Q, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       endif
+    endif
+
+  end function
+  
   !< Cumulative summation
   function CSUM(A, type) result(res)
     type(Matrix), intent(in) :: A
@@ -797,9 +907,11 @@ contains
     call mat_assemble(A%x, ierr)
 
     if(type == 1) then
-       call MatMatMult(UTI1, A%x, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, W, ierr)
+       call MatMatMult(UTI1, A%x, MAT_INITIAL_MATRIX, &
+            PETSC_DEFAULT_REAL, W, ierr)
     else if(type == 2) then
-       call MatMatMult(UTI2, A%x, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, W, ierr)
+       call MatMatMult(UTI2, A%x, MAT_INITIAL_MATRIX, &
+            PETSC_DEFAULT_REAL, W, ierr)
     else if(type == 3) then
        call MatMatMult(MAT_ALIGN_ROW, A%x, MAT_INITIAL_MATRIX, &
             PETSC_DEFAULT_REAL, W, ierr)
@@ -836,7 +948,8 @@ contains
              if(j==col) count = count + 1
              to = from + count - 1
 
-             call MatSetValues(res%x, 1, im, count, ik*n + mod(idxn(from:to), n), &
+             call MatSetValues(res%x, 1, im, count, &
+                  ik*n + mod(idxn(from:to), n), &
                   row(from:to), ADD_VALUES, ierr)
 
              from = from + count

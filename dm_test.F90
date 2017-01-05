@@ -739,12 +739,12 @@ contains
     type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
     type(Matrix)    		:: X,Y,Z,U,V,W 
     integer         		:: m,n,k
-    integer :: myrank, mysize
+    integer                     :: myrank, mysize
     real(kind=8)    		:: ep,alpha
     real(kind=8)    		:: a1,a2,a3
     logical         		:: debug = .false.
     integer         		:: ierr
-    real(kind=8),allocatable  :: array(:)
+    real(kind=8),allocatable    :: array(:)
 
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
@@ -756,23 +756,27 @@ contains
 
     if(myrank==0) print *, "==============Test dm_rep================="
     A=dm_seqs(m,n,k)
-    B=dm_rep(A,1,2) 
-    C=dm_rep(dm_seqs(m,n,k),2,3)
-    D=dm_rep(dm_seqs(m,n,1,.false.),3,2) 
+    B=dm_rep(A,1,2,1) 
+    C=dm_rep(dm_seqs(m,n,k),2,3,1)
+    D=dm_rep(dm_seqs(m,n,k),2,3,2)    
+    E=dm_rep(dm_seqs(m,n,1,.false.),3,2,1) 
     if(debug) then
        if(myrank==0) print *, ">A="
        call dm_view(A,ierr)
-       if(myrank==0) print *, ">B=dm_rep(A,1,2)"
+       if(myrank==0) print *, ">B=dm_rep(A,1,2,1)"
        call dm_view(B,ierr)
-       if(myrank==0) print *, ">C=dm_rep(dm_seqs(m,n,k),2,3)"
+       if(myrank==0) print *, ">C=dm_rep(dm_seqs(m,n,k),2,3,1)"
        call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_rep(dm_seqs(m,n,2,.false.),3,2)"
-       if(myrank==0) call dm_view(D,ierr)
+       if(myrank==0) print *, ">D=dm_rep(dm_seqs(m,n,k),2,3,2)"
+       call dm_view(D,ierr)
+       if(myrank==0) print *, ">E=dm_rep(dm_seqs(m,n,2,.false.),3,2,1)"
+       if(myrank==0) call dm_view(E,ierr)
     endif
     call dm_destroy(A,ierr)
     call dm_destroy(B,ierr)
     call dm_destroy(C,ierr)
     call dm_destroy(D,ierr)
+    call dm_destroy(E,ierr)    
   end subroutine test_dm_rep
 
   subroutine test_dm_seqs()
@@ -1383,7 +1387,7 @@ contains
   
     if(myrank==0) print *, "==============Test dm_solve==============="
     A=dm_rand(m,m,k, .true.)
-    B=dm_ones(m,1,k, .true.)
+    B=A * dm_ones(m,1,k, .true.)
     C=dm_solve(A,B)
     D=A .inv. B
     E=dm_rand(m,m,k, .true.)
@@ -1391,6 +1395,8 @@ contains
     G=dm_solve(E,F)
     H=E .inv. F
 
+    !call dm_view(dm_ones(m, 1, k, .true.), ierr)
+    
     if(debug) then
        if(myrank==0) print *, ">A=dm_seqs(m,m,k)"
        call dm_view(A,ierr)
@@ -2022,6 +2028,58 @@ contains
     call dm_destroy(H,ierr)
 
   end subroutine test_dm_nq
+
+  subroutine test_dm_max_min()
+    type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
+    type(Matrix)    		:: X,Y,Z,U,V,W 
+    integer         		:: m,n,k
+    integer                     :: pos1(3), pos2(3), pos3(3), pos4(3)
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    real(kind=8)    		:: a1,a2,a3
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable  :: array(:)
+    real(kind=8) :: m1, m2, m3, m4
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+   
+    if(myrank==0) print *, "==============Test dm_max_min=============="
+
+    A = dm_rand(m, n, k, .true.)
+    B = dm_seqs(m, n, k, .false.)
+    
+    call dm_max(A, m1, pos1, ierr)
+    call dm_min(A, m2, pos2, ierr)
+    call dm_max(B, m3, pos3, ierr)
+    call dm_min(B, m4, pos4, ierr)
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+
+       if(myrank==0) then
+          print*, ">max(A)=", m1, " POS=", pos1
+          print*, ">min(A)=", m2, " POS=", pos2          
+       endif
+
+       if(myrank==0) then
+          print*, ">B="          
+          call dm_view(B, ierr)
+          print*, ">max(B)=", m3, " POS=", pos3
+          print*, ">min(B)=", m4, " POS=", pos4          
+       endif
+    endif
+    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+  end subroutine test_dm_max_min
 
   subroutine test_dm_sparse()
     type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
@@ -3564,6 +3622,70 @@ contains
     call dm_destroy(A1, ierr)
     call dm_destroy(A2, ierr)
     call dm_destroy(A3, ierr)
+    ! call dm_destroy(B, ierr)
+    ! call dm_destroy(B1, ierr)
+  end subroutine 
+
+  subroutine test_SHIFT()
+    use dm_op
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test SHIFT=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, k)
+    B = SHIFT(A, 1,  1) !shift on x-axis, forward
+    C = SHIFT(A, 1, -1) !shift on x-axis, backward
+    D = SHIFT(A, 2,  1) !shift on y-axis, forward
+    E = SHIFT(A, 2, -1) !shift on y-axis, backward
+    F = SHIFT(A, 3,  1) !shift on z-axis, forward
+    G = SHIFT(A, 3, -1) !shift on z-axis, backward
+    
+    ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
+    ! B1 = AYF(B)
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+       if(myrank==0) print*, ">E="
+       call dm_view(E, ierr)
+       if(myrank==0) print*, ">F="
+       call dm_view(F, ierr)
+       if(myrank==0) print*, ">G="
+       call dm_view(G, ierr)
+       ! if(myrank==0) print*, ">B="
+       ! if(myrank==0) call dm_view(B, ierr)
+       ! if(myrank==0) print*, ">B1="
+       ! if(myrank==0) call dm_view(B1, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)
+    call dm_destroy(E, ierr)
+    call dm_destroy(F, ierr)
+    call dm_destroy(G, ierr)        
     ! call dm_destroy(B, ierr)
     ! call dm_destroy(B1, ierr)
   end subroutine 

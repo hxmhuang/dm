@@ -91,7 +91,7 @@ contains
     PetscBool::  isGlobal
     ! view matrix A
     call vec_assemble(A,ierr)
-    call mat_gettype(A,isGlobal,ierr)
+    call vec_gettype(A,isGlobal,ierr)
     if(isGlobal) then
        call VecView(A,PETSC_VIEWER_STDOUT_WORLD, ierr)
     else
@@ -300,25 +300,39 @@ contains
     PetscScalar, allocatable ::row(:)
     integer :: ik
     PetscLogEvent            ::  ievent
-    integer :: i, j
+    integer :: i, j, n_seed
+    integer :: clock
+    INTEGER, DIMENSION(:), ALLOCATABLE :: seed
+    integer :: rank
+
+    call MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr)
     
+    call random_seed(size = n_seed)
+    allocate(seed(n_seed))
+    call system_clock(count=clock)
+    seed = clock + rank + 37 * (/ (i - 1, i = 1, n_seed) /)
+    call random_seed(put = seed)
+            
     call PetscLogEventRegister("mat_rand",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     call MatGetOwnershipRange(A,ista,iend,ierr)
 
-    allocate(idxn(n), row(n), idxm(1))
+    allocate(idxn(n*k), row(n*k), idxm(1))
 
     do i=ista,iend-1
        ik = i / m
-       do j=1,n
-          idxn(j) = j + ik * n - 1
-          call RANDOM_NUMBER(row)
-       end do
+       idxn = [(i,i=0,n-1)] + ik * n
+       call RANDOM_NUMBER(row)
+       ! do j=1,n
+       !    idxn(j) = j + ik * n - 1
+       !    row(j) = j
+       !    !call RANDOM_NUMBER(row)
+       ! end do
        idxm(1) = i
        call MatSetValues(A, 1, idxm, n, idxn, row, INSERT_VALUES, ierr)
     enddo
     
-    deallocate(idxn, row, idxm)
+    deallocate(idxn, row, idxm, seed)
     
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_rand
@@ -932,32 +946,72 @@ contains
   ! T= [1 0 1 0]
   ! [0 1 0 1]
   ! -----------------------------------------------------------------------
-  subroutine mat_rep(A,m1,n1,k1,rm,rn,B,ierr)
+  subroutine mat_rep(A,m1,n1,k1,rm,rn,rk,B,ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
 
-    Mat,intent(in)::  A 
-    PetscInt,intent(in)::  m1,n1,k1,rm,rn
+    Mat,intent(in) ::  A 
+    PetscInt,intent(in) :: m1,n1,k1,rm,rn,rk
     Mat,intent(out)::B
-    Mat :: W1,W2,W3
+    Mat :: W1,W2,W3,W4
+    PetscInt, allocatable :: idx_row(:)
+    PetscScalar, allocatable :: val_rows(:)
+    integer :: new_m, new_n, new_k
     PetscErrorCode,intent(out)::ierr
-    PetscLogEvent            ::  ievent
+    PetscLogEvent   ::  ievent
+    IS :: ISRows, ISCols
+    logical :: isGlobal
+    integer :: COMM_TYPE
+    integer :: i,j,ista,iend,col
     
     call PetscLogEventRegister("mat_rep",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
+    call mat_gettype(A, isGlobal, ierr)
+
+    if(isGlobal) then
+       COMM_TYPE = PETSC_COMM_WORLD
+    else
+       COMM_TYPE = PETSC_COMM_SELF
+    endif
+    
     call mat_repx(A, m1, n1, k1, rn, W1, ierr)
     call mat_trans(W1, W2, ierr)
     call mat_repx(W2, rn*n1, m1, k1,rm,W3,ierr)
-    call mat_trans(W3, B, ierr)
+    call mat_trans(W3, W4, ierr)
 
+    !call mat_view(W4, ierr)
+    
+    new_m = m1 * rm
+    new_n = n1 * rn
+    new_k = k1 * rk
+
+    allocate(idx_row(new_n), val_rows(new_n))
+    
+    call mat_create(B, new_m, new_n, new_k, isGlobal, ierr)
+
+    idx_row = [(i, i=0,new_m * k1-1)]
+
+    call MatGetOwnershipRange(W4, ista, iend, ierr)
+
+    do i = ista, iend-1
+       call MatGetRow(W4, i, col, idx_row, val_rows, ierr)
+       do j = 0, rk-1
+          call MatSetValues(B, 1, [(i+j*new_m*k1)], col, &
+               idx_row+j*new_n*k1, val_rows, INSERT_VALUES, ierr)
+       enddo
+       call MatRestoreRow(W4, i, col, idx_row, val_rows, ierr)
+    enddo
+    
     call mat_destroy(W1, ierr)
     call mat_destroy(W2, ierr)
     call mat_destroy(W3, ierr)
+    call mat_destroy(W4, ierr)
 
+    deallocate(idx_row)
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_rep
 
@@ -1324,8 +1378,10 @@ contains
     call mat_assemble(b,ierr)
     call mat_gettype(A,isGLobal,ierr)
 
-    call mat_mat2vec(b, m, isGlobal,vec_b,ierr)
-    
+    call mat_mat2vec(b, isGlobal,vec_b,ierr)
+
+    !call mat_view(b, ierr)
+    !call vec_view(vec_b, ierr)
     ! if(isGlobal) then
     !    call VecCreate(PETSC_COMM_WORLD, vec_x, ierr)
     ! else
@@ -1343,7 +1399,7 @@ contains
     ! print*, "size(A) = (",nrow,",",ncol,")"
     
     call VecDuplicate(vec_b,vec_x,ierr)
-    
+    !call mat_view(A, ierr)
     if(isGlobal) then
        call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
        call KSPSetOperators(ksp,A,A,ierr)
@@ -1357,10 +1413,14 @@ contains
     endif
     
     tol = 1.0e-15
-    call KSPSetTolerances(ksp,tol,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL,PETSC_DEFAULT_INTEGER,ierr)
+    call KSPSetTolerances(ksp,tol,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL, &
+         PETSC_DEFAULT_INTEGER,ierr)
+    
     call KSPSetFromOptions(ksp,ierr)
     call KSPSolve(ksp,vec_b,vec_x,ierr)
-    
+
+    ! call vec_view(vec_x, ierr)
+
     ! call KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD,ierr)
     ! !call KSPView(ksp,PETSC_VIEWER_STDOUT_SELF,ierr)
     ! !call KSPGetIterationNumber(ksp,its,ierr)
@@ -1369,7 +1429,7 @@ contains
 
     ! call mat_view(A, ierr)
     ! call sleep(1)
-    ! call vec_view(vec_x, ierr)
+    !call vec_view(vec_x, ierr)
     ! call sleep(1)
     ! call vec_view(vec_b, ierr)
     
@@ -1384,7 +1444,7 @@ contains
   ! -----------------------------------------------------------------------
   ! convert one m*1*k matrix, dimension must be (m, 1, k), into a vector m*k 
   ! -----------------------------------------------------------------------
-  subroutine mat_mat2vec(A,m,isGlobal,v,ierr)
+  subroutine mat_mat2vec(A, isGlobal,v,ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1392,62 +1452,18 @@ contains
 #include <petsc/finclude/petscmat.h>
     Mat,    intent(in)      :: A 
     PetscBool,intent(in):: isGlobal
-    PetscInt, intent(in) :: m
     Vec,    intent(out)     :: v
+    Vec :: tmp_v
     PetscErrorCode      ::ierr
-    PetscInt            ::  nrow,ncol
-    PetscInt::  ista,iend
-    PetscInt::  ni
-    PetscInt,allocatable::  idx(:) , idy(:)
-    PetscScalar,allocatable::  y(:) 
-    integer :: i,pre_ik, cnt, ik
-
-    call MatGetSize(A,nrow,ncol,ierr)
-
-    if(isGlobal) then
-       call VecCreate(PETSC_COMM_WORLD,v,ierr)
-    else 
-       call VecCreate(PETSC_COMM_SELF,v,ierr)
-    endif
+    PetscScalar :: one = 1
     
-    call VecSetSizes(v,PETSC_DECIDE,nrow,ierr)
-    call VecSetFromOptions(v,ierr)
-    !call VecSetup(v,ierr)
-
-    call MatGetOwnershipRange(A,ista,iend,ierr)
-    ni=iend-ista
-
-    allocate(idx(ni),idy(1), y(ni))
-    pre_ik = 0
-    cnt = 0
-
-    if(ista/m .ne. (iend-1)/m) then
-       do i=ista,iend-1
-          ik = i / m
-          if((pre_ik .ne. ik) .or. (i == iend-1)) then
-             call MatGetValues(A, cnt, idx, 1, ik, y, ierr)
-             call VecSetValues(v, cnt, idx, y, INSERT_VALUES,ierr)  
-             cnt = 0
-             idx = 0
-          endif
-          cnt = cnt + 1          
-          idx(cnt) = i
-          pre_ik = ik
-       enddo
-    else
-       ik = ista / m
-       do i=ista,iend-1
-          idx(i-ista+1) = i
-       enddo
-       idy(1) = ik
-       call MatGetValues(A, ni, idx, 1, idy, y, ierr)
-       call VecSetValues(v, ni, idx, y, INSERT_VALUES,ierr)  
-    endif
+    call MatCreateVecs(A, tmp_v, PETSC_NULL_OBJECT,  ierr)
+    call MatCreateVecs(A, PETSC_NULL_OBJECT, v, ierr)
     
-    call VecAssemblyBegin(v,ierr)
-    call VecAssemblyEnd(v,ierr)
-
-    deallocate(idx, idy, y)
+    call VecSet(tmp_v, one, ierr)
+    !call vec_view(tmp_v, ierr)
+    call MatMult(A, tmp_v, v, ierr)
+    call VecDestroy(tmp_v, ierr)    
 
   end subroutine mat_mat2vec
 
@@ -2858,7 +2874,7 @@ contains
        isGlobal=.false.
     endif
   end subroutine 
-
+  
   subroutine vec_gettype(A,isGlobal,ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
@@ -2877,5 +2893,97 @@ contains
        isGlobal=.false.
     endif
   end subroutine 
-  
+
+  subroutine mat_max_min(A, m, n, k, val, vpos, is_min, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat, intent(in) :: A
+    integer, intent(in) :: m, n, k
+    integer :: i
+    integer, intent(out) :: ierr
+    logical, intent(in) :: is_min
+    PetscInt :: m1, n1, ista, iend, col
+    integer, intent(out) :: vpos(3)
+    Vec :: global_lrm_pos, global_lrm, local_lrm_pos
+    PetscInt, allocatable :: idxn(:)
+    PetscScalar, intent(out) :: val
+    PetscScalar, allocatable :: lrm(:) ! local row max
+    PetscScalar, allocatable :: lrm_pos(:) !local row max pos, i.e. column number
+    PetscScalar, allocatable :: row(:) 
+    integer :: pos(1)
+    logical :: isGlobal
+    integer :: COMM_TYPE
+    PetscInt :: num_row
+    PetscScalar :: max_col_idx(1)
+    VecScatter :: scatter
+    
+    call mat_gettype(A, isGlobal, ierr)
+    if(isGlobal) then
+       COMM_TYPE = PETSC_COMM_WORLD
+    else
+       COMM_TYPE = PETSC_COMM_SELF
+    endif
+    
+    call mat_assemble(A, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+    num_row = iend - ista
+    allocate(idxn(n*k), row(n*k), lrm(num_row), lrm_pos(num_row))
+    
+    do i = ista, iend - 1
+       call MatGetRow(A, i, col, idxn, row, ierr)
+
+       if(is_min) then
+          pos = minloc(row(1:col))
+       else
+          pos = maxloc(row(1:col))
+       endif
+       
+       lrm(i-ista+1) = row(pos(1))
+       lrm_pos(i-ista+1) = pos(1) - 1
+
+       call MatRestoreRow(A, i, col, idxn, row, ierr)
+    enddo
+    
+    call VecCreateMPIWithArray(COMM_TYPE, 1, iend - ista, m*k, &
+         lrm_pos, global_lrm_pos, ierr)
+    
+    call VecCreateMPIWithArray(COMM_TYPE, 1, iend - ista, m*k, &
+         lrm, global_lrm, ierr)
+
+    if(is_min) then
+       call VecMin(global_lrm, m1, val, ierr)       
+    else
+       call VecMax(global_lrm, m1, val, ierr)
+    endif
+    
+    call VecScatterCreateToAll(global_lrm_pos, scatter, local_lrm_pos, ierr)
+
+    call VecScatterBegin(scatter, global_lrm_pos, local_lrm_pos, &
+         INSERT_VALUES, SCATTER_FORWARD, ierr)
+
+    call VecScatterEnd(scatter, global_lrm_pos, local_lrm_pos, &
+         INSERT_VALUES, SCATTER_FORWARD, ierr)
+    
+    call VecScatterDestroy(scatter, ierr)
+
+    !call VecGetArrayF90(local_lrm_pos, p, ierr)
+    
+    call VecGetValues(local_lrm_pos, 1, [(m1)], max_col_idx, ierr)
+
+    n1 = int(max_col_idx(1)+0.01)
+    
+    !print*, "m1=", m1, "n1=", n1
+    vpos(1) = mod(m1, m)
+    vpos(2) = mod(n1, k)
+    vpos(3) = m1 / k
+    
+    deallocate(idxn, row, lrm, lrm_pos)
+    
+    call VecDestroy(global_lrm_pos, ierr)
+    call VecDestroy(global_lrm, ierr)
+    call VecDestroy(local_lrm_pos, ierr)
+  end subroutine 
 end module dm_mat

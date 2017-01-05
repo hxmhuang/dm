@@ -960,13 +960,13 @@ contains
   ! -----------------------------------------------------------------------
   ! B=repmat(A,m,n)
   ! -----------------------------------------------------------------------
-  function dm_rep(A,m,n) result(B)
+  function dm_rep(A,m,n,k) result(B)
     implicit none
-    type(Matrix),	intent(in)	::  A 
-    integer,	    intent(in)	::  m,n 
+    type(Matrix),   intent(in)	::  A 
+    integer,	    intent(in)	::  m,n,k 
     type(Matrix)              	::	B
     integer						::	ierr
-    call mat_rep(A%x,A%nx,A%ny,A%nz,m,n,B%x,ierr)
+    call mat_rep(A%x,A%nx,A%ny,A%nz,m,n,k,B%x,ierr)
     B%isGlobal=A%isGlobal
     B%nx=m*A%nx
     B%ny=n*A%ny
@@ -2261,12 +2261,14 @@ contains
     integer,		intent(out)		::	ierr
 
     if(A%isGlobal .neqv. B%isGlobal) then
-       call dm_printf("Error in dm_setcol: Matrix A and B should have the same distribution.",ierr)
+       call dm_printf("Error in dm_setcol: Matrix A and B &
+            &should have the same distribution.",ierr)
        stop
     endif
 
     if(A%nrow/= B%nrow)then
-       print *, "Error in dm_setcol: Matrix A and Matrix B should have the same row size."
+       print *, "Error in dm_setcol: Matrix A and Matrix B &
+            &should have the same row size."
        stop	
     endif
 
@@ -2277,6 +2279,32 @@ contains
     endif
   end subroutine dm_setcol
 
-
-
+  subroutine dm_max(A, val, pos, ierr)
+    type(Matrix), intent(in) :: A
+    integer, intent(out) :: pos(3)
+    integer, intent(out) :: ierr
+    real(kind=8), intent(out) :: val
+    
+    call mat_max_min(A%x, A%nx, A%ny, A%nz, val, &
+         pos, .false., ierr)
+    
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+  end subroutine 
+  
+  subroutine dm_min(A, val, pos, ierr)
+    type(Matrix), intent(in) :: A
+    integer, intent(out) :: pos(3)
+    integer, intent(out) :: ierr
+    real(kind=8), intent(out) :: val
+    
+    call mat_max_min(A%x, A%nx, A%ny, A%nz, val, &
+         pos, .true., ierr)
+    
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+  end subroutine
+  
 end module dm

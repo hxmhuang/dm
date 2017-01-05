@@ -82,6 +82,7 @@ program main
   call test_dm_ge()
   call test_dm_eq()
   call test_dm_nq()
+  call test_dm_max_min()
   call test_dm_sparse()
   call test_dm_save()
   call test_dm_load()
@@ -126,7 +127,7 @@ program main
   call test_DXF()
   call test_DXB()
   call test_DXC()
-  
+
   call test_DYF()
   call test_DYB()
   call test_DYC()
@@ -134,8 +135,10 @@ program main
   call test_DZF()
   call test_DZB()
   call test_DZC()
-
+  
   call test_CSUM() !for cumulative sum type 1,2,3
+
+  call test_SHIFT()
   
   call FinalizeOperatorModule()  
   
