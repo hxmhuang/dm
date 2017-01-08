@@ -11,11 +11,13 @@ module dm_op
 
   
   type(Matrix)  :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
+  type(Matrix)  :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2, NAG_MASK_Z1, NAG_MASK_Z2
   type(Matrix)  :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
   type(Matrix)  :: REV_MASK_Z1, REV_MASK_Z2
   type(Matrix)  :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
   type(Matrix)  :: HF_MASK_Z1, HF_MASK_Z2
   type(Matrix)  :: ZEROS, ONES
+  type(Matrix)  :: TRIL_IM_K1, TRIU_JM_K1
   
   private
   
@@ -38,6 +40,15 @@ module dm_op
   public :: DXC, DYC, DZC
   public :: CSUM , SHIFT
 
+  public :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
+  public :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2, NAG_MASK_Z1, NAG_MASK_Z2
+  public :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
+  public :: REV_MASK_Z1, REV_MASK_Z2
+  public :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
+  public :: HF_MASK_Z1, HF_MASK_Z2
+  public :: ZEROS, ONES
+  public :: TRIL_IM_K1, TRIU_JM_K1
+  
 contains
 
   subroutine InitOperatorModule(m, n, k, isGlobal)
@@ -124,6 +135,13 @@ contains
     REV_MASK_Z2 = ONES
     call dm_setvalues(REV_MASK_Z2, idxm, idxn, [(k-1)], zeros_mn, ierr)
 
+    NAG_MASK_X1 = - MASK_X1
+    NAG_MASK_X2 = - MASK_X2
+    NAG_MASK_Y1 = - MASK_Y1
+    NAG_MASK_Y2 = - MASK_Y2
+    NAG_MASK_Z1 = - MASK_Z1
+    NAG_MASK_Z2 = - MASK_Z2
+    
     HF_MASK_Z1 = 0.5 * MASK_Z1
     HF_MASK_Z2 = 0.5 * MASK_Z2
 
@@ -302,6 +320,48 @@ contains
     enddo
     call mat_assemble(MAT_SYL, ierr)
     !call mat_view(MAT_SYL, ierr)
+
+    !***********************************************************
+    ! [1 0 0 0]
+    ! [1 1 0 0] 
+    ! [1 1 1 0]
+    ! [1 1 1 1]
+    !***********************************************************    
+    call dm_create(TRIL_IM_K1, m, m, 1, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(TRIL_IM_K1%x, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / m
+       do in = 0, mod(im, m)
+          if(in .le. mod(im, m)) then
+             call MatSetValue(TRIL_IM_K1%x, im, in + ik * m, val, &
+                  INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+    call mat_assemble(TRIL_IM_K1%x, ierr)
+    !call mat_view(TRIL_IM_K1%x, ierr)
+
+    !***********************************************************
+    ! [1 1 1 1]
+    ! [0 1 1 1] 
+    ! [0 1 1 1]
+    ! [0 0 0 1]
+    !***********************************************************    
+    call dm_create(TRIU_JM_K1, n, n, 1, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(TRIU_JM_K1%x, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / n
+       do in = 0, mod(im, n)
+          if(in .le. mod(im, n)) then
+             call MatSetValue(TRIU_JM_K1%x, im, in + ik * n, val, &
+                  INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+    call mat_assemble(TRIU_JM_K1%x, ierr)
+    !call dm_view(TRIU_JM_K1, ierr)
     
   end subroutine 
 
@@ -322,7 +382,14 @@ contains
     call dm_destroy(MASK_Y2, ierr)
     call dm_destroy(MASK_Z1, ierr)
     call dm_destroy(MASK_Z2, ierr)
-    
+
+    call dm_destroy(NAG_MASK_X1, ierr)
+    call dm_destroy(NAG_MASK_X2, ierr)
+    call dm_destroy(NAG_MASK_Y1, ierr)
+    call dm_destroy(NAG_MASK_Y2, ierr)
+    call dm_destroy(NAG_MASK_Z1, ierr)
+    call dm_destroy(NAG_MASK_Z2, ierr)
+        
     call dm_destroy(REV_MASK_X1, ierr)
     call dm_destroy(REV_MASK_X2, ierr)
     call dm_destroy(REV_MASK_Y1, ierr)
@@ -350,8 +417,12 @@ contains
     call mat_destroy(MAT_SXU, ierr)
     call mat_destroy(MAT_SYL, ierr)
     call mat_destroy(MAT_SYR, ierr)
+
+    call dm_destroy(TRIL_IM_K1, ierr)
+    call dm_destroy(TRIU_JM_K1, ierr)
     
     call mat_destroy(MAT_ALIGN_ROW, ierr)
+
   end subroutine 
 
   !****************************************
@@ -637,6 +708,11 @@ contains
     integer :: ierr
     
     res = MAT_AXF * A
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -646,6 +722,11 @@ contains
     integer :: ierr
     
     res = MAT_AXB * A
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
   
@@ -655,6 +736,11 @@ contains
     integer :: ierr
     
     res = A * MAT_AYF
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -664,6 +750,11 @@ contains
     integer :: ierr
     
     res = A * MAT_AYB
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -679,7 +770,10 @@ contains
     
     res = 0.5*((A+res)+(A .em. MASK_Z2))
 
-    call dm_set_implicit(res, ierr)
+    res%nx = A%nx
+    res%ny = A%ny
+    res%nz = A%nz
+    res%isGlobal = A%isGlobal
     
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
@@ -700,11 +794,16 @@ contains
     
     res = 0.5*((A+res) +(A .em. MASK_Z1))
 
-    call dm_set_implicit(res, ierr)
+    res%nx = A%nx
+    res%ny = A%ny
+    res%nz = A%nz
+    res%isGlobal = A%isGlobal
     
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
+
+    call dm_set_implicit(res, ierr)    
   end function 
   
   function DXF(A) result(res)
@@ -713,6 +812,11 @@ contains
     integer :: ierr
     
     res = MAT_DXF * A
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -722,6 +826,11 @@ contains
     integer :: ierr
     
     res = MAT_DXB * A
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -731,6 +840,11 @@ contains
     integer :: ierr
     
     res = MAT_DXB * MAT_AXF * A
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
   
@@ -740,6 +854,11 @@ contains
     integer :: ierr
     
     res = A * MAT_DYF
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -749,6 +868,11 @@ contains
     integer :: ierr
     
     res = A * MAT_DYB
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -758,6 +882,11 @@ contains
     integer :: ierr
     
     res = A * MAT_AYF * MAT_DYB
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -802,9 +931,9 @@ contains
     
     res = (A-res) .em. REV_MASK_Z1
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
     
     call dm_set_implicit(res, ierr)
   end function 
@@ -836,9 +965,9 @@ contains
 
     res = (res .em. HF_REV_MASK_Z1) + (A .em. HF_MASK_Z2)
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
     
     call dm_set_implicit(res, ierr)
   end function 
@@ -883,6 +1012,11 @@ contains
        endif
     endif
 
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
+    call dm_set_implicit(res, ierr)
   end function
   
   !< Cumulative summation
@@ -963,12 +1097,11 @@ contains
     
     deallocate(row, idxn)
     call mat_destroy(W, ierr)
-    call dm_set_implicit(res, ierr)
-    
+
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
-    
+    call dm_set_implicit(res, ierr)
   end function 
   
   end module dm_op

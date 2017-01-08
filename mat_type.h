@@ -6,6 +6,8 @@
 #define MAT_MATH_TAN  6
 #define MAT_MATH_SQU  7
 #define MAT_MATH_CUBE 8
+#define MAT_MATH_ABS  9
+#define MAT_MATH_POW  10
 
 #define MAT_XTYPE_IMPLICIT 1
 #define MAT_XTYPE_EXPLICIT 2

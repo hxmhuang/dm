@@ -330,7 +330,14 @@ contains
     A%nz=k
   end subroutine dm_create
 
+  subroutine dm_print_info(A, ierr)
+    implicit none
+    type(Matrix), intent(inout) :: A
+    integer, intent(out) :: ierr
 
+    write(*, '(A,A,I3,A,I3,A,I3,A,L3)') &
+         "Matrix Info:", "  nx=", A%nx, "  ny=", A%ny, "  nz=", A%nz, "  isGlobal=", A%isGlobal
+  end subroutine dm_print_info
   ! -----------------------------------------------------------------------
   ! A=0 
   ! -----------------------------------------------------------------------
@@ -958,7 +965,7 @@ contains
 
 
   ! -----------------------------------------------------------------------
-  ! B=repmat(A,m,n)
+  ! B=repmat(A,m,n,k)
   ! -----------------------------------------------------------------------
   function dm_rep(A,m,n,k) result(B)
     implicit none
@@ -970,7 +977,7 @@ contains
     B%isGlobal=A%isGlobal
     B%nx=m*A%nx
     B%ny=n*A%ny
-    B%nz=A%nz
+    B%nz=k*A%nz
     call dm_set_implicit(B,ierr)
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1328,6 +1335,49 @@ contains
     endif
   end function dm_sqrt
 
+  ! -----------------------------------------------------------------------
+  ! B=abs(A) 
+  ! -----------------------------------------------------------------------
+  function dm_abs(A) result(B)
+    implicit none
+#include "mat_type.h"
+    type(Matrix),	intent(in)	::  A 
+    type(Matrix)              	::	B
+    integer						::	ierr
+    call mat_math(A%x,MAT_MATH_ABS,B%x,ierr)
+    B%isGlobal=A%isGlobal
+    B%nx = A%nx
+    B%ny = A%ny
+    B%nz = A%nz
+    call dm_set_implicit(B,ierr)
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x,ierr)
+    endif
+  end function dm_abs
+
+  ! -----------------------------------------------------------------------
+  ! B=pow(A, p) 
+  ! -----------------------------------------------------------------------
+  function dm_pow(A, p) result(B)
+    implicit none
+#include "mat_type.h"
+    type(Matrix),	intent(in)	::  A
+    real(kind=8), intent(in) :: p
+    type(Matrix)              	::	B
+    integer						::	ierr
+    call mat_math(A%x,MAT_MATH_POW,B%x,ierr, p)
+    B%isGlobal=A%isGlobal
+    B%nx = A%nx
+    B%ny = A%ny
+    B%nz = A%nz
+    call dm_set_implicit(B,ierr)
+
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x,ierr)
+    endif
+  end function dm_pow
+  
   ! -----------------------------------------------------------------------
   ! Solve Ax=b 
   ! -----------------------------------------------------------------------

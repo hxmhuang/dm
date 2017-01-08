@@ -1261,7 +1261,7 @@ contains
   ! B=fun(A,opt) 
   ! opt options: exp,log,sin,cos,tan
   ! -----------------------------------------------------------------------
-  subroutine mat_math(A,opt,B,ierr)
+  subroutine mat_math(A,opt,B, ierr, p)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
@@ -1273,6 +1273,8 @@ contains
     Mat,intent(out)::B
     PetscErrorCode,intent(out)::ierr
 
+    real(kind=8), optional, intent(in) :: p !power parameter
+    
     PetscInt::nrow,ncol
     PetscInt::col,m
     PetscInt,allocatable        ::idxn(:),idxtmp(:)
@@ -1319,6 +1321,10 @@ contains
              row=rowtmp**2
           case (MAT_MATH_CUBE)
              row=rowtmp**3
+          case (MAT_MATH_ABS)
+             row=abs(row)
+          case (MAT_MATH_POW)
+             row=row**p
           case default
              row=0.0    
           end select

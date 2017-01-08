@@ -22,7 +22,9 @@ include ${PETSC_DIR}/lib/petsc/conf/rules
 main: ${OBJMAIN}  chkopts
 	-${FLINKER} -o main ${OBJMAIN} ${PETSC_KSP_LIB} ${PNETCDF}/lib/libpnetcdf.a
 
-lib : ${OBJ} chkopts
+lib : 
+	make clean
+	make main
 	-@ar rc libdm.a ${OBJ}
 
 tiny:
