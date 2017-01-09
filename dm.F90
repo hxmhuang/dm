@@ -139,6 +139,12 @@ module dm
      module procedure dm_setdiag2
      module procedure dm_setdiag3
   end interface dm_setdiag
+
+  interface dm_pow
+     module procedure dm_pow1
+     module procedure dm_pow2
+     module procedure dm_pow3
+  end interface dm_pow
   
   interface assignment(=)
      module procedure dm_copy
@@ -1011,22 +1017,30 @@ contains
        B%nx = A%nx
        B%ny = 1
        B%nz = A%nz
-    else if ( ndim == 3 ) then
-       B%nx = A%nx
-       B%ny = A%ny
-       B%nz = 1
     else 
        print*, "Error: ndim can be only 1 or 2"
        stop
     endif
 
+    if (A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x,ierr)
+    endif
+    
     call dm_set_implicit(B,ierr)
+  end function 
 
+  function dm_sum_all(A) result(val)
+    implicit none
+    type(Matrix),   intent(in)	:: A 
+    real(kind=8)  :: val
+    integer			:: ierr
+
+    call mat_sum_all(A%x, A%nx, A%ny, A%nz, val, ierr)
+    
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
        call mat_destroy(A%x,ierr)
     endif
   end function 
-
 
   ! -----------------------------------------------------------------------
   ! Compute Y = a*X + Y.
@@ -1070,8 +1084,8 @@ contains
 
   subroutine dm_axpy3(Y,a,X,ierr)
     implicit none
-    type(Matrix),	intent(in)		::  X 
-    integer,        intent(in)		::	a
+    type(Matrix),   intent(in)		::  X 
+    integer,        intent(in)		::  a
     type(Matrix), 	intent(inout) 	::  Y 
     integer,		intent(out)	::	ierr
     call mat_axpy(Y%x,real(a,kind=8),X%x,ierr)
@@ -1359,7 +1373,7 @@ contains
   ! -----------------------------------------------------------------------
   ! B=pow(A, p) 
   ! -----------------------------------------------------------------------
-  function dm_pow(A, p) result(B)
+  function dm_pow1(A, p) result(B)
     implicit none
 #include "mat_type.h"
     type(Matrix),	intent(in)	::  A
@@ -1376,7 +1390,33 @@ contains
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
        call mat_destroy(A%x,ierr)
     endif
-  end function dm_pow
+  end function
+
+  function dm_pow2(A, p) result(B)
+    implicit none
+#include "mat_type.h"
+    type(Matrix),	intent(in)	::  A
+    real(kind=4), intent(in) :: p
+    type(Matrix)        	::	B
+    integer	::	ierr
+
+    B = dm_pow1(A, real(p, kind=8))
+    
+    call dm_set_implicit(B,ierr)
+  end function
+
+  function dm_pow3(A, p) result(B)
+    implicit none
+#include "mat_type.h"
+    type(Matrix),	intent(in)	::  A
+    integer, intent(in) :: p
+    type(Matrix)        	::	B
+    integer	::	ierr
+
+    B = dm_pow1(A, real(p, kind=8))
+    
+    call dm_set_implicit(B,ierr)
+  end function
   
   ! -----------------------------------------------------------------------
   ! Solve Ax=b 
@@ -1661,6 +1701,21 @@ contains
     endif
   end subroutine dm_getvalues
 
+  ! -----------------------------------------------------------------------
+  ! Get a single value in A.
+  ! -----------------------------------------------------------------------
+  function dm_getvalue(A, idxm, idxn, idxk) result(res)
+    implicit none
+    type(Matrix),	intent(in)	::	A
+    integer,		intent(in)	::	idxm,idxn,idxk
+    real(kind=8) :: res
+    real(kind=8)		::	v(1)	
+    integer		        ::	ierr
+
+    call dm_getvalues(A, (/idxm/),(/idxn/),(/idxk/),v,ierr) 
+    res = v(1)
+  end function
+  
   ! ! -----------------------------------------------------------------------
   ! ! Get local values in A.
   ! ! -----------------------------------------------------------------------

@@ -1045,10 +1045,12 @@ contains
 
     call PetscLogEventRegister("mat_sumx", 0, ievent, ierr)
     call PetscLogEventBegin(ievent, ierr)
-    call MatGetSize(A, nrow, ncol)
+
+    call MatGetSize(A, nrow, ncol, ierr)
     call mat_assemble(A, ierr)
     call MatGetOwnershipRange(A, ista, iend, ierr)
     call mat_gettype(A, isGlobal, ierr)
+
     call mat_create(B, nx, 1, nz, isGlobal, ierr)
     
     do i=ista,iend-1
@@ -1100,7 +1102,6 @@ contains
        call mat_trans(A, W1, ierr)
        call mat_sumx(W1, ny, nx, nz, W2, ierr)
        call mat_trans(W2, B, ierr)
-       
        call mat_destroy(W1,ierr)
        call mat_destroy(W2,ierr)
     else
@@ -1109,6 +1110,30 @@ contains
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_sum
 
+  subroutine mat_sum_all(A, nx, ny, nz, val, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,intent(in)::A
+    PetscInt, intent(in) :: nx, ny, nz
+    real(kind=8), intent(out) :: val
+    PetscScalar :: sum
+    PetscErrorCode,intent(out)::ierr
+    Vec :: v
+    PetscLogEvent   ::  ievent
+
+    call PetscLogEventRegister("mat_sum_all",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call MatCreateVecs(A, PETSC_NULL_OBJECT, v, ierr)
+    call MatGetRowSum(A, v, ierr)
+    call VecSum(v, sum, ierr)
+    val = sum
+    call VecDestroy(v, ierr)
+    call PetscLogEventEnd(ievent,ierr)
+  end subroutine
 
   ! -----------------------------------------------------------------------
   ! Compute Y = a*X + Y.

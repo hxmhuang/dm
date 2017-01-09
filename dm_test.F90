@@ -854,7 +854,8 @@ contains
     logical         		:: debug = .false.
     integer         		:: ierr
     real(kind=8),allocatable  :: array(:)
-
+    real(kind=8) :: res
+    
     call dm_comm_rank(myrank,ierr)
     call dm_comm_size(mysize,ierr)
     call dm_option_int('-m',m,ierr)
@@ -866,9 +867,11 @@ contains
     if(myrank == 0) print*, "==============Test dm_sum================"
     A = dm_seqs(m, n, k)
     B = dm_seqs(m, n, 2, .false.)
+
     C = dm_sum(A, 1)
     D = dm_sum(A, 2)  
-
+    res = dm_sum_all(A)
+    
     if(debug) then
        if(myrank == 0) print*, ">A="
        call dm_view(A, ierr)
@@ -878,6 +881,7 @@ contains
        call dm_view(C, ierr)
        if(myrank == 0) print*, ">D="
        call dm_view(D, ierr)
+       if(myrank == 0) print*, ">dm_sum_all(A)=", res
     end if
 
     call dm_destroy(A, ierr)
