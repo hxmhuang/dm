@@ -23,6 +23,9 @@ module dm_op
   
   type(Matrix)  :: MAT_AXF, MAT_AXB, MAT_AYF, MAT_AYB, MAT_AZF, MAT_AZB
   type(Matrix)  :: MAT_DXF, MAT_DXB, MAT_DYF, MAT_DYB, MAT_DZF, MAT_DZB
+
+  type(Matrix)  :: MAT_AXF_XY, MAT_AXB_XY, MAT_AYF_XY, MAT_AYB_XY
+  type(Matrix)  :: MAT_DXF_XY, MAT_DXB_XY, MAT_DYF_XY, MAT_DYB_XY
   
   Mat  :: MAT_P, MAT_Q !used for shift a matrix in diagonal direction.
   Mat  :: MAT_R, MAT_T !used for shift a matrix in diagonal direction.
@@ -37,6 +40,7 @@ module dm_op
   public :: InitOperatorModule, FinalizeOperatorModule
   public :: AXF, AXB, AYF, AYB, AZF, AZB
   public :: DXF, DXB, DYF, DYB, DZF, DZB
+  
   public :: DXC, DYC, DZC
   public :: CSUM , SHIFT
 
@@ -86,16 +90,28 @@ contains
     
     MAT_AXF = OP_AXF(m, n, k, is_global)
     MAT_AXB = OP_AXB(m, n, k, is_global)
+
+    MAT_AXF_XY = OP_AXF(m, n, 1, is_global)
+    MAT_AXB_XY = OP_AXB(m, n, 1, is_global)
     
     MAT_AYF = OP_AYF(m, n, k, is_global)
     MAT_AYB = OP_AYB(m, n, k, is_global)
+
+    MAT_AYF_XY = OP_AYF(m, n, 1, is_global)
+    MAT_AYB_XY = OP_AYB(m, n, 1, is_global)
     
     MAT_DXF = OP_DXF(m, n, k, is_global)
     MAT_DXB = OP_DXB(m, n, k, is_global)
 
+    MAT_DXF_XY = OP_DXF(m, n, 1, is_global)
+    MAT_DXB_XY = OP_DXB(m, n, 1, is_global)
+    
     MAT_DYF = OP_DYF(m, n, k, is_global)
     MAT_DYB = OP_DYB(m, n, k, is_global)
 
+    MAT_DYF_XY = OP_DYF(m, n, 1, is_global)
+    MAT_DYB_XY = OP_DYB(m, n, 1, is_global)
+    
     ONES = dm_ones(m, n, k, is_global)
     ZEROS = dm_zeros(m, n, k, is_global)
     
@@ -382,6 +398,15 @@ contains
     call dm_destroy(MASK_Y2, ierr)
     call dm_destroy(MASK_Z1, ierr)
     call dm_destroy(MASK_Z2, ierr)
+
+    call dm_destroy(MAT_AXF_XY, ierr)
+    call dm_destroy(MAT_AXB_XY, ierr)
+    call dm_destroy(MAT_AYF_XY, ierr)
+    call dm_destroy(MAT_AYB_XY, ierr)
+    call dm_destroy(MAT_DXF_XY, ierr)
+    call dm_destroy(MAT_DXB_XY, ierr)
+    call dm_destroy(MAT_DYF_XY, ierr)
+    call dm_destroy(MAT_DYB_XY, ierr)
 
     call dm_destroy(NAG_MASK_X1, ierr)
     call dm_destroy(NAG_MASK_X2, ierr)
@@ -706,8 +731,12 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = MAT_AXF * A
+
+    if(A%nz /= 1) then
+       res = MAT_AXF * A
+    else
+       res = MAT_AXF_XY * A       
+    endif
 
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
@@ -720,9 +749,31 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = MAT_AXB * A
 
+    if(A%nz /= 1) then
+       res = MAT_AXB * A
+    else
+       res = MAT_AXB_XY * A       
+    endif
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+
+    call dm_set_implicit(res, ierr)
+  end function 
+
+  function AYF(A) result(res)
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: res
+    integer :: ierr
+
+    if(A%nz /= 1) then
+       res = A * MAT_AYF
+    else
+       res = A * MAT_AYF_XY
+    endif
+    
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
@@ -730,27 +781,17 @@ contains
     call dm_set_implicit(res, ierr)
   end function 
   
-  function AYF(A) result(res)
-    type(Matrix), intent(in) :: A
-    type(Matrix) :: res
-    integer :: ierr
-    
-    res = A * MAT_AYF
-
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
-
-    call dm_set_implicit(res, ierr)
-  end function 
-
   function AYB(A) result(res)
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = A * MAT_AYB
 
+    if(A%nz /= 1) then
+       res = A * MAT_AYB
+    else
+       res = A * MAT_AYB_XY
+    endif
+    
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
@@ -810,8 +851,12 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = MAT_DXF * A
+
+    if(A%nz /= 1) then
+       res = MAT_DXF * A
+    else
+       res = MAT_DXF_XY * A
+    endif
     
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
@@ -824,9 +869,13 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = MAT_DXB * A
 
+    if(A%nz /= 1) then
+       res = MAT_DXB * A
+    else
+       res = MAT_DXB_XY * A
+    endif
+    
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
@@ -852,8 +901,12 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = A * MAT_DYF
+
+    if(A%nz /= 1) then
+       res = A * MAT_DYF
+    else
+       res = A * MAT_DYF_XY
+    endif
 
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
@@ -866,9 +919,13 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
-    
-    res = A * MAT_DYB
 
+    if(A%nz /= 1) then
+       res = A * MAT_DYB
+    else
+       res = A * MAT_DYB_XY
+    endif
+    
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
@@ -1031,13 +1088,14 @@ contains
     integer :: m, n, k, col
     PetscInt, allocatable :: idxn(:)
     PetscScalar, allocatable :: row(:)
-
-    res = ZEROS
+    logical :: isGlobal
+    !res = ZEROS
+    integer :: COMM_TYPE
 
     m = A%nx
     n = A%ny
     k = A%nz
-    
+
     call mat_assemble(A%x, ierr)
 
     if(type == 1) then
@@ -1046,28 +1104,31 @@ contains
     else if(type == 2) then
        call MatMatMult(UTI2, A%x, MAT_INITIAL_MATRIX, &
             PETSC_DEFAULT_REAL, W, ierr)
-    else if(type == 3) then
+    else if(type == 3 .or. type == 4) then
        call MatMatMult(MAT_ALIGN_ROW, A%x, MAT_INITIAL_MATRIX, &
             PETSC_DEFAULT_REAL, W, ierr)
     else
        call dm_printf("Error: Unknown sum type.", ierr)
        stop
     endif
-       
+    
     call MatGetOwnershipRange(W, ista, iend, ierr)
 
     allocate(row(A%ny * A%nz), idxn(n*k))
 
-    res%nx = A%nx
-    res%ny = A%ny
-    res%nz = A%nz
+    if(type == 4) then
+       call dm_create(res, A%nx, A%ny, 1, A%isGlobal, ierr) 
+    else
+       call dm_create(res, A%nx, A%ny, A%nz, A%isGlobal, ierr)
+    endif
 
     idxn = 0
     
     do im = ista, iend-1
        ik = im / m
 
-       if(type.eq.3 .and. ik .gt. 0) exit
+       if(type == 3 .and. ik > 0) exit
+       if(type == 4 .and. ik > 0) exit
        
        call MatGetRow(W, im, col, idxn, row, ierr)
 
@@ -1081,7 +1142,7 @@ contains
 
              if(j==col) count = count + 1
              to = from + count - 1
-
+             
              call MatSetValues(res%x, 1, im, count, &
                   ik*n + mod(idxn(from:to), n), &
                   row(from:to), ADD_VALUES, ierr)

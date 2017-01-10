@@ -2385,6 +2385,7 @@ contains
   end subroutine dm_setcol
 
   subroutine dm_max(A, val, pos, ierr)
+    implicit none
     type(Matrix), intent(in) :: A
     integer, intent(out) :: pos(3)
     integer, intent(out) :: ierr
@@ -2399,6 +2400,7 @@ contains
   end subroutine 
   
   subroutine dm_min(A, val, pos, ierr)
+    implicit none    
     type(Matrix), intent(in) :: A
     integer, intent(out) :: pos(3)
     integer, intent(out) :: ierr

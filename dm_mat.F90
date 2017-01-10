@@ -1126,7 +1126,7 @@ contains
 
     call PetscLogEventRegister("mat_sum_all",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-
+    call mat_assemble(A, ierr)
     call MatCreateVecs(A, PETSC_NULL_OBJECT, v, ierr)
     call MatGetRowSum(A, v, ierr)
     call VecSum(v, sum, ierr)
@@ -1331,35 +1331,48 @@ contains
        do j=1,m
           select case(opt)
           case (MAT_MATH_EXP)
-             row=exp(rowtmp)
+             row(j)=exp(rowtmp(j))
           case (MAT_MATH_SQRT)
-             row=sqrt(rowtmp)
+             if(rowtmp(j) >= 0.) then
+                row(j)=sqrt(rowtmp(j))
+             else
+                row(j) = 0
+             endif
           case (MAT_MATH_LOG)
-             row=log(rowtmp)
+             if(rowtmp(j) > 0) then
+                row(j)=log(rowtmp(j))
+             else
+                row(j) = 0
+             endif
           case (MAT_MATH_SIN)
-             row=sin(rowtmp)
+             row(j)=sin(rowtmp(j))
           case (MAT_MATH_COS)
-             row=cos(rowtmp)
+             row(j)=cos(rowtmp(j))
           case (MAT_MATH_TAN)
-             row=tan(rowtmp)
+             row(j)=tan(rowtmp(j))
           case (MAT_MATH_SQU)
-             row=rowtmp**2
+             row(j)=rowtmp(j)**2
           case (MAT_MATH_CUBE)
-             row=rowtmp**3
+             row(j)=rowtmp(j)**3
           case (MAT_MATH_ABS)
-             row=abs(row)
+             row(j)=abs(rowtmp(j))
           case (MAT_MATH_POW)
-             row=row**p
+             if(rowtmp(j) == 0 .and. p < 0) then
+                row(j) = 0
+             else 
+                row(j)=rowtmp(j)**p
+             endif
           case default
              row=0.0    
           end select
        enddo
-       do j=1,m
-          !Maybe there is a potenial bug here. When rowtmp < 1E-16, exp(rowtmp) will be NaN. 
-          !To avoid this, we have to set row=0.0 at his situation.
-          if(isnan(row(j))) row(j)=0.0
-          !print *,"------rowtmp(",j,")=",rowtmp(j),"row(",j,")=",row(j)
-       enddo
+          
+       ! do j=1,m
+       !    !Maybe there is a potenial bug here. When rowtmp < 1E-16, exp(rowtmp) will be NaN. 
+       !    !To avoid this, we have to set row=0.0 at his situation.
+       !    if(isnan(row(j)) .or. row(j)+1 == row(j)) row(j)=0.0
+       !    !print *,"------rowtmp(",j,")=",rowtmp(j),"row(",j,")=",row(j)
+       ! enddo
 
        call MatRestoreRow(A,i,col,idxtmp,rowtmp,ierr)
 
@@ -2944,10 +2957,10 @@ contains
     PetscScalar, allocatable :: lrm(:) ! local row max
     PetscScalar, allocatable :: lrm_pos(:) !local row max pos, i.e. column number
     PetscScalar, allocatable :: row(:) 
-    integer :: pos(1)
+    integer :: pos(1), cnt
     logical :: isGlobal
     integer :: COMM_TYPE
-    PetscInt :: num_row
+    PetscInt :: num_row, vec_size
     PetscScalar :: max_col_idx(1)
     VecScatter :: scatter
     
@@ -2962,51 +2975,66 @@ contains
     call MatGetOwnershipRange(A, ista, iend, ierr)
     num_row = iend - ista
     allocate(idxn(n*k), row(n*k), lrm(num_row), lrm_pos(num_row))
-    
+
+    lrm = 0
+    lrm_pos = 0
+
+    cnt = 0
     do i = ista, iend - 1
        call MatGetRow(A, i, col, idxn, row, ierr)
-
-       if(is_min) then
-          pos = minloc(row(1:col))
-       else
-          pos = maxloc(row(1:col))
+       if(col > 0) then
+          cnt = cnt + 1
+          if(is_min) then
+             pos = minloc(row(1:col))
+          else
+             pos = maxloc(row(1:col))
+          endif
+          lrm(cnt) = row(pos(1))
+          lrm_pos(cnt) = idxn(pos(1)) - 1
+          ! lrm(i-ista+1)     = row(pos(1))
+          ! lrm_pos(i-ista+1) = idxn(pos(1)) - 1
        endif
-       
-       lrm(i-ista+1) = row(pos(1))
-       lrm_pos(i-ista+1) = pos(1) - 1
-
        call MatRestoreRow(A, i, col, idxn, row, ierr)
     enddo
     
-    call VecCreateMPIWithArray(COMM_TYPE, 1, iend - ista, m*k, &
+    call VecCreateMPIWithArray(COMM_TYPE, 1, cnt, PETSC_DECIDE, &
          lrm_pos, global_lrm_pos, ierr)
     
-    call VecCreateMPIWithArray(COMM_TYPE, 1, iend - ista, m*k, &
+    call VecCreateMPIWithArray(COMM_TYPE, 1, cnt, PETSC_DECIDE, &
          lrm, global_lrm, ierr)
 
-    if(is_min) then
-       call VecMin(global_lrm, m1, val, ierr)       
+    !print*, "nrow=", num_row, " lrm=", lrm
+    !call vec_view(global_lrm, ierr)
+    call VecGetSize(global_lrm, vec_size, ierr)
+    
+    if(vec_size > 0) then
+       if(is_min) then
+          call VecMin(global_lrm, m1, val, ierr)       
+       else
+          call VecMax(global_lrm, m1, val, ierr)
+       endif
+
+       call VecScatterCreateToAll(global_lrm_pos, scatter, local_lrm_pos, ierr)
+
+       call VecScatterBegin(scatter, global_lrm_pos, local_lrm_pos, &
+            INSERT_VALUES, SCATTER_FORWARD, ierr)
+
+       call VecScatterEnd(scatter, global_lrm_pos, local_lrm_pos, &
+            INSERT_VALUES, SCATTER_FORWARD, ierr)
+
+       call VecScatterDestroy(scatter, ierr)
+
+       call VecGetValues(local_lrm_pos, 1, [(m1)], max_col_idx, ierr)
+
+       n1 = int(max_col_idx(1)+0.01)
+       
+       call VecDestroy(local_lrm_pos, ierr)
     else
-       call VecMax(global_lrm, m1, val, ierr)
+       m1 = 0
+       n1 = 0
     endif
     
-    call VecScatterCreateToAll(global_lrm_pos, scatter, local_lrm_pos, ierr)
-
-    call VecScatterBegin(scatter, global_lrm_pos, local_lrm_pos, &
-         INSERT_VALUES, SCATTER_FORWARD, ierr)
-
-    call VecScatterEnd(scatter, global_lrm_pos, local_lrm_pos, &
-         INSERT_VALUES, SCATTER_FORWARD, ierr)
-    
-    call VecScatterDestroy(scatter, ierr)
-
-    !call VecGetArrayF90(local_lrm_pos, p, ierr)
-    
-    call VecGetValues(local_lrm_pos, 1, [(m1)], max_col_idx, ierr)
-
-    n1 = int(max_col_idx(1)+0.01)
-    
-    !print*, "m1=", m1, "n1=", n1
+    ! print*, "m1=", m1, "n1=", n1
     vpos(1) = mod(m1, m)
     vpos(2) = mod(n1, k)
     vpos(3) = m1 / k
@@ -3015,6 +3043,6 @@ contains
     
     call VecDestroy(global_lrm_pos, ierr)
     call VecDestroy(global_lrm, ierr)
-    call VecDestroy(local_lrm_pos, ierr)
+
   end subroutine 
 end module dm_mat

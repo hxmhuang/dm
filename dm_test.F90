@@ -1369,6 +1369,86 @@ contains
     call dm_destroy(C,ierr)
     call dm_destroy(D,ierr)
   end subroutine test_dm_cube
+
+  subroutine test_dm_abs()
+    type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
+    type(Matrix)    		:: X,Y,Z,U,V,W 
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    real(kind=8)    		:: a1,a2,a3
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable  :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+   
+    if(myrank==0) print *, "==============Test dm_abs================="
+    A=dm_rand(m,m,k) - 0.5
+    B=dm_abs(A)
+    C=dm_abs(dm_seqs(m,m,k))
+    D=dm_abs(dm_seqs(m,m,2,.false.) - 5)
+    if(debug) then
+       if(myrank==0) print *, ">A="
+       call dm_view(A,ierr)
+       if(myrank==0) print *, ">B=dm_abs(A)"
+       call dm_view(B,ierr)
+       if(myrank==0) print *, ">C=dm_abs(dm_seqs(m,m,k))"
+       call dm_view(C,ierr)
+       if(myrank==0) print *, ">D=dm_abs(dm_seqs(m,m,2,.false.) - 5)"
+       if(myrank==0) call dm_view(D,ierr)
+    endif
+    call dm_destroy(A,ierr)
+    call dm_destroy(B,ierr)
+    call dm_destroy(C,ierr)
+    call dm_destroy(D,ierr)
+  end subroutine 
+
+  subroutine test_dm_pow()
+    type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
+    type(Matrix)    		:: X,Y,Z,U,V,W 
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    real(kind=8)    		:: a1,a2,a3
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable  :: array(:)
+
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+   
+    if(myrank==0) print *, "==============Test dm_pow================="
+    A=dm_seqs(m,m,k)
+    B=dm_pow(A, 2)
+    C=dm_pow(dm_seqs(m,m,k), 3.0)
+    D=dm_pow(dm_seqs(m,m,2,.false.), -1.0)
+    if(debug) then
+       if(myrank==0) print *, ">A="
+       call dm_view(A,ierr)
+       if(myrank==0) print *, ">B=dm_pow(A, 2)"
+       call dm_view(B,ierr)
+       if(myrank==0) print *, ">C=dm_pow(dm_seqs(m,m,k), 3.0)"
+       call dm_view(C,ierr)
+       if(myrank==0) print *, ">D=dm_pow(dm_seqs(m,m,2,.false.), -1.0)"
+       if(myrank==0) call dm_view(D,ierr)
+    endif
+    call dm_destroy(A,ierr)
+    call dm_destroy(B,ierr)
+    call dm_destroy(C,ierr)
+    call dm_destroy(D,ierr)
+  end subroutine 
   
   subroutine test_dm_solve()
     type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
@@ -3582,7 +3662,7 @@ contains
   subroutine test_CSUM()
     use dm_op
     type(Matrix)    		:: A, B, C
-    type(Matrix)    		:: A1, A2, A3
+    type(Matrix)    		:: A1, A2, A3, A4
     integer         		:: m,n,k
     integer :: myrank, mysize
     real(kind=8)    		:: ep,alpha
@@ -3602,9 +3682,11 @@ contains
     if(myrank == 0) print*, "==============Test CSUM=============="
 
     A = dm_seqs(2*m+1, 2*n+1, k)
-    A1 = CSUM(A, 1) !type 1, corresponding to SUM1 in matlab code
-    A2 = CSUM(A, 2) !type 2, corresponding to SUM2 in matlab code
-    A3 = CSUM(A, 3) !type 3
+    A1 = CSUM(A, 1) !type=1, corresponding to SUM1 in matlab code
+    A2 = CSUM(A, 2) !type=2, corresponding to SUM2 in matlab code
+    A3 = CSUM(A, 3) !type=3
+    A4 = CSUM(A, 4) !type=4, result is a 2D matrix, matlab: sum(A(:,:,:), 3)
+    
     ! B = dm_seqs(2*m+1, 2*n+1, k, .false.)
     ! B1 = AYF(B)
     if(debug) then
@@ -3616,6 +3698,9 @@ contains
        call dm_view(A2, ierr)
        if(myrank==0) print*, ">A3="
        call dm_view(A3, ierr)
+       if(myrank==0) print*, ">A4="
+       call dm_view(A4, ierr)
+       
        ! if(myrank==0) print*, ">B="
        ! if(myrank==0) call dm_view(B, ierr)
        ! if(myrank==0) print*, ">B1="
@@ -3626,6 +3711,8 @@ contains
     call dm_destroy(A1, ierr)
     call dm_destroy(A2, ierr)
     call dm_destroy(A3, ierr)
+    call dm_destroy(A4, ierr)
+    
     ! call dm_destroy(B, ierr)
     ! call dm_destroy(B1, ierr)
   end subroutine 

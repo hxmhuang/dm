@@ -70,6 +70,8 @@ program main
   call test_dm_sqrt()
   call test_dm_squ()
   call test_dm_cube()
+  call test_dm_abs()  
+  call test_dm_pow()
   call test_dm_solve()
   call test_dm_setvalue()
   call test_dm_getsub()
