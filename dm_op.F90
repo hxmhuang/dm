@@ -15,7 +15,7 @@ module dm_op
   type(Matrix)  :: NAG_MASK_Z1, NAG_MASK_Z2
   type(Matrix)  :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
   type(Matrix)  :: REV_MASK_Z1, REV_MASK_Z2, ONE_REV_MASK_Z1, ONE_REV_MASK_Z2
-  type(Matrix)  :: REV_MASK_ZZ
+  type(Matrix)  :: MASK_ZZ, REV_MASK_ZZ
   type(Matrix)  :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
   type(Matrix)  :: HF_MASK_Z1, HF_MASK_Z2
   type(Matrix)  :: ZEROS, ONES
@@ -155,6 +155,7 @@ contains
     call dm_setvalues(REV_MASK_Z2, idxm, idxn, [(k-1)], zeros_mn, ierr)
     ONE_REV_MASK_Z2 = ONES + REV_MASK_Z2
 
+    MASK_ZZ = MASK_Z1 + MASK_Z2
     REV_MASK_ZZ = REV_MASK_Z1 .em. REV_MASK_Z2
     
     NAG_MASK_X1 = - MASK_X1
@@ -458,6 +459,7 @@ contains
     call dm_destroy(ONE_REV_MASK_Z2, ierr)
 
     call dm_destroy(REV_MASK_ZZ, ierr)
+    call dm_destroy(MASK_ZZ, ierr)
   end subroutine 
 
   !****************************************
@@ -1056,26 +1058,26 @@ contains
     call mat_assemble(A%x, ierr)
     
     if(axis .eq. 1) then
-       if(direction .eq. 1) then
+       if(direction .eq. -1) then
           call MatMatMult(MAT_SXD, A%x, MAT_INITIAL_MATRIX, &
                PETSC_DEFAULT_REAL, res%x, ierr)
-       else if(direction .eq. -1) then
+       else if(direction .eq. 1) then
           call MatMatMult(MAT_SXU, A%x, MAT_INITIAL_MATRIX, &
                PETSC_DEFAULT_REAL, res%x, ierr)
        endif
     else if(axis .eq. 2) then
-       if(direction .eq. 1) then
-          call MatMatMult(A%x, MAT_SYR, MAT_INITIAL_MATRIX, &
-               PETSC_DEFAULT_REAL, res%x, ierr)
-       else if(direction .eq. -1) then
+       if(direction .eq. -1) then
           call MatMatMult(A%x, MAT_SYL, MAT_INITIAL_MATRIX, &
+               PETSC_DEFAULT_REAL, res%x, ierr)
+       else if(direction .eq. 1) then
+          call MatMatMult(A%x, MAT_SYR, MAT_INITIAL_MATRIX, &
                PETSC_DEFAULT_REAL, res%x, ierr)
        endif
     else
-       if(direction .eq. 1) then
+       if(direction .eq. -1) then
           call MatMatMatMult(MAT_R, A%x, MAT_T, MAT_INITIAL_MATRIX, &
                PETSC_DEFAULT_REAL, res%x, ierr)
-       else if(direction .eq. -1) then
+       else if(direction .eq. 1) then
           call MatMatMatMult(MAT_P, A%x, MAT_Q, MAT_INITIAL_MATRIX, &
                PETSC_DEFAULT_REAL, res%x, ierr)
        endif
