@@ -743,11 +743,20 @@ contains
        n=col2
        call MatRestoreRow(B,i,col2,PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,ierr)
 
+       if(m == 0 .or. n == 0) cycle
+
+       ! if(m /= n) then
+       !    print*, "Error: mat_emult: m does not equals to n!", "m=",m,"n=",n
+       !    call mat_view(A, ierr)
+       !    call mat_view(B, ierr)
+       !    stop
+       ! endif
+       
        allocate(idxn1(m),row1(m))
        allocate(idxtmp(m),rowtmp(m))
        allocate(idxn2(n),row2(n))
        allocate(idxn3(min(m,n)),row3(min(m,n)))
-
+       
        call MatGetRow(A,i,col1,idxn1,row1,ierr)
        m=col1
        idxtmp=idxn1
@@ -758,19 +767,28 @@ contains
        counter=0
        pos1=1
        pos2=1
-       do while(pos1<=m .and. pos2<=n)
-          if(idxtmp(pos1)<idxn2(pos2)) then
-             pos1=pos1+1
-          elseif(idxtmp(pos1)==idxn2(pos2))then
-             counter=counter+1
-             idxn3(counter)=idxn2(pos2)
-             row3(counter)=rowtmp(pos1)*row2(pos2)
-             pos1=pos1+1
-             pos2=pos2+1
-          else
-             pos2=pos2+1
-          endif
-       enddo
+
+       !if(m /= n) print*, "error, m=",m, "n=",n
+       if(m == n) then
+          counter = m
+          row3 = rowtmp * row2
+          idxn3 = idxtmp
+       else 
+          do while(pos1<=m .and. pos2<=n)
+             if(idxtmp(pos1)<idxn2(pos2)) then
+                pos1=pos1+1
+             elseif(idxtmp(pos1)==idxn2(pos2))then
+                counter=counter+1
+                idxn3(counter)=idxn2(pos2)
+                row3(counter)=rowtmp(pos1)*row2(pos2)
+                pos1=pos1+1
+                pos2=pos2+1
+             else
+                pos2=pos2+1
+             endif
+          enddo
+       endif
+       
        call MatRestoreRow(B,i,col2,idxn2,row2,ierr)
 
        !print *,">i=",i,"idxn3=",idxn3,"row3=",row3
@@ -1159,6 +1177,97 @@ contains
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_axpy
 
+  subroutine mat_apx(Y, a, X, nx, ny, nz, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,intent(in)    ::  X 
+    PetscScalar,    intent(in)    ::a
+    Mat,intent(inout)   ::Y
+    PetscErrorCode,intent(out)    ::ierr
+    PetscLogEvent            ::  ievent
+    PetscInt :: ista, iend, col, col1
+    integer, intent(in) :: nx, ny, nz
+    PetscInt, allocatable :: idxn(:), idxn1(:), consts(:)
+    PetscScalar, allocatable :: row(:), row1(:)
+    PetscInt :: i, j
+    
+    call PetscLogEventRegister("mat_apx",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call mat_assemble(X, ierr)
+    call MatGetOwnershipRange(X, ista, iend, ierr)
+    
+    allocate(idxn(ny), row(ny), consts(ny), idxn1(ny), row1(ny))
+    consts = (/(i,i=0,ny-1)/)
+    
+    do i=ista, iend - 1
+       call MatGetRow(X, i, col, idxn, row, ierr)
+       col1 = col
+       row1 = 0.
+       do j = 1, col1
+          row1(mod(idxn(j), ny)+1) = row(j)          
+       enddo
+       
+       idxn1(:) = (i / nx) * ny + consts
+       row1 = row1 + a
+       call MatSetValues(Y, 1, i, ny, idxn1, row1, INSERT_VALUES, ierr)
+       call MatRestoreRow(X, i, col, idxn, row, ierr)
+    enddo
+    
+    deallocate(idxn, row, consts, idxn1, row1)
+    call PetscLogEventEnd(ievent, ierr)
+  end subroutine mat_apx
+
+  ! Y = a*X + b
+  ! both of a and b are scalars
+    subroutine mat_axpb(Y, a, X, b, nx, ny, nz, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,intent(in)    ::  X 
+    PetscScalar,    intent(in)    ::a,b
+    Mat,intent(inout)   ::Y
+    PetscErrorCode,intent(out)    ::ierr
+    PetscLogEvent            ::  ievent
+    PetscInt :: ista, iend, col, col1
+    integer, intent(in) :: nx, ny, nz
+    PetscInt, allocatable :: idxn(:), idxn1(:), consts(:)
+    PetscScalar, allocatable :: row(:), row1(:)
+    PetscInt :: i, j
+    
+    call PetscLogEventRegister("mat_apx",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call mat_assemble(X, ierr)
+    call MatGetOwnershipRange(X, ista, iend, ierr)
+    
+    allocate(idxn(ny), row(ny), consts(ny), idxn1(ny), row1(ny))
+    consts = (/(i,i=0,ny-1)/)
+    
+    do i=ista, iend - 1
+       call MatGetRow(X, i, col, idxn, row, ierr)
+       col1 = col
+       row1 = 0.
+       !convert sparse verctor to dense vector
+       do j = 1, col1
+          row1(mod(idxn(j), ny)+1) = row(j)          
+       enddo
+       
+       idxn1(:) = (i / nx) * ny + consts
+       row1 = a * row1 + b
+       call MatSetValues(Y, 1, i, ny, idxn1, row1, INSERT_VALUES, ierr)
+       call MatRestoreRow(X, i, col, idxn, row, ierr)
+    enddo
+    
+    deallocate(idxn, row, consts, idxn1, row1)
+    call PetscLogEventEnd(ievent, ierr)
+  end subroutine 
+
 
   ! -----------------------------------------------------------------------
   ! Compute Y = a*Y + X.
@@ -1402,6 +1511,9 @@ contains
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscksp.h>
 #include <petsc/finclude/petscpc.h>
+#include <petsc/finclude/petscviewerdef.h>
+#include <petsc/finclude/petscbagdef.h>
+    
     Mat,intent(in)::A
     Mat,intent(in)::b
     Mat,intent(out)::x
@@ -1414,6 +1526,8 @@ contains
     PetscReal                   ::  tol
     PetscBool::isGlobal
     PetscLogEvent            ::  ievent
+    PetscViewer :: viewer
+
     call PetscLogEventRegister("mat_solve",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     !PetscInt                    ::  its
@@ -1476,6 +1590,13 @@ contains
     !call vec_view(vec_x, ierr)
     ! call sleep(1)
     ! call vec_view(vec_b, ierr)
+
+    call PetscViewerBinaryOpen(PETSC_COMM_WORLD,"save.mat", &
+         1, viewer, ierr);
+
+    call MatView(A, viewer, ierr)
+    call VecView(vec_x, viewer, ierr);
+    call VecView(vec_b, viewer, ierr);
     
     call KSPDestroy(ksp,ierr)
     call VecDestroy(vec_b,ierr)
@@ -3044,5 +3165,195 @@ contains
     call VecDestroy(global_lrm_pos, ierr)
     call VecDestroy(global_lrm, ierr)
 
-  end subroutine 
+  end subroutine mat_max_min
+
+  subroutine mat_trid(A, B, C, nx, ny, nz, D, ierr)
+    implicit none    
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A, B, C
+    integer, intent(in) :: nx, ny, nz
+    Mat, intent(out) :: D
+    integer, intent(out) :: ierr
+    PetscInt :: i, ista, iend, ii, ik, im, jj
+    logical :: isGlobal
+    
+    PetscInt, allocatable :: idxnA(:), idxnB(:), idxnC(:), idxnD(:)
+    PetscScalar, allocatable :: rowA(:), rowB(:), rowC(:), rowD(:,:)
+    PetscInt :: colA, colB, colC, colD
+    PetscLogEvent   :: ievent
+    PetscScalar     :: val
+    
+    call PetscLogEventRegister("mat_trid", 0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call mat_assemble(A, ierr)
+    call mat_assemble(B, ierr)
+    call mat_assemble(C, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+
+    call mat_gettype(A, isGlobal, ierr)
+    call mat_create(D, nz, nz, nx*ny, isGlobal, ierr)
+
+    !print*, "nx=", nx, "ny=", ny, "nz=", nz
+    
+    allocate(idxnA(ny), idxnB(ny), idxnC(ny), idxnD(ny))
+    allocate(rowA(ny), rowB(ny), rowC(ny), rowD(3, ny))
+    rowD = 0.
+
+    idxnD = (/(ii,ii=0,ny-1)/)
+    
+    do i = ista, iend - 1
+       im = mod(i, nx)       
+       ik = i / nx
+       
+       call MatGetRow(A, i, colA, idxnA, rowA, ierr)
+       !print*, "colA=", colA       
+       do ii = 1, colA
+          rowD(1, mod(idxnA(ii),ny)+1) = rowA(ii)
+       enddo
+       call MatRestoreRow(A, i, colA, idxnA, rowA, ierr)
+       
+       call MatGetRow(B, i, colB, idxnB, rowB, ierr)
+        !  print*, "colB=", colB
+       do ii = 1, colB
+          rowD(2, mod(idxnB(ii),ny)+1) = rowB(ii)
+       enddo
+       call MatRestoreRow(B, i, colB, idxnB, rowB, ierr)       
+
+       call MatGetRow(C, i, colC, idxnC, rowC, ierr)
+       do ii = 1, colC
+         ! print*, "colC=", colC
+          rowD(3, mod(idxnC(ii),ny)+1) = rowC(ii)
+       enddo
+       call MatRestoreRow(C, i, colC, idxnC, rowC, ierr)
+
+       do ii = 1, ny
+          jj = (im*ny + idxnD(ii))*nz + ik
+          !print*, "jj=", jj
+          if(mod(jj,nz) == 0) then
+             call MatSetValues(D, 1, jj, 2, (/jj,jj+1/), rowD(2:3,ii), INSERT_VALUES, ierr)             
+          else if(mod(jj,nz) == nz-1) then
+             call MatSetValues(D, 1, jj, 2, (/jj-1,jj/), rowD(1:2,ii), INSERT_VALUES, ierr)
+          else 
+             call MatSetValues(D, 1, jj, 3, (/jj-1,jj,jj+1/), rowD(:,ii), INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+
+    !call mat_view(D, ierr)
+    deallocate(idxnA, idxnB, idxnC, idxnD)
+    deallocate(rowA, rowB, rowC, rowD)
+    
+    call PetscLogEventEnd(ievent,ierr)
+  end subroutine mat_trid
+
+    subroutine mat_trid1(A, nx, ny, nz, D, ierr)
+    implicit none    
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A
+    integer, intent(in) :: nx, ny, nz
+    Mat, intent(out) :: D
+    integer, intent(out) :: ierr
+    PetscInt :: i, ista, iend, ii, ik, im, jj
+    logical :: isGlobal
+    
+    PetscInt, allocatable :: idxnA(:), idxnB(:), idxnC(:), idxnD(:)
+    PetscScalar, allocatable :: rowA(:), rowB(:), rowC(:), rowD(:,:)
+    PetscInt :: colA, colB, colC, colD
+    PetscLogEvent            ::  ievent
+    PetscScalar :: val
+    
+    call PetscLogEventRegister("mat_trid1", 0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call mat_assemble(A, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+
+    call mat_gettype(A, isGlobal, ierr)
+    call mat_create(D, nz, 1, nx*ny, isGlobal, ierr)
+    
+    allocate(idxnA(ny), idxnB(ny), idxnC(ny), idxnD(ny))
+    allocate(rowA(ny), rowB(ny), rowC(ny), rowD(1, ny))
+    rowD = 0.
+
+    idxnD = (/(ii,ii=0,ny-1)/)
+    
+    do i = ista, iend - 1
+       im = mod(i, nx)       
+       ik = i / nx
+       
+       call MatGetRow(A, i, colA, idxnA, rowA, ierr)
+       !print*, "colA=", colA       
+       do ii = 1, colA
+          rowD(1, mod(idxnA(ii),ny)+1) = rowA(ii)
+       enddo
+       call MatRestoreRow(A, i, colA, idxnA, rowA, ierr)
+       
+       do ii = 1, ny
+          jj = (im*ny + idxnD(ii)) * nz + ik
+          !print*, "jj=", jj
+          call MatSetValues(D, 1, jj, 1, im*ny+idxnD(ii), rowD(1,ii), INSERT_VALUES, ierr)
+       enddo
+    enddo
+
+    !call mat_view(D, ierr)
+    deallocate(idxnA, idxnB, idxnC, idxnD)
+    deallocate(rowA, rowB, rowC, rowD)
+    
+    call PetscLogEventEnd(ievent,ierr)
+  end subroutine
+
+
+  subroutine mat_trid2(A,Anx,Any,Anz,D,Dnx,Dny,Dnz,ierr)
+    implicit none    
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A
+    integer, intent(in) :: Anx, Any, Anz
+    integer, intent(in) :: Dnx, Dny, Dnz    
+    Mat, intent(out) :: D
+    integer, intent(out) :: ierr
+    PetscInt :: i, ista, iend, ii, ik, im, jj, iRow, iCol, iDnx, iDny, iDnz
+    logical :: isGlobal
+    PetscInt :: idxnA(1)
+    PetscScalar :: rowA(1)
+    PetscInt :: colA
+    PetscLogEvent  ::  ievent
+    PetscScalar :: val
+
+    call PetscLogEventRegister("mat_trid2", 0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+    
+    call mat_assemble(A, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+
+    call mat_gettype(A, isGlobal, ierr)
+    call mat_create(D, Dnx, Dny, Dnz, isGlobal, ierr)
+    
+    do i = ista, iend - 1
+       iDnx = (i / Anx) / Dny
+       iDny = mod(i / Anx, Dny)
+       iDnz = mod(i, Anx)
+       iRow = iDnx + iDnz * Dnx
+       iCol = iDny + iDnz * Dny
+       call MatGetRow(A, i, colA, idxnA, rowA, ierr)
+       call MatSetValues(D, 1, iRow, 1, iCol, rowA, INSERT_VALUES, ierr)
+       call MatRestoreRow(A, i, colA, idxnA, rowA, ierr)
+    enddo
+
+    !call mat_view(D, ierr)
+    call PetscLogEventEnd(ievent,ierr)
+  end subroutine
+  
 end module dm_mat

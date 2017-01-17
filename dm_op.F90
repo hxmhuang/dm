@@ -11,9 +11,11 @@ module dm_op
 
   
   type(Matrix)  :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
-  type(Matrix)  :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2, NAG_MASK_Z1, NAG_MASK_Z2
+  type(Matrix)  :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2
+  type(Matrix)  :: NAG_MASK_Z1, NAG_MASK_Z2
   type(Matrix)  :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
-  type(Matrix)  :: REV_MASK_Z1, REV_MASK_Z2
+  type(Matrix)  :: REV_MASK_Z1, REV_MASK_Z2, ONE_REV_MASK_Z1, ONE_REV_MASK_Z2
+  type(Matrix)  :: REV_MASK_ZZ
   type(Matrix)  :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
   type(Matrix)  :: HF_MASK_Z1, HF_MASK_Z2
   type(Matrix)  :: ZEROS, ONES
@@ -33,7 +35,7 @@ module dm_op
   Mat  :: MAT_ALIGN_ROW
   Mat  :: MAT_SXD, MAT_SXU !left shift matrix, right shift matrix
   Mat  :: MAT_SYL, MAT_SYR !left shift matrix, right shift matrix
-  
+
   public :: OP_AXF, OP_AXB, OP_AYF, OP_AYB
   public :: OP_DXF, OP_DXB, OP_DYF, OP_DYB
   
@@ -47,7 +49,7 @@ module dm_op
   public :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
   public :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2, NAG_MASK_Z1, NAG_MASK_Z2
   public :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
-  public :: REV_MASK_Z1, REV_MASK_Z2
+  public :: REV_MASK_Z1, REV_MASK_Z2, REV_MASK_ZZ
   public :: HF_REV_MASK_Z1, HF_REV_MASK_Z2
   public :: HF_MASK_Z1, HF_MASK_Z2
   public :: ZEROS, ONES
@@ -147,10 +149,14 @@ contains
     
     REV_MASK_Z1 = ONES
     call dm_setvalues(REV_MASK_Z1, idxm, idxn, [(0)], zeros_mn, ierr)
-
+    ONE_REV_MASK_Z1 = ONES + REV_MASK_Z1
+    
     REV_MASK_Z2 = ONES
     call dm_setvalues(REV_MASK_Z2, idxm, idxn, [(k-1)], zeros_mn, ierr)
+    ONE_REV_MASK_Z2 = ONES + REV_MASK_Z2
 
+    REV_MASK_ZZ = REV_MASK_Z1 .em. REV_MASK_Z2
+    
     NAG_MASK_X1 = - MASK_X1
     NAG_MASK_X2 = - MASK_X2
     NAG_MASK_Y1 = - MASK_Y1
@@ -448,6 +454,10 @@ contains
     
     call mat_destroy(MAT_ALIGN_ROW, ierr)
 
+    call dm_destroy(ONE_REV_MASK_Z1, ierr)    
+    call dm_destroy(ONE_REV_MASK_Z2, ierr)
+
+    call dm_destroy(REV_MASK_ZZ, ierr)
   end subroutine 
 
   !****************************************
@@ -738,9 +748,9 @@ contains
        res = MAT_AXF_XY * A       
     endif
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -756,9 +766,9 @@ contains
        res = MAT_AXB_XY * A       
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -774,9 +784,9 @@ contains
        res = A * MAT_AYF_XY
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -792,9 +802,9 @@ contains
        res = A * MAT_AYB_XY
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -805,21 +815,21 @@ contains
     integer :: ierr
 
     call mat_assemble(A%x, ierr)
-    
-    call MatMatMatMult(MAT_R, A%x,  MAT_T, MAT_INITIAL_MATRIX, &
-         PETSC_DEFAULT_REAL, res%x, ierr)
-    
-    res = 0.5*((A+res)+(A .em. MASK_Z2))
 
     res%nx = A%nx
     res%ny = A%ny
     res%nz = A%nz
     res%isGlobal = A%isGlobal
-    
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
 
+    call MatMatMatMult(MAT_R, A%x,  MAT_T, MAT_INITIAL_MATRIX, &
+         PETSC_DEFAULT_REAL, res%x, ierr)
+    
+    !res = 0.5*((A+res)+(A .em. MASK_Z2))
+    res = 0.5 * (A .em. ONE_REV_MASK_Z2 + res)
+    
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
     call dm_set_implicit(res, ierr)
   end function 
 
@@ -827,22 +837,24 @@ contains
     type(Matrix), intent(in) :: A
     type(Matrix) :: res
     integer :: ierr
+    integer :: xtype
 
     call mat_assemble(A%x, ierr)
-    
-    call MatMatMatMult(MAT_P, A%x,  MAT_Q, MAT_INITIAL_MATRIX, &
-         PETSC_DEFAULT_REAL, res%x, ierr)
-    
-    res = 0.5*((A+res) +(A .em. MASK_Z1))
 
     res%nx = A%nx
     res%ny = A%ny
     res%nz = A%nz
     res%isGlobal = A%isGlobal
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    call MatMatMatMult(MAT_P, A%x,  MAT_Q, MAT_INITIAL_MATRIX, &
+         PETSC_DEFAULT_REAL, res%x, ierr)
+
+    !res = 0.5*((A+res) +(A .em. MASK_Z1))
+    res = 0.5 * (A .em. ONE_REV_MASK_Z1 + res)
+    
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)    
   end function 
@@ -858,9 +870,9 @@ contains
        res = MAT_DXF_XY * A
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -876,9 +888,9 @@ contains
        res = MAT_DXB_XY * A
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -890,9 +902,9 @@ contains
     
     res = MAT_DXB * MAT_AXF * A
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -908,9 +920,9 @@ contains
        res = A * MAT_DYF_XY
     endif
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -926,9 +938,9 @@ contains
        res = A * MAT_DYB_XY
     endif
     
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -940,9 +952,9 @@ contains
     
     res = A * MAT_AYF * MAT_DYB
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 
@@ -964,9 +976,9 @@ contains
     
     res = (res - A) .em. REV_MASK_Z2
 
-    if(A%xtype == MAT_XTYPE_IMPLICIT) then
-       call dm_destroy(A, ierr)
-    endif
+    ! if(A%xtype == MAT_XTYPE_IMPLICIT) then
+    !    call dm_destroy(A, ierr)
+    ! endif
 
     call dm_set_implicit(res, ierr)
   end function 

@@ -35,7 +35,7 @@ tiny:
 small:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 4 ./main -m 3 -n 2 -k 3 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
+	-@${MPIEXEC} -n 4 ./main -m 4 -n 2 -k 4 -ep 3.1 -debug -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
 
 middle:
 	make clean
@@ -48,7 +48,7 @@ middle:
 big:
 	make clean
 	make main 
-	-@${MPIEXEC} -n 16 ./main -m 300 -n 300 -k 40 -ep 3.1 -log_view -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
+	-@${MPIEXEC} -n 4 ./main -m 100 -n 100 -k 20 -ep 3.1 -log_view -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
 
 huge:
 	make clean

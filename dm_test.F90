@@ -2165,6 +2165,64 @@ contains
     call dm_destroy(B, ierr)
   end subroutine test_dm_max_min
 
+  subroutine test_dm_trid()
+    type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
+    integer         		:: m,n,k
+    integer                     :: pos1(3), pos2(3), pos3(3), pos4(3)
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    real(kind=8)    		:: a1,a2,a3
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable  :: array(:)
+    real(kind=8) :: m1, m2, m3, m4
+    type(Matrix) :: x, bb, x1
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+   
+    if(myrank==0) print *, "==============Test dm_trid=============="
+
+    A = (dm_seqs(m, n, k) - 1) * 0.01
+    B = dm_seqs(m, n, k)
+    C = (dm_seqs(m, n, k) + 0.5) * 0.01
+
+    D  = dm_trid(A, B, C)
+    bb = dm_trid1(A)
+    x  = dm_solve(D, bb)
+    x1 = dm_trid2(x, A%nx, A%ny, A%nz)
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+       if(myrank==0) print*, ">bb="
+       call dm_view(bb, ierr)
+       if(myrank==0) print*, ">x="
+       call dm_view(x, ierr)
+       if(myrank==0) print*, ">x1="
+       call dm_view(x1, ierr)
+    endif
+    
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)
+    call dm_destroy(bb, ierr)
+    call dm_destroy(x, ierr)
+    call dm_destroy(x1, ierr)
+  end subroutine
+  
   subroutine test_dm_sparse()
     type(Matrix)    		:: A,B,C,D,E,F,G,H,II,KK 
     type(Matrix)    		:: X,Y,Z,U,V,W 

@@ -338,11 +338,18 @@ contains
 
   subroutine dm_print_info(A, ierr)
     implicit none
-    type(Matrix), intent(inout) :: A
+    type(Matrix), intent(in) :: A
     integer, intent(out) :: ierr
+    integer :: myrank
 
-    write(*, '(A,A,I3,A,I3,A,I3,A,L3)') &
-         "Matrix Info:", "  nx=", A%nx, "  ny=", A%ny, "  nz=", A%nz, "  isGlobal=", A%isGlobal
+    call dm_comm_rank(myrank, ierr)
+
+    if(myrank == 0) then
+       write(*, '(A,A,I3,A,I3,A,I3,A,L3)') &
+            "Matrix Info:", "  nx=", A%nx, "  ny=", A%ny, "  nz=", A%nz, &
+            "  isGlobal=", A%isGlobal
+    endif
+    
   end subroutine dm_print_info
   ! -----------------------------------------------------------------------
   ! A=0 
@@ -382,7 +389,6 @@ contains
     call mat_constants(A%x,A%nx,A%ny,A%nz,real(1.0,8),ierr)
     call dm_set_implicit(A,ierr)
   end function dm_ones
-
 
   function dm_constants(m,n,k, value, isGlobal) result(A)
     implicit none
@@ -475,6 +481,10 @@ contains
     type(Matrix)                 ::  W
     integer						 ::  ierr
 
+    if(B%nx /= 0 .and. B%nx /= A%nx) then
+       print*, "WARNING: Reassign matrix with different size."
+    endif
+    
     B%isGlobal=A%isGlobal
     B%nx=A%nx
     B%ny=A%ny
@@ -540,10 +550,19 @@ contains
     type(Matrix),	intent(in)	::  A 
     real(kind=8),	intent(in)	::  alpha 
     type(Matrix)                ::	C
-    integer						::	ierr
+    integer		::	ierr
+    PetscScalar :: val
     call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
-    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
-    C=dm_add1(A,C)
+    !call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
+    !C=dm_add1(A,C)
+    
+    val = alpha
+    
+    call mat_apx(C%x, val, A%x, A%nx, A%ny, A%nz, ierr)
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+    
     call dm_set_implicit(C,ierr)
   end function dm_add2
 
@@ -642,8 +661,12 @@ contains
     integer						::	ierr
 
     call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
-    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
-    C=dm_minus1(A,C)
+    !call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr)
+    call mat_axpb(C%x, real(1, kind=8), A%x, -alpha, A%nx, A%ny, A%nz, ierr)
+    !C=dm_minus1(A,C)
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
     call dm_set_implicit(C,ierr)
   end function dm_minus2
 
@@ -665,8 +688,12 @@ contains
     integer						::	ierr
 
     call dm_create(C,A%nx,A%ny,A%nz,A%isGlobal,ierr)
-    call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
-    C=dm_minus1(C,A)
+    !call mat_constants(C%x,C%nx,C%ny,C%nz,alpha,ierr) 
+    !C=dm_minus1(C,A)
+    call mat_axpb(C%x, real(-1,kind=8), A%x, alpha, A%nx, A%ny, A%nz, ierr)
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
     call dm_set_implicit(C,ierr)
   end function dm_minus4
 
@@ -2413,5 +2440,66 @@ contains
        call mat_destroy(A%x, ierr)
     endif
   end subroutine
+
+  function dm_trid(A, B, C) result(D)
+    implicit none
+    type(Matrix), intent(in)  :: A,B,C
+    type(Matrix) :: D
+    integer :: ierr
+
+    D%isGlobal = A%isGlobal
+    D%nx = A%nz
+    D%ny = A%nz
+    D%nz = A%nx * A%ny
+    call mat_trid(A%x, B%x, C%x, A%nx, A%ny, A%nz, D%x, ierr)
+
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+    if(B%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(B%x, ierr)
+    endif
+    if(C%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(C%x, ierr)
+    endif
+    call dm_set_implicit(D, ierr)
+  end function
+
+  function dm_trid1(A) result(D)
+    implicit none
+    type(Matrix), intent(in)  :: A
+    type(Matrix) :: D
+    integer :: ierr
+
+    D%isGlobal = A%isGlobal
+    D%nx = A%nz 
+    D%ny = 1
+    D%nz = A%nx * A%ny
+    call mat_trid1(A%x, A%nx, A%ny, A%nz, D%x, ierr)
+
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+    call dm_set_implicit(D, ierr)
+  end function
+
+  function dm_trid2(A, Dnx, Dny, Dnz) result(D)
+    implicit none
+    type(Matrix), intent(in)  :: A
+    type(Matrix) :: D
+    integer,intent(in) :: Dnx, Dny, Dnz
+    integer :: ierr
+
+    D%isGlobal = A%isGlobal
+    D%nx = Dnx 
+    D%ny = Dny
+    D%nz = Dnz
+    call mat_trid2(A%x, A%nx, A%ny, A%nz, D%x,Dnx, Dny, Dnz, ierr)
+
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+    call dm_set_implicit(D, ierr)
+  end function
   
 end module dm
