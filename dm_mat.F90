@@ -1591,12 +1591,13 @@ contains
     ! call sleep(1)
     ! call vec_view(vec_b, ierr)
 
-    call PetscViewerBinaryOpen(PETSC_COMM_WORLD,"save.mat", &
-         1, viewer, ierr);
-
-    call MatView(A, viewer, ierr)
-    call VecView(vec_x, viewer, ierr);
-    call VecView(vec_b, viewer, ierr);
+    !! This following code save vector A, vec_x and vec_b to file save.mat
+    !! save.mat can be loaded into matlab
+    ! call PetscViewerBinaryOpen(PETSC_COMM_WORLD,"save.mat", &
+    !      1, viewer, ierr);
+    ! call MatView(A, viewer, ierr)
+    ! call VecView(vec_x, viewer, ierr);
+    ! call VecView(vec_b, viewer, ierr);
     
     call KSPDestroy(ksp,ierr)
     call VecDestroy(vec_b,ierr)
@@ -2919,47 +2920,89 @@ contains
   ! -----------------------------------------------------------------------
   !> Set the diagonal of A to constant value 
   ! -----------------------------------------------------------------------
-  subroutine mat_setdiag(A,value,ierr)
+  subroutine mat_setdiag(A, val, nx, ny, nz, ierr)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
     Mat,intent(inout)::A
-    PetscScalar,    intent(in)::value
+    PetscScalar,    intent(in)::val
     PetscErrorCode,intent(out)::ierr
     Vec::  x 
     PetscInt::  nrow,ncol 
     PetscBool:: isGlobal
     PetscLogEvent            ::  ievent
+    PetscInt :: ista, iend, i, ik, j
+    integer, intent(in) :: nx, ny, nz
+    
     call PetscLogEventRegister("mat_setdiag",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
     call mat_gettype(A,isGlobal,ierr)
     call MatGetSize(A,nrow,ncol,ierr)
-    if(nrow /= ncol) then
-       print *, "Error in mat_diag_set: the row number should equal to the column number"
-       stop
-    endif
-    if(isGlobal) then
-       call VecCreate(PETSC_COMM_WORLD,x,ierr)
-    else
-       call VecCreate(PETSC_COMM_SELF,x,ierr)
-    endif
-    call VecSetSizes(x,PETSC_DECIDE,nrow,ierr)
-    call VecSetFromOptions(x,ierr)
-    call VecSet(x,value,ierr)
-    !call VecAssemblyBegin(x,ierr)
-    !call VecAssemblyEnd(x,ierr)
-    !call mat_assemble(A,ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
 
-    call MatDiagonalSet(A,x,INSERT_VALUES,ierr)
-
-    call VecDestroy(x,ierr)
-
+    do i = ista, iend - 1
+       ik = i / nx
+       do j = 0, ny - 1
+          if(mod(i, nx) == j) then
+             call MatSetValue(A, i, j + ik * ny, val, INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+    
     call PetscLogEventEnd(ievent,ierr)
   end subroutine mat_setdiag
 
+  ! -----------------------------------------------------------------------
+  !> Set the diagonal of A to constant value 
+  ! -----------------------------------------------------------------------
+  subroutine mat_getdiag(A, C, nx, ny, nz, ierr)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    Mat,intent(in)::A
+    Mat, intent(out) :: C
+
+    PetscErrorCode,intent(out)::ierr
+    Vec::  x 
+    PetscInt::  nrow,ncol 
+    PetscBool:: isGlobal
+    PetscLogEvent            ::  ievent
+    PetscInt :: ista, iend
+    integer, intent(in) :: nx, ny, nz
+    PetscScalar :: val(1)
+    PetscInt :: i, j, ik
+    
+    call PetscLogEventRegister("mat_getdiag",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call mat_assemble(A, ierr)    
+    call mat_gettype(A, isGlobal, ierr)
+    call MatGetSize(A, nrow, ncol, ierr)
+
+    call mat_create(C, nx, 1, nz, isGlobal, ierr)
+    call mat_assemble(C, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+    val = 0.
+    do i = ista, iend - 1
+       ik = i / nx
+       do j = 0, ny - 1
+          if(mod(i, nx) == j) then
+             call MatGetValues(A, 1, i, 1, j+ik * ny, val(:), ierr)
+             if(val(1) /= 0) then
+                call MatSetValue(C, i, ik, val(1), INSERT_VALUES, ierr)
+             endif
+          endif
+       enddo
+    enddo
+    
+    call PetscLogEventEnd(ievent,ierr)
+  end subroutine 
+  
 
   subroutine mat_setcol(A,idxn,B,ierr)
     implicit none
@@ -3354,6 +3397,193 @@ contains
 
     !call mat_view(D, ierr)
     call PetscLogEventEnd(ievent,ierr)
+  end subroutine
+
+  function mat_inverse(A, nx, ny, nz) result(C)
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A
+    integer, intent(in) :: nx, ny, nz
+    Mat :: C
+    IS :: ISRows, ISCols
+    PetscInt, allocatable :: vrow(:), vcol(:)
+    MatFactorInfo :: info(MAT_FACTORINFO_SIZE)
+    integer :: ierr, i
+    
+    if(nz /= 1) then
+       print*, "error, functioninverse does not supported 3d matrix now"
+       stop
+    endif
+    
+    allocate(vrow(nx), vcol(ny))
+
+    vrow = (/(i, i=0, nx-1)/)
+    vcol = (/(i, i=0, ny-1)/)
+
+    call ISCreateGeneral(PETSC_COMM_WORLD,size(vrow),vrow, &
+         PETSC_COPY_VALUES,ISRows,ierr)
+
+    call ISCreateGeneral(PETSC_COMM_WORLD,size(vcol),vcol, &
+         PETSC_COPY_VALUES,ISCols,ierr)
+
+    call MatLUFactor(A, ISRows, ISCols, ierr)
+
+    info(1) = 2.0
+    print*, info(1)
+    !mfi%dt = 2.0
+    
+    deallocate(vrow, vcol)
+
+  end function mat_inverse
+
+  subroutine mat_find1(A, nx, ny, nk, C, nonzero_count, ierr) 
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A
+    integer, intent(in) :: nx, ny, nk
+    Mat, intent(out) :: C
+    integer, intent(out) :: nonzero_count
+    integer ierr
+    PetscInt :: ista, iend, i, j, k, col, ik
+    PetscInt, allocatable :: idxn(:)
+    PetscScalar, allocatable :: row(:)
+    integer :: cnt
+    PetscInt, allocatable :: local_idx(:)
+    Vec :: global_idx
+    logical :: isGlobal
+    integer :: COMM_TYPE
+    PetscInt :: vec_size
+    
+    call mat_assemble(A, ierr)
+    call mat_gettype(A, isGlobal, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nk))
+
+    cnt = 0
+    
+    do i = ista, iend-1
+       ik = i / nx
+       call MatGetRow(A, i, col, idxn, row, ierr)
+       do j = 1, col
+          if(row(j) /= 0.) then
+             cnt = cnt + 1                          
+             local_idx(cnt) = mod(idxn(j), ny) &
+                  + mod(i, nx) * ny + ik * nx * ny
+          endif
+       enddo
+       call MatRestoreRow(A, i, col, idxn, row, ierr)
+    enddo
+
+    if(isGlobal) then
+       COMM_TYPE = PETSC_COMM_WORLD
+    else
+       COMM_TYPE = PETSC_COMM_SELF
+    endif
+
+    call VecCreateMPIWithArray(COMM_TYPE, 1, cnt, PETSC_DECIDE, local_idx, &
+         global_idx, ierr)
+    
+    call VecGetOwnershipRange(global_idx, ista, iend, ierr)
+    call VecGetSize(global_idx, vec_size, ierr)
+    call mat_create(C, vec_size, 1, 1, isGlobal, ierr)
+    
+    ! call MatCreateMPIAIJWithArrays(COMM_TYPE, cnt, PETSC_DECIDE, &
+    !      PETSC_DECIDE, 1, (/(i,i=ista,iend-1)/), (/0/), &
+    !      local_idx(1:cnt), C, ierr)
+    call MatSetValues(C, cnt, (/(i,i=ista,iend-1)/), 1, (/0/), &
+         real(local_idx(1:cnt), kind=8), INSERT_VALUES, ierr)
+    
+    nonzero_count = vec_size
+    call VecDestroy(global_idx, ierr)
+    deallocate(idxn, row, local_idx)
+  end subroutine
+
+  subroutine mat_find2(A, nx, ny, nk, C, ierr) 
+    implicit none
+#include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscvec.h90>
+#include <petsc/finclude/petscmat.h>
+    
+    Mat, intent(in) :: A
+    integer, intent(in) :: nx, ny, nk
+    integer, intent(out), allocatable :: C(:)
+    integer ierr
+    PetscInt :: ista, iend, i, j, k, col, ik
+    PetscInt, allocatable :: idxn(:)
+    PetscScalar, allocatable :: row(:)
+    integer :: cnt
+    PetscScalar, allocatable :: local_idx(:)
+    Vec :: global_idx, local_global_idx
+    logical :: isGlobal
+    integer :: COMM_TYPE
+    PetscInt :: vec_size
+    VecScatter :: scatter
+    PetscScalar, POINTER :: C1(:)
+    
+    call mat_assemble(A, ierr)
+    call mat_gettype(A, isGlobal, ierr)
+    call MatGetOwnershipRange(A, ista, iend, ierr)
+
+    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nk))
+
+    cnt = 0
+    
+    do i = ista, iend-1
+       ik = i / nx
+       call MatGetRow(A, i, col, idxn, row, ierr)
+       do j = 1, col
+          if(row(j) /= 0.) then
+             cnt = cnt + 1                          
+             local_idx(cnt) = mod(idxn(j), ny) &
+                  + mod(i, nx) * ny + ik * nx * ny
+          endif
+       enddo
+       call MatRestoreRow(A, i, col, idxn, row, ierr)
+    enddo
+
+    if(isGlobal) then
+       COMM_TYPE = PETSC_COMM_WORLD
+    else
+       COMM_TYPE = PETSC_COMM_SELF
+    endif
+
+    call VecCreateMPIWithArray(COMM_TYPE, 1, cnt, PETSC_DECIDE, local_idx, &
+         global_idx, ierr)
+    call VecGetSize(global_idx, vec_size, ierr)
+
+    call VecScatterCreateToAll(global_idx, scatter, local_global_idx, ierr)
+
+    call VecScatterBegin(scatter, global_idx, local_global_idx, &
+         INSERT_VALUES, SCATTER_FORWARD, ierr)
+
+    call VecScatterEnd(scatter, global_idx, local_global_idx, &
+         INSERT_VALUES, SCATTER_FORWARD, ierr)
+
+    call VecScatterDestroy(scatter, ierr)
+
+    !print*, "nonzero_count=", vec_size
+    
+    allocate(C(vec_size))
+    call VecGetArrayF90(local_global_idx, C1, ierr)
+
+    !print*, "C1=", int(C1)
+    !print*, "size(C1)=", size(C1)
+    C = int(C1)
+    
+    call VecDestroy(global_idx, ierr)
+    call VecDestroy(local_global_idx, ierr)
+    
+    deallocate(idxn, row, local_idx)
+
   end subroutine
   
 end module dm_mat

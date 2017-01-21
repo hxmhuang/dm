@@ -28,6 +28,8 @@ module dm_op
 
   type(Matrix)  :: MAT_AXF_XY, MAT_AXB_XY, MAT_AYF_XY, MAT_AYB_XY
   type(Matrix)  :: MAT_DXF_XY, MAT_DXB_XY, MAT_DYF_XY, MAT_DYB_XY
+
+  type(Matrix)  :: MAT_COPY_EDGE_X, MAT_COPY_EDGE_Y
   
   Mat  :: MAT_P, MAT_Q !used for shift a matrix in diagonal direction.
   Mat  :: MAT_R, MAT_T !used for shift a matrix in diagonal direction.
@@ -46,7 +48,7 @@ module dm_op
   public :: DXC, DYC, DZC
   public :: CSUM , SHIFT
 
-  public :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2
+  public :: MASK_X1, MASK_X2, MASK_Y1, MASK_Y2, MASK_Z1, MASK_Z2, MASK_ZZ
   public :: NAG_MASK_X1, NAG_MASK_X2, NAG_MASK_Y1, NAG_MASK_Y2, NAG_MASK_Z1, NAG_MASK_Z2
   public :: REV_MASK_X1, REV_MASK_X2, REV_MASK_Y1, REV_MASK_Y2
   public :: REV_MASK_Z1, REV_MASK_Z2, REV_MASK_ZZ
@@ -54,6 +56,7 @@ module dm_op
   public :: HF_MASK_Z1, HF_MASK_Z2
   public :: ZEROS, ONES
   public :: TRIL_IM_K1, TRIU_JM_K1
+  public :: COPY_EDGE_X, COPY_EDGE_Y
   
 contains
 
@@ -385,6 +388,62 @@ contains
     enddo
     call mat_assemble(TRIU_JM_K1%x, ierr)
     !call dm_view(TRIU_JM_K1, ierr)
+
+    !***********************************************************
+    ! [0 0 0 0 0]
+    ! [1 1 0 0 0] 
+    ! [0 0 1 0 0]
+    ! [0 0 0 1 1]
+    ! [0 0 0 0 0]    
+    !***********************************************************    
+    call dm_create(MAT_COPY_EDGE_Y, n, n, 1, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_COPY_EDGE_Y%x, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / n
+       do in = 0, n - 1
+          if(in == 0 .and. mod(im, n) == 0) cycle
+          if(in == n-1 .and. mod(im,n) == n-1) cycle
+
+          if((mod(im,n) == in) .or.  &
+               (mod(im, n)==1   .and. in==0) .or. &
+               (mod(im, n)==n-2 .and. in==n-1)) then
+          call MatSetValue(MAT_COPY_EDGE_Y%x, im, in + ik * n, val, &
+               INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+    call mat_assemble(MAT_COPY_EDGE_Y%x, ierr)
+    !call dm_view(MAT_COPY_EDGE_Y, ierr)
+
+    !***********************************************************
+    ! [0 1 0 0 0]
+    ! [0 1 0 0 0] 
+    ! [0 0 1 0 0]
+    ! [0 0 0 1 0]
+    ! [0 0 0 1 0]    
+    !***********************************************************    
+    call dm_create(MAT_COPY_EDGE_X, m, m, 1, is_global, ierr)
+    val = 1.0
+    call MatGetOwnershipRange(MAT_COPY_EDGE_X%x, ista, iend, ierr)
+    do im = ista, iend - 1
+       ik = im / m
+       do in = 0, m - 1
+
+          if(in == 0 .and. mod(im, m) == 0) cycle
+          if(in == m-1 .and. mod(im,m) == m-1) cycle
+
+          if(mod(im,m) == in .or. &
+               (mod(im, m) == 0 .and. in==1) .or. &
+               (mod(im, m) == m-1 .and. in==m-2)) then
+          
+          call MatSetValue(MAT_COPY_EDGE_X%x, im, in + ik * m, val, &
+               INSERT_VALUES, ierr)
+          endif
+       enddo
+    enddo
+    call mat_assemble(MAT_COPY_EDGE_X%x, ierr)
+    !call dm_view(MAT_COPY_EDGE_X, ierr)
     
   end subroutine 
 
@@ -460,6 +519,10 @@ contains
 
     call dm_destroy(REV_MASK_ZZ, ierr)
     call dm_destroy(MASK_ZZ, ierr)
+
+    call dm_destroy(MAT_COPY_EDGE_X, ierr)
+    call dm_destroy(MAT_COPY_EDGE_Y, ierr)
+    
   end subroutine 
 
   !****************************************
@@ -1178,5 +1241,38 @@ contains
     endif
     call dm_set_implicit(res, ierr)
   end function 
-  
+
+  function COPY_EDGE_X(A) result(C)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: C
+    integer :: ierr
+
+    call mat_assemble(A%x, ierr)
+
+    C = MAT_COPY_EDGE_X * A
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+    
+    call dm_set_implicit(C, ierr)
+  end function 
+
+  function COPY_EDGE_Y(A) result(C)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: C
+    integer :: ierr
+
+    call mat_assemble(A%x, ierr)
+    !call MatMatMult(A, MAT_COPY_EDGE_Y, ierr)
+    C = A * MAT_COPY_EDGE_Y
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+    
+    call dm_set_implicit(C, ierr)
+  end function   
   end module dm_op

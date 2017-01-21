@@ -72,7 +72,7 @@ program main
   ! call test_dm_cube()
   ! call test_dm_abs()  
   ! call test_dm_pow()
-  ! call test_dm_solve()
+  !call test_dm_solve()
   ! call test_dm_setvalue()
   ! call test_dm_getsub()
   ! call test_dm_setvalues()
@@ -92,6 +92,14 @@ program main
   ! call test_dm_save3d()
   ! call test_dm_load3d()
 
+  call test_dm_getdiag()
+  call test_dm_setdiag()
+  call test_dm_gendiag()
+  !call test_dm_inverse()
+
+  call test_dm_find()
+  !call test_inv()
+  
   if(myrank==0) then
      print *, "****************************************"     
      print *, "*         Test Operator Matrices       *"
@@ -141,7 +149,8 @@ program main
   
   ! call test_CSUM() !for cumulative sum type 1,2,3
 
-  call test_SHIFT()
+  ! call test_SHIFT()
+  !call test_copy_edge()
   
   call FinalizeOperatorModule()  
   

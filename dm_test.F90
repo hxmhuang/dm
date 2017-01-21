@@ -1479,6 +1479,8 @@ contains
     G=dm_solve(E,F)
     H=E .inv. F
 
+    !X = dm_rand(m, m, 1, .true.)
+    
     !call dm_view(dm_ones(m, 1, k, .true.), ierr)
     
     if(debug) then
@@ -3838,5 +3840,320 @@ contains
     ! call dm_destroy(B, ierr)
     ! call dm_destroy(B1, ierr)
   end subroutine 
+
+  subroutine test_copy_edge()
+    use dm_op
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test copy_edge=============="
+
+    A = dm_seqs(2*m+1, 2*n+1, 1)
+    B = copy_edge_x(A) !shift on x-axis, forward
+    C = copy_edge_y(A) !shift on x-axis, backward
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+
+  end subroutine 
+
+  subroutine test_dm_getdiag()
+    use dm_op
+    implicit none
+    
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test dm_getdiag=============="
+
+    A = dm_seqs(2*m+1, 2*m+1, 1)
+    B = dm_getdiag(A)
+    C = dm_seqs(2*m+1, 2*m+1, 2)
+    D = dm_getdiag(C)
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)
+  end subroutine 
   
+  subroutine test_dm_setdiag()
+    use dm_op
+    implicit none
+    
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer                     :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test dm_setdiag=============="
+
+    A = dm_seqs(2*m+1, 2*m+1, 1)
+    B = A
+    call dm_setdiag(B, 3.3, ierr)
+    C = dm_ones(m, n, k)
+    D = C
+    call dm_setdiag(D, 2, ierr)
+
+    E = dm_zeros(m, n, k)
+    call dm_setdiag(E, 1.2, ierr)
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+       if(myrank==0) print*, ">E="
+       call dm_view(E, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)
+    call dm_destroy(E, ierr)
+  end subroutine 
+
+  subroutine test_dm_gendiag()
+    use dm_op
+    implicit none
+    
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer                     :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test dm_gendiag=============="
+
+    A = dm_gendiag(m, n, k, 2.0)
+    B = dm_gendiag(m, m, k, 2)    
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+  end subroutine 
+
+  subroutine test_dm_inverse()
+    use dm_op
+    implicit none
+    
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer                     :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    real(kind=8),allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test dm_inverse=============="
+
+    A = dm_gendiag(m, m, 1, 2.0)
+    B = dm_inverse(A)
+    C = dm_rand(n, n, 1)    
+    D = dm_inverse(C)
+    
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+    endif
+
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)    
+  end subroutine 
+
+  subroutine test_dm_find()
+    use dm_op
+    implicit none
+    
+    type(Matrix)    		:: A, B, C, D, E, F, G
+    type(Matrix)    		:: A1, A2, A3
+    integer         		:: m,n,k
+    integer                     :: myrank, mysize
+    real(kind=8)    		:: ep,alpha
+    logical         		:: debug = .false.
+    integer         		:: ierr
+    integer,allocatable    :: array(:)
+    integer :: i
+    
+    call dm_comm_rank(myrank,ierr)
+    call dm_comm_size(mysize,ierr)
+    call dm_option_int('-m',m,ierr)
+    call dm_option_int('-n',n,ierr)
+    call dm_option_int('-k',k,ierr)
+    call dm_option_real('-ep',ep,ierr)
+    call dm_option_bool('-debug',debug,ierr)
+
+    if(myrank == 0) print*, "==============Test dm_find=============="
+
+    A = dm_seqs(m, n, k) - 2
+    B = dm_find1(A)
+    C = dm_seqs(m, n, k) - 5
+    call dm_setvalues(C, (/0/), (/1/), (/0/), (/0/), ierr)
+    D = dm_find1(C)
+    E = dm_find1(dm_zeros(m, n, k))
+
+    call dm_find2(C, array)
+
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">B="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">D="
+       call dm_view(D, ierr)
+       if(myrank==0) print*, ">Array="
+       if(myrank==0) print*, array
+    endif
+
+    deallocate(array)
+    call dm_destroy(A, ierr)
+    call dm_destroy(B, ierr)
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)
+    call dm_destroy(E, ierr)
+  end subroutine 
+  
+  
+  ! subroutine test_inv()
+  !   use dm_op
+  !   type(Matrix)    		:: A, B, C, D, E, F, G
+  !   type(Matrix)    		:: A1, A2, A3
+  !   integer         		:: m,n,k
+  !   integer :: myrank, mysize
+  !   real(kind=8)    		:: ep,alpha
+  !   logical         		:: debug = .false.
+  !   integer         		:: ierr
+  !   real(kind=8),allocatable    :: array(:)
+  !   integer :: i
+    
+  !   call dm_comm_rank(myrank,ierr)
+  !   call dm_comm_size(mysize,ierr)
+  !   call dm_option_int('-m',m,ierr)
+  !   call dm_option_int('-n',n,ierr)
+  !   call dm_option_int('-k',k,ierr)
+  !   call dm_option_real('-ep',ep,ierr)
+  !   call dm_option_bool('-debug',debug,ierr)
+
+  !   if(myrank == 0) print*, "==============Test copy_inv=============="
+
+  !   A = dm_rand(m, m, 1)
+  !   B = 1 .inv. A
+  !   if(debug) then
+  !      if(myrank==0) print*, ">A="
+  !      call dm_view(A, ierr)
+  !      if(myrank==0) print*, ">B="
+  !      call dm_view(B, ierr)
+  !   endif
+
+  !   call dm_destroy(A, ierr)
+  !   call dm_destroy(B, ierr)
+
+  ! end subroutine   
 end module dm_test

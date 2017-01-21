@@ -140,6 +140,12 @@ module dm
      module procedure dm_setdiag3
   end interface dm_setdiag
 
+  interface dm_gendiag
+     module procedure dm_gendiag1
+     module procedure dm_gendiag2
+     module procedure dm_gendiag3
+  end interface dm_gendiag
+  
   interface dm_pow
      module procedure dm_pow1
      module procedure dm_pow2
@@ -150,6 +156,12 @@ module dm
      module procedure dm_copy
   end interface assignment(=)
 
+  interface
+     subroutine abort() bind(C, name="abort")
+     end subroutine abort
+  end interface
+
+  
   integer 	::  dm_nx
   integer 	::  dm_ny
   integer 	::  dm_nz
@@ -945,7 +957,9 @@ contains
     if((A%nx/=B%nx) .or. (A%ny/=B%ny) .or. (A%nz/=B%nz) &
          .or.  (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_emult: the A matrix &
-            &and B matrix should have the same distribution." 
+            &and B matrix should have the same distribution."
+       call abort()
+       !call backtrace()
        stop	
     endif
 
@@ -1450,7 +1464,7 @@ contains
   ! -----------------------------------------------------------------------
   function dm_solve(A,B) result(X)
     implicit none
-    type(Matrix),intent(in)  ::  A 
+    type(Matrix),intent(in)  :: A 
     type(Matrix),intent(in)  ::	B
     type(Matrix)             ::	X
     integer		     ::	ierr
@@ -1481,7 +1495,33 @@ contains
     endif
   end function dm_solve
 
-
+  function dm_inverse(A) result(C)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: W
+    type(Matrix) :: C
+    integer :: ierr
+    
+    if(A%nz /=1) then
+       print*, "dm_inverse does not support 3D matrix yet."
+       stop
+    endif
+    
+    if(A%nx /= A%ny) then
+       print*, "dm_inverse : Matrix A must be square matrix!"
+       stop
+    endif
+    
+    W = A
+    C%x = mat_inverse(W%x, A%nx, A%ny, A%nz)
+    C%nx = A%nx
+    C%ny = A%ny
+    C%nz = A%nz
+    
+    call dm_set_implicit(C, ierr)
+    
+  end function dm_inverse
+  
   ! -----------------------------------------------------------------------
   ! Load a standard row-cloumn file into a matrix 
   ! -----------------------------------------------------------------------
@@ -1554,7 +1594,98 @@ contains
     endif
   end subroutine 
   
+  subroutine dm_setdiag1(A, val, ierr)
+    implicit none
+    type(Matrix), intent(inout) :: A
+    real(kind=8) :: val
+    integer, intent(inout) :: ierr
+    
+    call mat_setdiag(A%x, val, A%nx, A%ny, A%nz, ierr)
 
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+  end subroutine 
+
+  subroutine dm_setdiag2(A, val, ierr)
+    implicit none
+    type(Matrix), intent(inout) :: A
+    real(kind=4) :: val
+    integer, intent(inout) :: ierr
+    
+    call dm_setdiag1(A, real(val,kind=8), ierr)
+  end subroutine 
+
+  subroutine dm_setdiag3(A, val, ierr)
+    implicit none
+    type(Matrix), intent(inout) :: A
+    integer :: val
+    integer, intent(inout) :: ierr
+    
+    call dm_setdiag1(A, real(val,kind=8), ierr)
+  end subroutine 
+
+  function dm_gendiag1(m, n, k, val, isGlobal) result(C)
+    implicit none
+    type(Matrix) :: C
+    logical, intent(in), optional :: isGlobal
+    integer :: ierr
+    integer, intent(in) :: m, n, k
+    real(kind=8), intent(in) :: val
+
+    if(present(isGlobal)) then
+       !call dm_zeros(C, m, n, k, isGlobal, ierr)
+       C = dm_zeros(m, n, k, isGlobal)       
+    else
+       !call dm_zeros(C, m, n, k, .true., ierr)
+       C = dm_zeros(m, n, k)              
+    endif
+
+    call dm_setdiag(C, val, ierr)
+    call dm_set_implicit(C, ierr)    
+  end function 
+
+  function dm_gendiag2(m, n, k, val, isGlobal) result(C)
+    implicit none
+    type(Matrix) :: C
+    logical, intent(in), optional :: isGlobal
+    integer :: ierr
+    integer, intent(in) :: m, n, k    
+    real, intent(in) :: val
+
+    C = dm_gendiag1(m, n, k, real(val, kind=8), isGlobal)
+    call dm_set_implicit(C, ierr)        
+  end function
+  
+  function dm_gendiag3(m, n, k, val, isGlobal) result(C)
+    implicit none
+    type(Matrix) :: C
+    logical, intent(in), optional :: isGlobal
+    integer :: ierr
+    integer, intent(in) :: m, n, k    
+    integer, intent(in) :: val
+
+    C = dm_gendiag1(m, n, k, real(val, kind=8), isGlobal)    
+    call dm_set_implicit(C, ierr)
+  end function
+
+  function dm_getdiag(A) result(C)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: C
+    integer :: ierr
+    
+    call mat_getdiag(A%x, C%x, A%nx, A%ny, A%nz, ierr)
+    C%nx = A%nx
+    C%ny = 1
+    C%nz = A%nz
+    C%isGlobal = A%isGlobal
+    
+    if(A%xtype==MAT_XTYPE_IMPLICIT) then
+       call mat_destroy(A%x, ierr)
+    endif
+  end function 
+  
   ! -----------------------------------------------------------------------
   ! A(m,n)=value 
   ! -----------------------------------------------------------------------
@@ -2350,35 +2481,35 @@ contains
   ! -----------------------------------------------------------------------
   ! Set the diagonal of A to constant value 
   ! -----------------------------------------------------------------------
-  subroutine dm_setdiag1(A,value,ierr) 
-    implicit none
-    type(Matrix),	intent(inout)	::  A 
-    real(kind=8),	intent(in)		::  value
-    integer							::	ierr
+  ! subroutine dm_setdiag1(A,value,ierr) 
+  !   implicit none
+  !   type(Matrix),	intent(inout)	::  A 
+  !   real(kind=8),	intent(in)		::  value
+  !   integer							::	ierr
 
-    call mat_setdiag(A%x,value,ierr)
-    call dm_set_explicit(A,ierr)
-  end subroutine dm_setdiag1
+  !   call mat_setdiag(A%x,value,ierr)
+  !   call dm_set_explicit(A,ierr)
+  ! end subroutine dm_setdiag1
 
-  subroutine dm_setdiag2(A,value,ierr) 
-    implicit none
-    type(Matrix),	intent(inout)	::  A 
-    real,			intent(in)		::  value
-    integer							::	ierr
+  ! subroutine dm_setdiag2(A,value,ierr) 
+  !   implicit none
+  !   type(Matrix),	intent(inout)	::  A 
+  !   real,			intent(in)		::  value
+  !   integer							::	ierr
 
-    call mat_setdiag(A%x,real(value,kind=8),ierr)
-    call dm_set_explicit(A,ierr)
-  end subroutine dm_setdiag2
+  !   call mat_setdiag(A%x,real(value,kind=8),ierr)
+  !   call dm_set_explicit(A,ierr)
+  ! end subroutine dm_setdiag2
 
-  subroutine dm_setdiag3(A,value,ierr) 
-    implicit none
-    type(Matrix),	intent(inout)	::  A 
-    integer,		intent(in)		::  value
-    integer							::	ierr
+  ! subroutine dm_setdiag3(A,value,ierr) 
+  !   implicit none
+  !   type(Matrix),	intent(inout)	::  A 
+  !   integer,		intent(in)		::  value
+  !   integer							::	ierr
 
-    call mat_setdiag(A%x,real(value,kind=8),ierr)
-    call dm_set_explicit(A,ierr)
-  end subroutine dm_setdiag3
+  !   call mat_setdiag(A%x,real(value,kind=8),ierr)
+  !   call dm_set_explicit(A,ierr)
+  ! end subroutine dm_setdiag3
 
 
   ! -----------------------------------------------------------------------
@@ -2501,5 +2632,45 @@ contains
     endif
     call dm_set_implicit(D, ierr)
   end function
-  
+
+  function dm_find1(A) result(C)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: C
+    integer :: ierr
+    integer :: nonzero_count
+
+    call mat_find1(A%x, A%nx, A%ny, A%nz, C%x, nonzero_count, ierr)
+
+    if(nonzero_count == 0) then
+       C%nx = 0
+       C%ny = 0
+       C%nz = 0
+    else
+       C%nx = nonzero_count
+       C%ny = 1
+       C%nz = 1
+    endif
+    C%isGlobal = A%isGlobal
+
+    !print*, "nonzero_count=", nonzero_count
+    
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+    call dm_set_implicit(C, ierr)
+  end function dm_find1
+
+  subroutine dm_find2(A, C) 
+    implicit none
+    type(Matrix), intent(in) :: A
+    integer, intent(out), allocatable :: C(:)
+    integer :: ierr
+
+    call mat_find2(A%x, A%nx, A%ny, A%nz, C, ierr)
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
+  end subroutine
 end module dm
