@@ -4046,24 +4046,24 @@ contains
 
     A = dm_gendiag(m, m, 1, 2.0)
     B = dm_inverse(A)
-    C = dm_rand(n, n, 1)    
-    D = dm_inverse(C)
+    ! C = dm_rand(n, n, 1)    
+    ! D = dm_inverse(C)
     
-    if(debug) then
-       if(myrank==0) print*, ">A="
-       call dm_view(A, ierr)
-       if(myrank==0) print*, ">B="
-       call dm_view(B, ierr)
-       if(myrank==0) print*, ">C="
-       call dm_view(C, ierr)
-       if(myrank==0) print*, ">D="
-       call dm_view(D, ierr)
-    endif
+    ! if(debug) then
+    !    if(myrank==0) print*, ">A="
+    !    call dm_view(A, ierr)
+    !    if(myrank==0) print*, ">dm_inverse(A)="
+    !    call dm_view(B, ierr)
+    !    if(myrank==0) print*, ">C="
+    !    call dm_view(C, ierr)
+    !    if(myrank==0) print*, ">dm_inverse(C)="
+    !    call dm_view(D, ierr)
+    ! endif
 
     call dm_destroy(A, ierr)
     call dm_destroy(B, ierr)
-    call dm_destroy(C, ierr)
-    call dm_destroy(D, ierr)    
+    ! call dm_destroy(C, ierr)
+    ! call dm_destroy(D, ierr)    
   end subroutine 
 
   subroutine test_dm_find()
@@ -4120,40 +4120,4 @@ contains
     call dm_destroy(E, ierr)
   end subroutine 
   
-  
-  ! subroutine test_inv()
-  !   use dm_op
-  !   type(Matrix)    		:: A, B, C, D, E, F, G
-  !   type(Matrix)    		:: A1, A2, A3
-  !   integer         		:: m,n,k
-  !   integer :: myrank, mysize
-  !   real(kind=8)    		:: ep,alpha
-  !   logical         		:: debug = .false.
-  !   integer         		:: ierr
-  !   real(kind=8),allocatable    :: array(:)
-  !   integer :: i
-    
-  !   call dm_comm_rank(myrank,ierr)
-  !   call dm_comm_size(mysize,ierr)
-  !   call dm_option_int('-m',m,ierr)
-  !   call dm_option_int('-n',n,ierr)
-  !   call dm_option_int('-k',k,ierr)
-  !   call dm_option_real('-ep',ep,ierr)
-  !   call dm_option_bool('-debug',debug,ierr)
-
-  !   if(myrank == 0) print*, "==============Test copy_inv=============="
-
-  !   A = dm_rand(m, m, 1)
-  !   B = 1 .inv. A
-  !   if(debug) then
-  !      if(myrank==0) print*, ">A="
-  !      call dm_view(A, ierr)
-  !      if(myrank==0) print*, ">B="
-  !      call dm_view(B, ierr)
-  !   endif
-
-  !   call dm_destroy(A, ierr)
-  !   call dm_destroy(B, ierr)
-
-  ! end subroutine   
 end module dm_test

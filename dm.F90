@@ -1495,32 +1495,6 @@ contains
     endif
   end function dm_solve
 
-  function dm_inverse(A) result(C)
-    implicit none
-    type(Matrix), intent(in) :: A
-    type(Matrix) :: W
-    type(Matrix) :: C
-    integer :: ierr
-    
-    if(A%nz /=1) then
-       print*, "dm_inverse does not support 3D matrix yet."
-       stop
-    endif
-    
-    if(A%nx /= A%ny) then
-       print*, "dm_inverse : Matrix A must be square matrix!"
-       stop
-    endif
-    
-    W = A
-    C%x = mat_inverse(W%x, A%nx, A%ny, A%nz)
-    C%nx = A%nx
-    C%ny = A%ny
-    C%nz = A%nz
-    
-    call dm_set_implicit(C, ierr)
-    
-  end function dm_inverse
   
   ! -----------------------------------------------------------------------
   ! Load a standard row-cloumn file into a matrix 
@@ -2672,5 +2646,28 @@ contains
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
-  end subroutine
+  end subroutine dm_find2
+
+  function dm_inverse(A) result(X)
+    implicit none
+    type(Matrix), intent(in) :: A
+    type(Matrix) :: X
+    integer :: ierr
+    character(len=200) :: msg
+    
+    if(A%nx /= A%ny .or. A%nz /= 1) then
+       write(msg, *) "dm_inverse: matrix dimension error! size(A)=", &
+            A%nx,A%ny,A%nz
+       
+       call dm_printf(msg, ierr)
+       call abort()
+    endif
+    
+    X%x = mat_inverse(A%x, A%nx)
+    X%nx = A%nx
+    X%ny = A%ny
+    X%nz = 1
+    call dm_set_implicit(X, ierr)
+    
+  end function dm_inverse
 end module dm

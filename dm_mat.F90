@@ -1527,7 +1527,7 @@ contains
     PetscBool::isGlobal
     PetscLogEvent            ::  ievent
     PetscViewer :: viewer
-
+    
     call PetscLogEventRegister("mat_solve",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     !PetscInt                    ::  its
@@ -3399,46 +3399,96 @@ contains
     call PetscLogEventEnd(ievent,ierr)
   end subroutine
 
-  function mat_inverse(A, nx, ny, nz) result(C)
+  function mat_inverse(A, m) result(C)
     implicit none
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
 #include <petsc/finclude/petscvec.h90>
 #include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscksp.h>
+#include <petsc/finclude/petscpc.h>
+#include <petsc/finclude/petscviewerdef.h>
+#include <petsc/finclude/petscbagdef.h>
     
     Mat, intent(in) :: A
-    integer, intent(in) :: nx, ny, nz
+    Mat :: A3D
+    integer, intent(in) :: m
     Mat :: C
-    IS :: ISRows, ISCols
-    PetscInt, allocatable :: vrow(:), vcol(:)
-    MatFactorInfo :: info(MAT_FACTORINFO_SIZE)
+    Vec :: B, X
     integer :: ierr, i
+    integer :: COMM_TYPE
+    logical :: isGlobal
+    PetscInt :: ista, iend
+    PetscScalar :: one, zero, val
+    KSP :: ksp
+    PC :: pc
+    PetscScalar :: tol
+    PetscLogEvent :: ievent
+
+    call PetscLogEventRegister("mat_inverse",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    call mat_assemble(A, ierr)
+    call mat_rep(A, m, m, 1, 1, 1, m, A3D, ierr)
+    call mat_assemble(A3D, ierr)
     
-    if(nz /= 1) then
-       print*, "error, functioninverse does not supported 3d matrix now"
-       stop
+    call mat_gettype(A, isGlobal, ierr)
+    if(isGlobal) then
+       COMM_TYPE = PETSC_COMM_WORLD
+    else
+       COMM_TYPE = PETSC_COMM_SELF
     endif
+
+    !!!Create B
+    call VecCreate(COMM_TYPE, B, ierr)
+    call VecSetSizes(B, PETSC_DECIDE, m*m, ierr)
+    call VecSetFromOptions(B, ierr)
+    call VecSetUp(B, ierr)
+    call VecGetOwnershipRange(B, ista, iend, ierr)
+
+    one = 1.0; zero = 0.
     
-    allocate(vrow(nx), vcol(ny))
-
-    vrow = (/(i, i=0, nx-1)/)
-    vcol = (/(i, i=0, ny-1)/)
-
-    call ISCreateGeneral(PETSC_COMM_WORLD,size(vrow),vrow, &
-         PETSC_COPY_VALUES,ISRows,ierr)
-
-    call ISCreateGeneral(PETSC_COMM_WORLD,size(vcol),vcol, &
-         PETSC_COPY_VALUES,ISCols,ierr)
-
-    call MatLUFactor(A, ISRows, ISCols, ierr)
-
-    info(1) = 2.0
-    print*, info(1)
-    !mfi%dt = 2.0
+    do i = ista, iend - 1
+       if(mod(i, m) == i / m) then
+          call VecSetValue(B, i, one, INSERT_VALUES, ierr)
+       else
+          call VecSetValue(B, i, zero, INSERT_VALUES, ierr)
+       endif
+    enddo
+    call vec_assemble(B, ierr)
     
-    deallocate(vrow, vcol)
+    call VecDuplicate(B, X, ierr)
+    call KSPCreate(COMM_TYPE, ksp, ierr)
+    call KSPSetOperators(ksp, A3D, A3D, ierr)
+    call KSPGetPC(ksp, pc, ierr)
+    call PCSetType(pc, PCJACOBI, ierr)
+    
+    tol = 1.0E-15
+    
+    ! call mat_view(A3D, ierr)
+    ! stop
+    
+    call KSPSetTolerances(ksp,tol,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL, &
+         PETSC_DEFAULT_INTEGER,ierr)
+    
+    call KSPSetFromOptions(ksp,ierr)
+    call KSPSolve(ksp, B, X,ierr)
 
-  end function mat_inverse
+    call mat_create(C, m, m, 1, isGlobal, ierr)
+    call VecGetOwnershipRange(X, ista, iend, ierr)
+
+    do i = ista, iend-1
+       call VecGetValues(X, 1, i, val, ierr)
+       call MatSetValues(C, 1, mod(i, m), 1, i/m, val, INSERT_VALUES, ierr)
+    enddo
+
+    !call mat_assemble(C)
+    call KSPDestroy(ksp, ierr)
+    call VecDestroy(X, ierr)
+    call VecDestroy(B, ierr)
+    call MatDestroy(A3D, ierr)
+    call PetscLogEventEnd(ievent, ierr)
+  end function 
 
   subroutine mat_find1(A, nx, ny, nk, C, nonzero_count, ierr) 
     implicit none

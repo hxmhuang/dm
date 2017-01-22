@@ -95,9 +95,9 @@ program main
   call test_dm_getdiag()
   call test_dm_setdiag()
   call test_dm_gendiag()
-  !call test_dm_inverse()
-
   call test_dm_find()
+  
+  call test_dm_inverse()  
   !call test_inv()
   
   if(myrank==0) then
@@ -124,7 +124,7 @@ program main
      print *, "****************************************"
   endif
   
-  call InitOperatorModule(2*m+1, 2*n+1, k)
+  !call InitOperatorModule(2*m+1, 2*n+1, k)
   
   ! call test_AXF()
   ! call test_AXB()
@@ -152,7 +152,7 @@ program main
   ! call test_SHIFT()
   !call test_copy_edge()
   
-  call FinalizeOperatorModule()  
+  !call FinalizeOperatorModule()  
   
   call dm_finalize(ierr)
 end program main
