@@ -3583,7 +3583,7 @@ contains
     call mat_gettype(A, isGlobal, ierr)
     call MatGetOwnershipRange(A, ista, iend, ierr)
 
-    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nk))
+    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nx))
 
     cnt = 0
     
@@ -3620,18 +3620,18 @@ contains
 
     call VecScatterDestroy(scatter, ierr)
 
-    !print*, "nonzero_count=", vec_size
-    
     allocate(C(vec_size))
     call VecGetArrayF90(local_global_idx, C1, ierr)
 
     !print*, "C1=", int(C1)
     !print*, "size(C1)=", size(C1)
+
+    !allocate(C(size(C1))) !array C must be deallocated by who call this function
     C = int(C1)
     
     call VecDestroy(global_idx, ierr)
     call VecDestroy(local_global_idx, ierr)
-    
+
     deallocate(idxn, row, local_idx)
 
   end subroutine

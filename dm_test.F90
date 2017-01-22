@@ -4046,24 +4046,24 @@ contains
 
     A = dm_gendiag(m, m, 1, 2.0)
     B = dm_inverse(A)
-    ! C = dm_rand(n, n, 1)    
-    ! D = dm_inverse(C)
+    C = dm_rand(n, n, 1)    
+    D = dm_inverse(C)
     
-    ! if(debug) then
-    !    if(myrank==0) print*, ">A="
-    !    call dm_view(A, ierr)
-    !    if(myrank==0) print*, ">dm_inverse(A)="
-    !    call dm_view(B, ierr)
-    !    if(myrank==0) print*, ">C="
-    !    call dm_view(C, ierr)
-    !    if(myrank==0) print*, ">dm_inverse(C)="
-    !    call dm_view(D, ierr)
-    ! endif
+    if(debug) then
+       if(myrank==0) print*, ">A="
+       call dm_view(A, ierr)
+       if(myrank==0) print*, ">dm_inverse(A)="
+       call dm_view(B, ierr)
+       if(myrank==0) print*, ">C="
+       call dm_view(C, ierr)
+       if(myrank==0) print*, ">dm_inverse(C)="
+       call dm_view(D, ierr)
+    endif
 
     call dm_destroy(A, ierr)
     call dm_destroy(B, ierr)
-    ! call dm_destroy(C, ierr)
-    ! call dm_destroy(D, ierr)    
+    call dm_destroy(C, ierr)
+    call dm_destroy(D, ierr)    
   end subroutine 
 
   subroutine test_dm_find()
@@ -4097,7 +4097,7 @@ contains
     D = dm_find1(C)
     E = dm_find1(dm_zeros(m, n, k))
 
-    call dm_find2(C, array)
+    array = dm_find2(C)
 
     if(debug) then
        if(myrank==0) print*, ">A="

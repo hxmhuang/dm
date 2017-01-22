@@ -307,6 +307,10 @@ contains
     type(Matrix),  intent(in)   ::  A
     integer,	   intent(out)	::  ierr 
     call mat_view(A%x,ierr)
+
+    if(A%xtype == MAT_XTYPE_IMPLICIT) then
+       call dm_destroy(A, ierr)
+    endif
   end subroutine dm_view
 
 
@@ -2635,10 +2639,10 @@ contains
     call dm_set_implicit(C, ierr)
   end function dm_find1
 
-  subroutine dm_find2(A, C) 
+  function dm_find2(A) result(C)
     implicit none
     type(Matrix), intent(in) :: A
-    integer, intent(out), allocatable :: C(:)
+    integer, allocatable :: C(:)
     integer :: ierr
 
     call mat_find2(A%x, A%nx, A%ny, A%nz, C, ierr)
@@ -2646,7 +2650,7 @@ contains
     if(A%xtype == MAT_XTYPE_IMPLICIT) then
        call dm_destroy(A, ierr)
     endif
-  end subroutine dm_find2
+  end function dm_find2
 
   function dm_inverse(A) result(X)
     implicit none
