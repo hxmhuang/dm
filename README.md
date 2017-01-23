@@ -13,7 +13,7 @@ This software is developed based on PETSc.
    
    `$ git clone -b maint https://bitbucket.org/petsc/petsc petsc`
 	   
-2. Set Environmental Variable before installing PETSC
+2. Set environmental variable before installing PETSC
    
    `$ export PETSC_DIR=[YOUR PETSC DIR]` </br>
    `$ export PETSC_ARCH=linux-gnu`

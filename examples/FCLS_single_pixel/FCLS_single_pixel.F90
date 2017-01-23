@@ -365,7 +365,7 @@ program main
 
   call dm_init1(ierr)
 
-  call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+  call dm_comm_rank(rank, ierr)
   
   N = 20
   allocate(r1(N), A(N, N), abundance(N))
