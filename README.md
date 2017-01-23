@@ -26,7 +26,7 @@ This software is developed based on PETSc.
 
 ## Install DM library
 
-1. Because DM library depends on pnetcdf, the path of pnetcdf libarary should be specified before compilation
+1. Because DM library depends on pnetcdf, the path of pnetcdf library should be specified before compilation
    
 	`$ export PATH_PNETCDF=[YOUR PNETCDF PATH]`
 	
@@ -44,15 +44,15 @@ This software is developed based on PETSc.
    
    `$ make lib`
    
-   If the compilation is successful, you can see the module files `*.mod` and a static libaray file
+   If the compilation is successful, you can see the module files `*.mod` and a static library file
    `"libdm.a"` generated in DM directory. 
 
 ## Compile your own code that depend on DM library
 
->	Your have to specify the DM library path and PNETCDF path by setting the enviromental varaibale 
-> 
+Your have to specify the DM library path and PNETCDF path by setting the environment variable
+ 
 >   `export PATH_DM=[YOUR DM LIBRARY]` </br>
 >   `export PATH_PNETCDF=[YOUR PNETCDF PATH]`
->   
->   Here is an example of [makefile](./examples/makefile) you can use in your own project after a minor modifiction.
+   
+   Here is an example of [makefile](./examples/makefile) you can use in your own project.
 
