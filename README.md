@@ -6,7 +6,7 @@ This software is developed based on PETSc.
 
 #Installation Guide:
 ## Pre-installation 
-> Some third-party libraries must be installed before including MPI compiler, PETSC library and library [pnetcdf](https://trac.mcs.anl.gov/projects/parallel-netcdf/wiki/Download), this installation only cover the process of PETSC and DM library installation.
+> Some third-party libraries must be installed including MPI compiler, PETSC and [pnetcdf](https://trac.mcs.anl.gov/projects/parallel-netcdf/wiki/Download) library, this installation only cover the process of PETSC and DM library installation.
 
 ## Install PETSC
 1. Download PETSC using git
