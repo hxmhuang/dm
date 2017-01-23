@@ -33,7 +33,8 @@ This software is developed based on PETSc.
 2. Download DM library from github
 	
    `$ git clone https://github.com/hxmhuang/dm.git .`
-	   
+   `$ git checkout 3D`	
+   
 3. There are many test cases in the DM source code, if you want to review the results of test cases, run 
 
 	`$ cd dm`	
