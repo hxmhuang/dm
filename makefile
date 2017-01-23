@@ -1,10 +1,6 @@
 
-#MOD_PATH=libs/pnetcdf/include/
-
-PNETCDF=${ESM_SOFT}/pnetcdf/
-
 CFLAGS	         =  
-FFLAGS	         =-Wno-tabs -I ${PNETCDF}/include -fbacktrace
+FFLAGS	         =-Wno-tabs -I ${PATH_PNETCDF}/include -fbacktrace
 CPPFLAGS         =
 FPPFLAGS         =
 LOCDIR           = src/ksp/ksp/examples/tutorials/
@@ -20,7 +16,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 main: ${OBJMAIN}  chkopts
-	-${FLINKER} -o main ${OBJMAIN} ${PETSC_KSP_LIB} ${PNETCDF}/lib/libpnetcdf.a
+	-${FLINKER} -o main ${OBJMAIN} ${PETSC_KSP_LIB} ${PATH_PNETCDF}/lib/libpnetcdf.a
 
 lib : 
 	make clean
