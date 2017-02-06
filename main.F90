@@ -95,34 +95,33 @@ program main
   call test_dm_getdiag()
   call test_dm_setdiag()
   call test_dm_gendiag()
-  call test_dm_find()
+   call test_dm_find()
   
-  call test_dm_inverse()  
-  !call test_inv()
+   call test_dm_inverse()  
   
-  if(myrank==0) then
-     print *, "****************************************"     
-     print *, "*         Test Operator Matrices       *"
-     print *, "****************************************"
-  endif
+  ! if(myrank==0) then
+  !    print *, "****************************************"     
+  !    print *, "*         Test Operator Matrices       *"
+  !    print *, "****************************************"
+  ! endif
   
-  call test_OP_AXF()
-  call test_OP_AXB()
+  ! call test_OP_AXF()
+  ! call test_OP_AXB()
   
-  call test_OP_AYF()
-  call test_OP_AYB()
+  ! call test_OP_AYF()
+  ! call test_OP_AYB()
 
-  call test_OP_DXF()  
-  call test_OP_DXB()
+  ! call test_OP_DXF()  
+  ! call test_OP_DXB()
 
-  call test_OP_DYF()  
-  call test_OP_DYB()
+  ! call test_OP_DYF()  
+  ! call test_OP_DYB()
 
-  if(myrank==0) then
-     print *, "****************************************"     
-     print *, "*            Test Operator Module      *"
-     print *, "****************************************"
-  endif
+  ! if(myrank==0) then
+  !    print *, "****************************************"     
+  !    print *, "*            Test Operator Module      *"
+  !    print *, "****************************************"
+  ! endif
   
   call InitOperatorModule(2*m+1, 2*n+1, k)
   

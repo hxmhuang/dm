@@ -3515,7 +3515,7 @@ contains
     call mat_assemble(A, ierr)
     call mat_gettype(A, isGlobal, ierr)
     call MatGetOwnershipRange(A, ista, iend, ierr)
-    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nk))
+    allocate(idxn(ny*nk), row(ny*nk), local_idx(ny*nk*nx))
 
     cnt = 0
     
@@ -3548,8 +3548,11 @@ contains
     ! call MatCreateMPIAIJWithArrays(COMM_TYPE, cnt, PETSC_DECIDE, &
     !      PETSC_DECIDE, 1, (/(i,i=ista,iend-1)/), (/0/), &
     !      local_idx(1:cnt), C, ierr)
+    
     call MatSetValues(C, cnt, (/(i,i=ista,iend-1)/), 1, (/0/), &
          real(local_idx(1:cnt), kind=8), INSERT_VALUES, ierr)
+
+    !print*, "local_idx=", local_idx
     
     nonzero_count = vec_size
     call VecDestroy(global_idx, ierr)
