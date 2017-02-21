@@ -13,8 +13,8 @@ EXAMPLESMATLAB   =
 DIRS		 =
 CLEANFILES       =
 
-PETSC_ARCH=linux-gnu-c-debug
-PETSC_DIR=/Users/sxzhang/Projects/petsc
+#PETSC_ARCH=linux-gnu-c-debug
+#PETSC_DIR=/Users/sxzhang/Projects/petsc
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

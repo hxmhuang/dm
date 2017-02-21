@@ -41,8 +41,9 @@ module dm_data
 contains
 
   subroutine dm_init(ierr)
+#include "petsc.h"
     integer, intent(out) :: ierr
-    call PetscInitialize(ierr)
+    call PetscInitialize(PETSC_NULL_CHARACTER,ierr) 
   end subroutine dm_init
 
   subroutine dm_finalize(ierr)
