@@ -95,7 +95,7 @@ program main
   call test_dm_getdiag()
   call test_dm_setdiag()
   call test_dm_gendiag()
-   call test_dm_find()
+  call test_dm_find()
   
    call test_dm_inverse()  
   

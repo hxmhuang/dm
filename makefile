@@ -18,10 +18,13 @@ include ${PETSC_DIR}/lib/petsc/conf/rules
 main: ${OBJMAIN}  chkopts
 	-${FLINKER} -o main ${OBJMAIN} ${PETSC_KSP_LIB} ${PATH_PNETCDF}/lib/libpnetcdf.a
 
-lib : 
-	make clean
-	make main
-	-@ar rc libdm.a ${OBJ}
+# lib : 
+# 	make clean
+# 	make main
+# 	-@ar rcs libdm.a ${OBJ}
+
+dmlib : $(OBJ)
+	@ar rcs libdm.a ${OBJ}
 
 tiny:
 	make clean
@@ -50,7 +53,6 @@ huge:
 	make clean
 	make main 
 	-@${MPIEXEC} -n 16 ./main -m 1000 -n 1000 -k 5 -ep 3.1 -log_view -ksp_type bcgs -pc_type bjacobi -sub_ksp_type preonly -sub_pc_type jacobi
-
 
 
 #include ${PETSC_DIR}/lib/petsc/conf/test
