@@ -2,6 +2,7 @@
 !> Distributed Matrix Computing Library
 ! -----------------------------------------------------------------------
 module dm_data
+  use dm_common
   implicit none
 #include "dm_type.h"
   
@@ -152,6 +153,25 @@ contains
 
   end subroutine
 
+  subroutine print3d(A, prefix)
+    implicit none
+#include "petsc.h"
+    Vec :: A, vout
+    character(len=*) :: prefix
+    VecScatter :: ctx
+    integer :: ierr
+    
+    call  VecScatterCreateToZero(A, ctx, vout, ierr);
+    ! scatter as many times as you need
+    call  VecScatterBegin(ctx, A, vout,INSERT_VALUES,SCATTER_FORWARD, ierr)
+    call  VecScatterEnd(ctx, A,vout,INSERT_VALUES,SCATTER_FORWARD, ierr)
+    ! destroy scatter context and local vector when no longer needed
+    call  VecScatterDestroy(ctx, ierr);
+    
+    call  VecDestroy(vout, ierr);
+
+  end subroutine
+  
   subroutine get_local_ptr3d(A, xx)
     implicit none
 #include "petsc.h"
@@ -161,9 +181,11 @@ contains
     integer :: ierr
     PetscScalar, pointer :: raw_ptr(:,:,:)
     PetscInt :: xs, xl, ys, yl, zs, zl
-
+    
     call VecGetDM(A, ada, ierr)
+    
     call DMDAVecGetArrayF90(ada, A, raw_ptr, ierr)
+    
     call DMDAGetCorners(ada,xs, ys, zs, &
          xl, yl, zl, ierr)
     
@@ -173,7 +195,52 @@ contains
     ! print*, "raw_ptr:", raw_ptr(xs:xs+xl-1, ys:ys+yl-1, zs:zs+zl-1)
 
   end subroutine
+
+!   subroutine get_corners(A, cor)
+!     implicit none
+! #include "petsc.h"
+!     Vec :: A
+!     type(corner), intent(out) :: cor 
+!     PetscInt :: xs, xl, ys, yl, zs, zl
+!     DM :: adm
+!     integer :: ierr
+
+!     call assert(size(starts) == size(ends) &
+!          .and. size(starts) > 0, &
+!          __FILE__, __LINE__)
     
+!     call VecGetDM(A, adm, ierr)
+    
+!     select case(size(starts))
+!     case (1)
+!        call DMDAGetCorners(adm, xs, &
+!             PETSC_NULL_INTEGER, &
+!             PETSC_NULL_INTEGER, &
+!             xl, PETSC_NULL_INTEGER, &
+!             PETSC_NULL_INTEGER, ierr)
+!        cor%xs = xs
+!        cor%xe = xs + xl - 1;
+!     case (2)
+!        call DMDAGetCorners(adm, xs, &
+!             ys, &
+!             PETSC_NULL_INTEGER, &
+!             xl, yl, &
+!             PETSC_NULL_INTEGER, ierr)
+!        cor%xs = xs
+!        cor%ys = ys
+!        cor%xe = xs + xl - 1
+!        cor%ye = ys + yl - 1
+!     case (3)
+!        call DMDAGetCorners(adm, starts(1), &
+!             starts(2), &
+!             starts(3), &
+!             ends(1), &
+!             ends(2), &
+!             ends(3), ierr)
+
+!     end select
+!   end subroutine
+     
   ! -----------------------------------------------------------------------
   ! A=1. 
   ! -----------------------------------------------------------------------
@@ -234,7 +301,7 @@ contains
 
        call DMDACreate2d(PETSC_COMM_WORLD, &
          &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,        &
-         &     DMDA_STENCIL_BOX, m,n, PETSC_DECIDE,      &
+         &     DMDA_STENCIL_STAR, m,n, PETSC_DECIDE,      &
          &     PETSC_DECIDE,dof,s,                       &
          &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,    &
          &     ada,ierr)
@@ -257,7 +324,7 @@ contains
        
        call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,               &
             &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
-            &     DMDA_STENCIL_BOX, m,n,k,PETSC_DECIDE,PETSC_DECIDE,      &
+            &     DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
             &     PETSC_DECIDE,dof,s,                                     &
             &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
             &     PETSC_NULL_INTEGER,ada,ierr)
@@ -277,6 +344,64 @@ contains
     call PetscLogEventEnd(ievent,ierr)
   end subroutine data_constants
 
+  subroutine data_rand(A, t_shape, ierr)
+    implicit none
+#include "petsc.h"
+
+    Vec, intent(out):: A
+    DM :: ada
+    PetscErrorCode, intent(out) ::ierr
+    integer :: t_shape(:)
+    PetscInt :: m, n, k
+    integer :: num_dim
+    PetscInt :: xs, ys, zs, xl, yl, zl
+    PetscInt::  ista,iend,ilocal
+    PetscInt,   allocatable::idxm(:),idxn(:)
+    PetscScalar,allocatable::row(:)
+    integer :: i,j
+    PetscLogEvent            ::  ievent
+    integer :: dof = 1, s = 1
+    PetscRandom :: rctx
+    
+    call PetscLogEventRegister("data_rand",0, ievent, ierr)
+    call PetscLogEventBegin(ievent,ierr)
+
+    num_dim = size(t_shape)
+
+    m = t_shape(1)
+    if(num_dim >= 2) n = t_shape(2)
+    if(num_dim >= 3) k = t_shape(3)
+
+    call PetscRandomCreate(PETSC_COMM_WORLD, rctx, ierr)
+
+    select case(num_dim)
+    case (1)
+       call DMDACreate1d(PETSC_COMM_WORLD, &
+            &     DM_BOUNDARY_NONE,        &
+            &     m,  dof, s,     &
+            &     PETSC_NULL_INTEGER,ada,ierr)
+    case (2)
+       call DMDACreate2d(PETSC_COMM_WORLD, &
+            &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,        &
+            &     DMDA_STENCIL_STAR, m,n, PETSC_DECIDE,     &
+            &     PETSC_DECIDE,dof,s,                       &
+            &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,    &
+            &     ada,ierr)
+
+    case (3)
+       call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,               &
+            &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
+            &     DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
+            &     PETSC_DECIDE,dof,s,                                     &
+            &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
+            &     PETSC_NULL_INTEGER,ada,ierr)
+    end select
+
+   call DMCreateGlobalVector(ada, A, ierr)
+   call VecSetRandom(A, rctx)
+   call PetscLogEventEnd(ievent,ierr)
+  end subroutine 
+  
   subroutine data_plus1(A, B, ierr) 
     implicit none
 #include "petsc.h"
@@ -395,13 +520,13 @@ contains
        call DMDAVecGetArrayF90(B_dm, B, b_1d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_1d(xs:xe) = a_1d(xs:xe) + b_1d(xs:xe)
-       case (2)
+       case (type_minus)
           a_1d(xs:xe) = a_1d(xs:xe) - b_1d(xs:xe)
-       case (3)
+       case (type_mult)
           a_1d(xs:xe) = a_1d(xs:xe) * b_1d(xs:xe)
-       case (4)
+       case (type_divd)
           a_1d(xs:xe) = a_1d(xs:xe) / b_1d(xs:xe)
        end select
 
@@ -412,13 +537,13 @@ contains
        call DMDAVecGetArrayF90(B_dm, B, b_2d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_2d(xs:xe, ys:ye) = a_2d(xs:xe, ys:ye) + b_2d(xs:xe, ys:ye)
-       case (2)
+       case (type_minus)
           a_2d(xs:xe, ys:ye) = a_2d(xs:xe, ys:ye) - b_2d(xs:xe, ys:ye)
-       case (3)
+       case (type_mult)
           a_2d(xs:xe, ys:ye) = a_2d(xs:xe, ys:ye) * b_2d(xs:xe, ys:ye)
-       case (4)
+       case (type_divd)
           a_2d(xs:xe, ys:ye) = a_2d(xs:xe, ys:ye) / b_2d(xs:xe, ys:ye)
        end select
 
@@ -429,16 +554,16 @@ contains
        call DMDAVecGetArrayF90(B_dm, B, b_3d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_3d(xs:xe, ys:ye, zs:ze) = a_3d(xs:xe, ys:ye, zs:ze) + &
                b_3d(xs:xe, ys:ye, zs:ze)
-       case (2)
+       case (type_minus)
           a_3d(xs:xe, ys:ye, zs:ze) = a_3d(xs:xe, ys:ye, zs:ze) - &
                b_3d(xs:xe, ys:ye, zs:ze)
-       case (3)
+       case (type_mult)
           a_3d(xs:xe, ys:ye, zs:ze) = a_3d(xs:xe, ys:ye, zs:ze) * &
                b_3d(xs:xe, ys:ye, zs:ze)
-       case (4)
+       case (type_divd)
           a_3d(xs:xe, ys:ye, zs:ze) = a_3d(xs:xe, ys:ye, zs:ze) / &
                b_3d(xs:xe, ys:ye, zs:ze)
        end select
@@ -499,13 +624,13 @@ contains
        call DMDAVecGetArrayF90(C_dm, C, c_1d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_1d(xs:xe) = b_1d(xs:xe) + c_1d(xs:xe)
-       case (2)
+       case (type_minus)
           a_1d(xs:xe) = b_1d(xs:xe) - c_1d(xs:xe)
-       case (3)
+       case (type_mult)
           a_1d(xs:xe) = b_1d(xs:xe) * c_1d(xs:xe)
-       case (4)
+       case (type_divd)
           a_1d(xs:xe) = b_1d(xs:xe) / c_1d(xs:xe)
        end select
 
@@ -518,13 +643,13 @@ contains
        call DMDAVecGetArrayF90(C_dm, C, c_2d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_2d(xs:xe, ys:ye) = b_2d(xs:xe, ys:ye) + c_2d(xs:xe, ys:ye)
-       case (2)
+       case (type_minus)
           a_2d(xs:xe, ys:ye) = b_2d(xs:xe, ys:ye) - c_2d(xs:xe, ys:ye)
-       case (3)
+       case (type_mult)
           a_2d(xs:xe, ys:ye) = b_2d(xs:xe, ys:ye) * c_2d(xs:xe, ys:ye)
-       case (4)
+       case (type_divd)
           a_2d(xs:xe, ys:ye) = b_2d(xs:xe, ys:ye) / c_2d(xs:xe, ys:ye)
        end select
 
@@ -537,16 +662,16 @@ contains
        call DMDAVecGetArrayF90(C_dm, C, c_3d, ierr)
 
        select case(op_type)
-       case (1)
+       case (type_plus)
           a_3d(xs:xe, ys:ye, zs:ze) = b_3d(xs:xe, ys:ye, zs:ze) + &
                c_3d(xs:xe, ys:ye, zs:ze)
-       case (2)
+       case (type_minus)
           a_3d(xs:xe, ys:ye, zs:ze) = b_3d(xs:xe, ys:ye, zs:ze) - &
                c_3d(xs:xe, ys:ye, zs:ze)
-       case (3)
+       case (type_mult)
           a_3d(xs:xe, ys:ye, zs:ze) = b_3d(xs:xe, ys:ye, zs:ze) * &
                c_3d(xs:xe, ys:ye, zs:ze)
-       case (4)
+       case (type_divd)
           a_3d(xs:xe, ys:ye, zs:ze) = b_3d(xs:xe, ys:ye, zs:ze) / &
                c_3d(xs:xe, ys:ye, zs:ze)
        end select
@@ -561,6 +686,4 @@ contains
     
     call PetscLogEventEnd(ievent,ierr)
   end subroutine 
-
-  
 end module 

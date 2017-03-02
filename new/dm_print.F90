@@ -39,7 +39,7 @@ contains
     real(kind=8),intent(in) :: arr(:)
     
     write(*,"(A)"), msg
-    write(*, "(5X, 100g10.5)"), arr
+    write(*, "(5X, 100g12.5)"), arr
 
   end subroutine
 
@@ -63,7 +63,7 @@ contains
     print*, msg
 
     do i = 1, dim(2)
-       write(*,"(5X, 100g10.5)") arr(i, :)
+       write(*,"(5X, 100g12.5)") arr(i, :)
     enddo
 
   end subroutine
@@ -95,7 +95,7 @@ contains
     do k = 1, dim(3)
        write(*,"(4X, A, I0.1)"), "k = ",k
        do j = 1, dim(2)
-          write(*,"(5X, 100g10.5)") arr(:,j,k)!)(/(arr(i,j,k), i=0,dim(1)-1)/)
+          write(*,"(5X, 100g12.5)") arr(:,j,k)
        enddo
     enddo
   end subroutine
@@ -113,7 +113,8 @@ contains
     do k = 1, dim(3)
        write(*,"(4X, A, I0.1)"), "k = ",k
        do j = 1, dim(2)
-          write(*,"(5X, 100g10.5)") (/(arr(i,j,k), i=0,dim(1)-1)/)
+          !(/(arr(i,j,k), i=0,dim(1)-1)/)          
+          write(*,"(5X, 100g12.5)") arr(:,j,k) 
        enddo
     enddo
   end subroutine
@@ -131,7 +132,7 @@ contains
     do k = 1, dim(3)
        write(*,"(4X, A, I0.1)"), "k = ",k
        do j = 1, dim(2)
-          write(*,"(5X, 100g10.5)") arr(:,j,k)
+          write(*,"(5X, 100g12.5)") arr(:,j,k)
        enddo
     enddo
   end subroutine

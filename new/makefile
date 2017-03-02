@@ -13,29 +13,25 @@ EXAMPLESMATLAB   =
 DIRS		 =
 CLEANFILES       =
 
-#PETSC_ARCH=linux-gnu-c-debug
-#PETSC_DIR=/Users/sxzhang/Projects/petsc
+#--------------------------------------------------------------------------
 
-include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
+all:
+	@make clean
+	echo "preprocessing files..."
+	@sh ./pre.sh
+	@cd build && make all
+	cp build/main ./
 
-OBJS_FUNC =dm_func_consts.o dm_func_ones.o
-OBJS=dm_data.o dm_print.o c_gettimeofday.o dm_common.o dm_tensor.o dm_expr.o ${OBJS_FUNC} dm_basics.o
-OBJ_MAIN=${OBJS} main.o
+clean:
+	cd build && make clean
+	cp build/main ./
+#--------------------------------------------------------------------------
+
+# PYTHON = python
+
+# TESTEXAMPLES_C_PYTHON       = ex1.PETSc runex1 runex1py ex1.rm
+# TESTEXAMPLES_FORTRAN_PYTHON = ex1f.PETSc runex1f ex1f.rm
 
 #--------------------------------------------------------------------------
 
-all: ${OBJ_MAIN} chkopts
-	-${FLINKER} -o main ${OBJ_MAIN} ${PETSC_KSP_LIB}
-	-rm *.o *.mod
-
-#--------------------------------------------------------------------------
-
-PYTHON = python
-
-TESTEXAMPLES_C_PYTHON       = ex1.PETSc runex1 runex1py ex1.rm
-TESTEXAMPLES_FORTRAN_PYTHON = ex1f.PETSc runex1f ex1f.rm
-
-#--------------------------------------------------------------------------
-
-include ${PETSC_DIR}/lib/petsc/conf/test
+#include ${PETSC_DIR}/lib/petsc/conf/test

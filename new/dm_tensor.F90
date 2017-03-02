@@ -10,31 +10,46 @@ module dm_tensor
   public :: tensor_new, tensor_destroy
   
   integer, parameter :: zero3(3) = (/0,0,0/)
+
+  type grid
+     character(1) :: grid_type !'B' or 'C'
+     type(tensor), pointer :: dx_3d => null()
+     type(tensor), pointer :: dy_3d => null()
+     type(tensor), pointer :: dz_3d => null()     
+  end type grid
   
   type tensor
-     !the left and right leaf for the tree
-     type(tensor), pointer :: left => null(), right => null()
-
-     !node type, 0 for data, 1 for '+', 2 for '-', 3 for '*', 4 for '/'
-     integer :: node_type = 0
-
      !dim and shape should not be specified by user!
      integer :: m_dim = 0, m_shape(3) = zero3 
-
-     !the pointers used to point petsc raw data
-     real(kind=8), pointer :: data1d(:) => null(), &
-          data2d(:,:) => null(), data3d(:,:,:) => null()
      
      Vec :: data = 0
-     !DM  :: data_dm = 0
 
      !check if it is an implicit variable
      logical :: is_implicit = .false.
+
+     logical :: is_field = .false.
+     integer :: grid_pos
+!     type(grid) :: 
   end type tensor
+  
+  !here we use a trick to extract range information from an empty array
+  !see find_range function
+  integer, allocatable :: r(:)
   
 contains
 
-  subroutine display(objA, prefix)
+  function find_range(range) result(res)
+    implicit none
+    integer, intent(inout) :: range(:)
+    integer :: res(2)
+
+    !print*, size(range)
+    res(1) = (loc(range) - loc(r)) / 4
+    res(2) = ((loc(range) + size(range) * 4) - loc(r) - 4)/4
+
+  end function
+  
+  subroutine display2(objA, prefix)
     type(tensor), intent(in),target :: objA
     type(tensor), pointer :: A
     character(len=*), optional, intent(in) :: prefix
@@ -50,7 +65,7 @@ contains
        write(*, "(A)") "ans = "
     endif
     
-    write(*, "(4X, A, 100I2)") "node_type : ", A%node_type
+    !write(*, "(4X, A, 100I2)") "node_type : ", A%node_type
     
     write(*, "(4X, A)", advance="no") "shape : ["
     do i = 1, A%m_dim
@@ -75,11 +90,11 @@ contains
           call dm_print("data=", x3)
        end select
     else
-       write(*, "(4X, A, Z16.6)"), "left  = 0x", loc(A%left)
-       write(*, "(4X, A, Z16.6)"), "right = 0x", loc(A%right)       
+       !write(*, "(4X, A, Z16.6)"), "left  = 0x", loc(A%left)
+       !write(*, "(4X, A, Z16.6)"), "right = 0x", loc(A%right)       
     end if
     write(*,*) ""    
-  end subroutine display
+  end subroutine
 
   function tensor_new(m_shape) result(A)
     implicit none
@@ -193,57 +208,53 @@ contains
     end if
   end subroutine 
 
-  !naively copy the data member and pointers from B to A
+  subroutine tensor_copy_structure(A, B)
+    implicit none
+    type(tensor), intent(inout) :: A
+    type(tensor), intent(in) :: B
+
+    A%m_dim = B%m_dim
+    A%m_shape = B%m_shape
+    
+  end subroutine
+  
+  !> naively copy the data member and pointers from B to A
   subroutine tensor_copy(A, B)
     implicit none
     type(tensor), intent(inout) :: A
     type(tensor), intent(in) :: B
     integer :: ierr
     
-    A%m_dim = B%m_dim
-    A%m_shape = B%m_shape
-    A%left  => B%left
-    A%right => B%right
-    A%node_type = B%node_type
-    
+    call tensor_copy_structure(A, B)
     call data_destroy(A%data,  ierr)
 
     A%data = B%data
   end subroutine
 
-  !deep copy tensor, all data are copied from B to A
+  !> deep copy tensor, all data are copied from B to A
   subroutine tensor_deep_copy(A, B)
     implicit none
     type(tensor), intent(out) :: A
-    type(tensor), intent(in) :: B
+    type(tensor), intent(in)  :: B
     integer :: ierr
-    
-    A%m_dim = B%m_dim
-    A%m_shape = B%m_shape
-    A%left => B%left
-    A%right => B%right
-    A%node_type = B%node_type
-    
+
+    call tensor_copy_structure(A, B)
     call data_destroy(A%data,  ierr) !safe destroy
     call data_clone(A%data, B%data, ierr)
   end subroutine tensor_deep_copy
 
-  !duplicate tensor structure, but the data is not copied
+  !> duplicate tensor structure, the data is allocated but not copied
   subroutine tensor_duplicate(A, B)
     implicit none
     type(tensor), intent(out) :: A
     type(tensor), intent(in) :: B
     integer :: ierr
     
-    A%m_dim = B%m_dim
-    A%m_shape = B%m_shape
-    A%left => B%left
-    A%right => B%right
-    A%node_type = B%node_type
-    
+    call tensor_copy_structure(A, B)
     call data_destroy(A%data,  ierr) !safe destroy
     call data_duplicate(A%data,  B%data,  ierr)
   end subroutine 
+
   
 end module 
 
