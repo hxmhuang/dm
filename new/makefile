@@ -1,6 +1,6 @@
 
 CFLAGS           =
-FFLAGS		 =
+FFLAGS		 = -fcheck=all -fbacktrace
 CPPFLAGS         =
 FPPFLAGS         =
 LOCDIR		 = tutorials/python/

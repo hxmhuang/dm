@@ -16,7 +16,6 @@
 #define arthimic        1
 #define math_function   2
 
-
 #define type_data   abstract_data*256+0
 #define type_ref    abstract_data*256+1
 #define type_scalar abstract_data*256+2
@@ -32,5 +31,5 @@
 #define type_sin    math_function*256+2
 #define type_cos    math_function*256+3
 #define type_rcp    math_function*256+4
-  
+
 #endif

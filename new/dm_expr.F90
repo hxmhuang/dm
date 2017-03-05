@@ -3,43 +3,11 @@ module dm_expr
   use dm_tensor
 #include "dm_type.h"
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
-#define __NL__
-
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(A)=", loc(A)
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(B)=", loc(B)
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(C)=", loc(C(1))
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(D)=", loc(C(2))
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(res)=", loc(res)
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(res%left)=",  loc(res%left)
-  ! write(*, "(A, Z16.16)") "$1_$2_$3 : loc(res%right)=", loc(res%right)
+#:set DEBUG = 1
   
-! !we use macro preprocessor to generate codes
-! define(`evaluate', `eval')
-! undefine(`eval')
-! define(`CONCAT', `$1$2$3')dnl
-! define(`OV', `
-! define(`aa', ifelse($1, `real(8)', `real8', $1))dnl
-! define(`bb', ifelse($3, `real(8)', `real8', $3))dnl
-! function CONCAT(aa,_$2_,bb) (A, B) result(res)
-!    implicit none       
-!    type($1),intent(in),target  :: A
-!    type($3),intent(in),target  :: B
-!    type(node), target :: res
-!    type(node), pointer :: C(:)
-
-!    allocate(C(2))
-   
-!    C(1) = node_new(A)
-!    C(2) = node_new(B)
-!    res = node_new(type_$2, C(1), C(2))
-! end function
-! !')
-
-! define(`OV_NAME',`module procedure CONCAT(ifelse($1, `real(8)', `real8', $1),_$2_,ifelse($3, `real(8)', `real8', $3))')
-
-public :: operator(+),operator(-)
-public :: operator(*),operator(/)
-public :: assignment(=)
+  public :: operator(+),operator(-)
+  public :: operator(*),operator(/)
+  public :: assignment(=)
 
   type node_array
      type(node), pointer :: ptr => null()
@@ -47,17 +15,16 @@ public :: assignment(=)
   
   type node
      type(tensor), pointer :: data => null()
-     
-     !the left and right leaf for the tree
-     ! type(node), pointer :: left => null()
-     ! type(node), pointer :: right => null()
 
-     type(node_array), allocatable, dimension(:) :: subs
-
+     !the operands for a operation, e.g. A + B,, A and B are operands
+     !for a binary operator, the number operands is always 2
      type(node_array), allocatable, dimension(:) :: operands
+
+     !optimized operands, e.g. A + B + C, opt_operands are (A,B,C)
+     type(node_array), allocatable, dimension(:) :: opt_operands
      
      !node type, 0 for data, 1 for '+', 2 for '-',
-     !3 for '*', 4 for '/'
+     !3 for '*', 4 for '/', etc.
      integer :: node_type
 
      ! the node shape inherit from its left/right
@@ -108,6 +75,14 @@ public :: assignment(=)
      module procedure reallocate1,reallocate2
   end interface reallocate
 
+  interface operator (-)
+     module procedure uminus_node, uminus_tensor
+  end interface operator (-)
+
+  interface operator (+)
+     module procedure uplus_node, uplus_tensor
+  end interface operator (+)
+  
 contains
 
   !the following code using preprossor to create subroutines  
@@ -124,23 +99,79 @@ contains
     type(${type1}$),intent(in),target  :: A
     type(${type2}$),intent(in),target  :: B
     type(node), target :: res
-    type(node), pointer :: C(:)
+    type(node), pointer :: C, D
 
-    allocate(C(2))
+    allocate(C, D)
 
-    call node_new(C(1), A)
-    call node_new(C(2), B)
+    call node_new(C, A)
+    call node_new(D, B)
 #:if (name2 == 'real8')
-    write(*,*) "AA=", C(2)%node_type
-    write(*,*) "C(2)=", C(2)%m_shape
+    write(*,*) "AA=", C%node_type
+    write(*,*) "C=",  C%m_shape
 #:endif
-    call node_new(res, type_${op}$, C(1), C(2))
+    call node_new(res, type_${op}$, C, D)
   end function
   
 #:endif
 #:endfor
 #:endfor
 #:endfor
+
+  function uminus_node (A) result(res)
+    implicit none       
+    type(node),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_minus, C, D)
+  end function
+
+  function uminus_tensor (A) result(res)
+    implicit none       
+    type(tensor),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_minus, C, D)
+  end function
+
+  function uplus_node (A) result(res)
+    implicit none       
+    type(node),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_plus, C, D)
+  end function
+
+  function uplus_tensor (A) result(res)
+    implicit none       
+    type(tensor),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_plus, C, D)
+  end function
   
   subroutine node_new1(B, A) 
     implicit none
@@ -154,7 +185,7 @@ contains
   
   subroutine node_new2(B, A) 
     implicit none
-    type(node), intent(in) :: A
+    type(node), intent(in)   :: A
     type(node), intent(out)  :: B
     integer i
     
@@ -162,35 +193,13 @@ contains
     B%m_shape = A%m_shape
     B%alpha = A%alpha
     B%beta = A%beta
-    
-    ! B%left => A%left
-    ! B%right => A%right
     B%data => A%data
 
-    if(B%node_type == type_scalar) print*, "node_new2 : B%scalar=", B%scalar
     B%scalar = B%scalar
     B%node_type = A%node_type
 
-    !B%operands => A%operands
-    ! if(associated(A%operands)) then
-    !    allocate(B%operands(size(A%operands)))
-    !    B%operands = A%operands
-    ! end if
-
+    call copy_node_array(B%opt_operands, A%opt_operands)
     call copy_node_array(B%operands, A%operands)
-    call copy_node_array(B%subs, A%subs)
-    
-    ! if(associated(A%subs)) then
-    !    allocate(B%subs(size(A%subs)))
-    !    B%subs = A%subs
-
-    !    ! do i = 1, size(A%subs)
-    !    !    write(*, "(I0.1, A, Z16.16, A, I0.1)"), i," = ", loc(A%subs(i)%ptr), "type=",A%node_type           
-    !    !call write_graph(A%subs(i)%ptr,  .false.)
-    !    !write(out_unit, format_map), A%id, "->", loc(A%subs), ";"
-    !    end do
-       
-    !end if
   end subroutine
 
   subroutine node_new3(C, op_type, left, right)
@@ -208,6 +217,10 @@ contains
     endif
     
     if(is_scalar(left)) then
+       !copy the right to C
+       C%m_dim   = right%m_dim
+       C%m_shape = right%m_shape
+       
        x = left % scalar
        select case(op_type)
        case (type_plus) ! x + A
@@ -215,33 +228,30 @@ contains
           C%beta  = right%beta
           C%node_type = right%node_type
           C%data => right%data
-          call copy_node_array(C%subs, right%subs)
+          C%is_implicit = right%is_implicit          
+          call copy_node_array(C%operands, right%operands)
        case (type_minus) ! x - A
           C%alpha = x - right%alpha
           C%beta  = -right%beta
           C%node_type = right%node_type
           C%data => right%data
-          call copy_node_array(C%subs, right%subs)          
+          C%is_implicit = right%is_implicit                    
+          call copy_node_array(C%operands, right%operands)          
        case (type_mult) ! x .* A
           C%alpha = x * right%alpha
           C%beta  = x * right%beta
           C%node_type = right%node_type
           C%data  => right%data
-          call copy_node_array(C%subs, right%subs)
+          C%is_implicit = right%is_implicit                    
+          call copy_node_array(C%operands, right%operands)
        case (type_divd) ! x ./ A
+          C%beta = x
           C%node_type = type_rcp
-          allocate(C%subs(1))
-          C%subs(1)%ptr => right
+          allocate(C%operands(1))
+          C%operands(1)%ptr => right
+          C%is_implicit = .true.
        end select
-
-       !copy the right to C
-       C%m_dim   = right%m_dim
-       C%m_shape = right%m_shape
-       C%is_implicit = right%is_implicit
-       ! if(associated(right%operands)) then
-       !    allocate(C%operands(size(right%operands)))
-       !    C%operands = right%operands
-       ! end if
+       
     else if(is_scalar(right)) then
        x = right % scalar
        select case(op_type)
@@ -249,47 +259,35 @@ contains
           C%alpha = left%alpha + x
           C%beta  = left%beta
           C%node_type = left%node_type
-          
-          call copy_node_array(C%subs, left%subs)
-          
+          call copy_node_array(C%operands, left%operands)
        case (type_minus) ! A - a
           C%alpha = left%alpha - x
           C%beta  = left%beta
           C%node_type = left%node_type
-          
-          call copy_node_array(C%subs, left%subs)
-
+          call copy_node_array(C%operands, left%operands)
        case (type_mult) ! A .* a
           C%alpha = left%alpha * x
           C%beta  = left%beta  * x
           C%node_type = left%node_type
-          
-          call copy_node_array(C%subs, left%subs)
-
+          call copy_node_array(C%operands, left%operands)
        case (type_divd)
           C%alpha = left%alpha / x
           C%alpha = left%beta  / x
           C%node_type = left%node_type
-          
-          call copy_node_array(C%subs, left%subs)
+          call copy_node_array(C%operands, left%operands)
        end select
 
        !copy the left to C
        C%m_dim   = left%m_dim
        C%m_shape = left%m_shape
-       C%data    => left%data
        C%is_implicit = left%is_implicit
-       ! if(associated(left%operands)) then
-       !    allocate(C%operands(size(left%operands)))
-       !    C%operands = left%operands
-       ! end if
-       call copy_node_array(C%operands, left%operands)
+       call copy_node_array(C%opt_operands, left%opt_operands)
     else
-       allocate(C%subs(2))
-       C%subs(1)%ptr => left
-       C%subs(2)%ptr => right
+       allocate(C%operands(2))
+       C%operands(1)%ptr => left
+       C%operands(2)%ptr => right
        
-       C%m_dim = left%m_dim
+       C%m_dim   = left%m_dim
        C%m_shape = left%m_shape
        C%node_type = op_type
        C%is_implicit = .true.
@@ -305,7 +303,6 @@ contains
     B%m_shape = (/1, 1, 1/)
     B%scalar = scalar
     B%node_type = type_scalar
-    print*, "B%scalar=", B%scalar
   end subroutine
 
   subroutine node_new5(B, scalar)
@@ -372,18 +369,20 @@ contains
     type(node), intent(inout), target :: A
     type(node), intent(in),    target :: B
 
-    print*, "hello!!!"
+#:if DEBUG > 0
+    print*, "call node_assign_node"
+#:endif
+    
     A%data  => B%data
     A%node_type = B%node_type
     A%m_dim = B%m_dim
     A%m_shape = B%m_shape
     A%alpha = B%alpha
     A%beta = B%beta
-
-    call copy_node_array(A%subs, B%subs)
+    A%scalar = B%scalar
+    
     call copy_node_array(A%operands, B%operands)
-
-    A%is_implicit = B%is_implicit
+    call copy_node_array(A%opt_operands, B%opt_operands)
     
   end subroutine
   
@@ -399,13 +398,14 @@ contains
     
     call node_new(C, B)
 
-    !call node_combine(C, res)
+    call node_combine(C, res)
     
-    call write_graph(C)
-
+    call write_graph(C, .true., "graph.dot")
+    call write_opt_graph(C, .true., "opt_graph.dot")
+    
     ! call node_destroy(C, ierr)
     
-    !write(*, "(I3)") size(C%operands)
+    !write(*, "(I3)") size(C%opt_operands)
     !call eval(B)
     
     !call tensor_copy(A, B%data)
@@ -448,18 +448,19 @@ contains
 
     cnt = 0
     
-    if(A%node_type == type_data) return
+    if(A%node_type == type_data &
+         .or. A%node_type==type_scalar) return
 
-    do i = 1,size(A%subs)
+    do i = 1,size(A%operands)
        !combine the left node
-       call node_combine(A%subs(i)%ptr, subs)
+       call node_combine(A%operands(i)%ptr, subs)
 
        !if the node_type does not match its leaf node_type,
        ! not accept the returned list from leaf
-       if(A%node_type /= A%subs(i)%ptr%node_type) then
+       if(A%node_type /= A%operands(i)%ptr%node_type) then
           if(allocated(subs))  deallocate(subs)
           allocate(subs(1))
-          subs(1)%ptr => A%subs(i)%ptr
+          subs(1)%ptr => A%operands(i)%ptr
        end if
        
        if(allocated(subs)) then
@@ -467,69 +468,25 @@ contains
 
           call reallocate(res, cnt)
           res(cnt-size(subs)+1 : cnt) = subs
-          
-          ! if(allocated(res)) then
-          !    allocate(tmp(size(res)))
-          !    tmp = res
-          !    deallocate(res)
-
-          !    allocate(res(cnt))
-          !    res(1:size(tmp)) = res
-          !    res(size(tmp)+1:cnt) = subs
-          !    deallocate(tmp)
-          ! else
-          !    allocate(res(cnt))
-          !    res = subs
-          ! endif
        endif
-
     enddo
 
-    call copy_node_array(A%operands, res)
+    call copy_node_array(A%opt_operands, res)
+
+#ifdef DEBUG
+    write(*,*) "**********************"
+    write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
     
-    ! allocate(A%operands(size(res)))
-    ! A%operands = res
+    if(allocated(A%opt_operands)) then
+       do i = 1, size(A%opt_operands)
+          write(*, "(5X, Z16.16, A, I0.3)"), &
+               loc(A%opt_operands(i)%ptr), &
+               " type=", A%opt_operands(i)%ptr%node_type 
 
-    ! !combine the left node
-    ! call node_combine(A%left, left)
-
-    ! !if the node_type does not match its leaf node_type,
-    ! ! not accept the returned list from leaf
-    ! if(A%node_type /= A%left%node_type) then
-    !    if(allocated(left))  deallocate(left)
-    !    allocate(left(1))
-    !    left(1)%ptr => A%left
-    ! end if
-
-    ! !combine the right node
-    ! call node_combine(A%right, right)
-
-    ! if(A%node_type /= A%right%node_type) then
-    !    if(allocated(right)) deallocate(right)
-    !    allocate(right(1))
-    !    right(1)%ptr => A%right
-    ! end if
-
-    !combine the result from left and right leaves
-    ! allocate(res(size(left) + size(right)))
-    ! res(1:size(left)) = left
-    ! res(size(left)+1:size(left)+size(right)) = right
-
-    ! allocate(A%operands(size(left) + size(right)))
-    ! A%operands = res
-
-    ! write(*,*) "**********************"
-    ! if(associated(A%operands)) then
-    !    do i = 1, size(A%operands)
-    !       write(*, "(Z16.16, A, Z16.16, A, Z16.16)"), &
-    !            loc(A%operands(i)%ptr), &
-    !            " left=",  loc(A%operands(i)%ptr%left), &
-    !            " right=", loc(A%operands(i)%ptr%right)
-
-    !    enddo
-    ! end if
-
-    ! deallocate(left, right)
+       enddo
+    endif
+#endif
+    
   end subroutine
 
   recursive subroutine node_destroy(A, ierr)
@@ -538,23 +495,24 @@ contains
     integer :: ierr
     integer i
 
-    if(A%node_type == type_data) return
+    if(A%node_type == type_data .or. &
+         A%node_type == type_scalar) return
     
-    ! do i = 1, size(A%operands)
+    ! do i = 1, size(A%opt_operands)
     !    write(*, "(Z16.16, A, I4, A, I4)"), &
-    !         loc(A%operands(i)%ptr), " = ", A%operands(i)%ptr%node_type, &
-    !         " = ", size(A%operands(i)%ptr%operands)
+    !         loc(A%opt_operands(i)%ptr), " = ", A%opt_operands(i)%ptr%node_type, &
+    !         " = ", size(A%opt_operands(i)%ptr%opt_operands)
     ! enddo
     
-    if(allocated(A%subs)) then
-       do i = 1, size(A%subs)
-          call node_destroy(A%subs(i)%ptr, ierr)
+    if(allocated(A%operands)) then
+       do i = 1, size(A%operands)
+          call node_destroy(A%operands(i)%ptr, ierr)
        enddo
     endif
     
     !destroy the operands
-    deallocate(A%operands)
-    !A%operands => null()
+    deallocate(A%opt_operands)
+    !A%opt_operands => null()
 
     !destroy data if the data is implicit
     if(associated(A%data)) then
@@ -564,12 +522,14 @@ contains
        end if
     end if
   end subroutine
- 
-  recursive subroutine write_graph(A, is_root)
+
+#:for o in ['', 'opt_']
+  recursive subroutine write_${o}$graph(A, is_root, file)
     implicit none
     type(node), intent(inout) :: A
     integer :: i
     character(len=100) :: label1, label2
+    character(len=*),optional :: file
     integer id
     logical,intent(in), optional :: is_root
     logical :: am_i_root
@@ -578,6 +538,8 @@ contains
     
     character(len=*), parameter :: &
          format_label = "(I0.1,A,A,A,F4.1,A,F4.1,A)"
+    character(len=*), parameter :: &
+         format_label1 = "(I0.1,A,A,A)"
     character(len=*), parameter :: &
          format_map = "(I0.1,A,I0.1,A)"
     
@@ -591,47 +553,65 @@ contains
     endif
 
     if(am_i_root) then
-       open(unit=out_unit,file="graph.dot", &
-            action="write", status="replace")
+       if(present(file)) then
+          open(unit=out_unit,file=file, &
+               action="write", status="replace")
+       else
+          open(unit=out_unit,file="graph.dot", &
+               action="write", status="replace")
+       endif
        write(out_unit, *) "digraph G {"
     end if
 
     select case (A%node_type)
+    case (type_scalar)
+       write(op_name, "(F4.1)") A%scalar
     case (type_data)
-       write(op_name, *) "data"
+       write(op_name, *) "Matrix"
     case (type_plus)
        write(op_name, *) "(+)"
     case (type_minus)
        write(op_name, *) "(-)"
     case (type_mult)
-       write(op_name, *) "(*)"
+       write(op_name, *) "(.*)"
     case (type_divd)
-       write(op_name, *) "(/)"
+       write(op_name, *) "(./)"
     case default
        write(op_name, *) "func"
     end select
+
+#:set SHOW_ALPHA_BETA = 1
     
-    write(out_unit, format_label) id,'[label="',trim(op_name), '\n(',&
+#:if SHOW_ALPHA_BETA > 0
+    write(out_unit, format_label) id, &
+         '[label="',trim(op_name), '\n(',&
          A%alpha, ',',A%beta, ')"];'
+#:else
+    write(out_unit, format_label1) id, &
+         '[label="',trim(op_name), '"];'
+#:endif
+    
     !print*, label1
-    if(A%node_type == type_data) then
+    if(A%node_type == type_data .or. A%node_type == type_scalar) then
        return
     end if
-
-    !if(is_root)  print*, "id=", id, am_i_root    
-    ! write(*,*) "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"    
-    ! write(*, "(A, Z16.16, A, Z16.16, A, Z16.16, I4.3, I3)") &
-    !      "A=", loc(A), &
-    !      " left=", loc(A%left), " right=", &
-    !      loc(A%right), A%node_type, size(A%operands)
-
-    print*, "subs=", size(A%subs)
-    write(*, *) "type=", A%node_type
-
-    do i = 1, size(A%subs)
-       write(*, "(I0.1, A, Z16.16)"), i," = ", loc(A%subs(i)%ptr)           
-       call write_graph(A%subs(i)%ptr,  .false.)
-       write(out_unit, format_map), A%id, "->", A%subs(i)%ptr%id, ";"
+    
+#ifdef DEBUG
+#:if o == "opt_"
+    print*, "-------------------------"
+#:else
+    print*, "~~~~~~~~~~~~~~~~~~~~~~~~~"
+#:endif
+    
+    do i = 1, size(A%${o}$operands)
+       write(*, "(I0.1, A, Z16.16)"), &
+            i," = ", loc(A%${o}$operands(i)%ptr)           
+    end do
+#endif    
+    do i = 1, size(A%${o}$operands)
+       call write_${o}$graph(A%${o}$operands(i)%ptr,  .false.)
+       write(out_unit, format_map), &
+            A%id, "->", A%${o}$operands(i)%ptr%id, ";"
     end do
     
     if(am_i_root) then
@@ -639,8 +619,10 @@ contains
        close (out_unit)
     end if
 
+    
   end subroutine
-
+#:endfor
+  
   function is_scalar(A) result(res)
     implicit none
     type(node) :: A

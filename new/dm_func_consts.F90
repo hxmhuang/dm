@@ -15,7 +15,7 @@ contains
     type(tensor) :: res
     integer :: ierr
     
-    res = tensor_new((/m/))
+    call tensor_new(res, (/m/))
     call data_constants(res%data, val, (/m/), ierr)
   end function
 
@@ -24,7 +24,7 @@ contains
     real(kind=8) :: val    
     type(tensor) :: res
     
-    res = tensor_new((/m, n/))
+    call tensor_new(res, (/m, n/))
     call data_constants(res%data,  val, (/m,n/), ierr)
   end function
 
@@ -33,7 +33,7 @@ contains
     real(kind=8) :: val    
     type(tensor) :: res
     
-    res = tensor_new((/m,n,k/))
+    call tensor_new(res, (/m,n,k/))
     call data_constants(res%data,  val, (/m,n,k/), ierr)
   end function
 end module

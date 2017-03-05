@@ -3,6 +3,7 @@ program main
   use dm_expr
   use dm_tensor
   use dm_basics
+  use dispmodule
   implicit none
 
   type(tensor) :: A, B, C, D, E, F, G, H, BB
@@ -34,6 +35,8 @@ program main
   
   call dm_init(ierr)
 
+  CALL disp('A = ', (/1,2,3,4/), orient='row')
+  
   !three-dimensional array
   A = ones(2, 2, 2)
   B = ones(2, 2, 2)
@@ -43,10 +46,14 @@ program main
 
   !call display(A, "A=")
   
-  !C = A + B + C * D + E
-  !C = 1.0 + 2. * A + B * C
-  C = 2.0 + (1.0 / B) + A
+  !C = 1.0 + A + B + C * D + E
+  !C = 1.0 + 2. * A + 4.0 / B * C * D
+  !D = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
   
+  !C = A - B
+  !C = 2.0 + (1.0 / B) + A
+  !C = 2.0 * (A - 0.1) + B  
+  E = A * B * C + D
   ! call display(C)
 
   ! !show the result of A-B

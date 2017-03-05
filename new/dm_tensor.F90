@@ -31,6 +31,10 @@ module dm_tensor
      integer :: grid_pos
 !     type(grid) :: 
   end type tensor
+
+  type tensor_ptr
+     type(tensor), pointer, dimension(:) :: ptr
+  end type tensor_ptr
   
   !here we use a trick to extract range information from an empty array
   !see find_range function
@@ -96,14 +100,14 @@ contains
     write(*,*) ""    
   end subroutine
 
-  function tensor_new(m_shape) result(A)
+  subroutine tensor_new(A, m_shape)
     implicit none
     integer, intent(in) :: m_shape(:)
-    type(tensor):: A
+    type(tensor), intent(out) :: A
 
     A%m_dim = size(m_shape)
     A%m_shape(1:A%m_dim) = m_shape
-  end function
+  end subroutine
 
   subroutine tensor_destroy(A, ierr)
     implicit none
@@ -134,9 +138,16 @@ contains
           call data_plus(A%data, B%data, C%data, ierr)
        end if
     end if
-    
   end subroutine 
 
+  subroutine tensor_plus(dst, src_list)
+    implicit none
+    type(tensor), intent(inout) :: dst
+    type(tensor_ptr), intent(inout) :: src_list(:)
+    
+  end subroutine
+
+  
   !A = B - C
   subroutine tensor_minus(A, B, C)
     implicit none
@@ -159,7 +170,6 @@ contains
           call data_minus(A%data, B%data, C%data, ierr)
        end if
     end if
-    
   end subroutine 
 
   subroutine tensor_mult(A, B, C)
