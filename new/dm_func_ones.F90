@@ -16,7 +16,7 @@ contains
     integer :: ierr
     
     call tensor_new(res, (/m/))
-    call data_constants(res%data, one, (/m/), ierr)
+    call data_consts(res%data, one, (/m/), ierr)
   end function
 
   function ones_2d(m, n) result(res)
@@ -25,7 +25,7 @@ contains
     real(kind=8) :: one = 1
     
     call tensor_new(res, (/m, n/))
-    call data_constants(res%data,  one, (/m,n/), ierr)
+    call data_consts(res%data,  one, (/m,n/), ierr)
   end function
 
   function ones_3d(m, n, k) result(res)
@@ -34,7 +34,7 @@ contains
     real(kind=8) :: one = 1
     
     call tensor_new(res, (/m,n,k/))
-    call data_constants(res%data,  one, (/m,n,k/), ierr)
+    call data_consts(res%data,  one, (/m,n,k/), ierr)
   end function
 end module
 

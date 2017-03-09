@@ -2,11 +2,15 @@
 #include <petsc/finclude/petscmatdef.h>
 #include <petsc/finclude/petscvecdef.h>
 #include <petsc/finclude/petscdmdef.h> 
+#:include "type_def.fypp"
+
+#include "dm_type.h"
 
 module dm_tensor
   use dm_common
   use dm_data
-
+  use func_helper
+  
   public :: tensor_new, tensor_destroy
   
   integer, parameter :: zero3(3) = (/0,0,0/)
@@ -29,19 +33,44 @@ module dm_tensor
 
      logical :: is_field = .false.
      integer :: grid_pos
-!     type(grid) :: 
+
   end type tensor
 
   type tensor_ptr
-     type(tensor), pointer, dimension(:) :: ptr
+     type(tensor), pointer :: ptr
   end type tensor_ptr
   
   !here we use a trick to extract range information from an empty array
   !see find_range function
   integer, allocatable :: r(:)
+
+  interface
+     subroutine reg_func(p, id) &
+          bind(C, name="reg_func")
+       implicit none
+       C_POINTER :: p
+       integer :: id
+     end subroutine
+  end interface
   
 contains
 
+  subroutine init_tensor(ierr)
+    implicit none
+    integer, intent(out) :: ierr
+
+    !initialize data module
+    call init_data(ierr)
+
+#:for e in L
+#:if e[1] >= 50
+    !write(*, "(A, Z16.6)"), "f_addr=", loc(tensor_${e[2]}$)
+    call reg_func(loc(tensor_${e[2]}$), ${e[0]}$)
+#:endif
+#:endfor
+
+  end subroutine
+  
   function find_range(range) result(res)
     implicit none
     integer, intent(inout) :: range(:)
@@ -54,6 +83,7 @@ contains
   end function
   
   subroutine display2(objA, prefix)
+#include "petsc.h"            
     type(tensor), intent(in),target :: objA
     type(tensor), pointer :: A
     character(len=*), optional, intent(in) :: prefix
@@ -62,6 +92,9 @@ contains
 
     A => objA
 
+    print*, "adsafasfasf"
+    !call VecView(objA%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
+    
     write(*,*) ""
     if(present(prefix)) then
        write(*, "(A)") prefix
@@ -117,113 +150,59 @@ contains
     call data_destroy(A%data, ierr)
   end subroutine 
   
-  subroutine tensor_plus(A, B, C) !A = B + C
+#:for op in L
+  #:if op[1] >= 50
+  subroutine tensor_${op[2]}$(res, operands, alpha, beta, args) 
     implicit none
-    type(tensor), intent(inout) :: A
-    type(tensor), intent(inout) :: B, C
-    integer :: ierr
-
-    if(B%is_implicit) then
-       call tensor_copy(A, B)
-       call data_plus(A%data, C%data, ierr) !A = A + C
-       if(C%is_implicit) then
-          call tensor_destroy(C, ierr)
-       endif
-    else
-       if(C%is_implicit) then
-          call tensor_copy(A, C)
-          call data_plus(A%data, B%data, ierr)
-       else
-          call tensor_duplicate(A, B)
-          call data_plus(A%data, B%data, C%data, ierr)
-       end if
-    end if
-  end subroutine 
-
-  subroutine tensor_plus(dst, src_list)
-    implicit none
-    type(tensor), intent(inout) :: dst
-    type(tensor_ptr), intent(inout) :: src_list(:)
     
+    type(tensor), intent(inout), pointer :: res
+    type(tensor_ptr), intent(in)  :: operands(:)
+    Vec,allocatable :: operands_vec(:)
+    real(8), intent(in) :: alpha(:), beta(:)
+    real(8), intent(in) :: args(10)
+    integer :: n
+    integer :: ierr, i
+    
+    allocate(operands_vec(size(operands)))
+
+    if(.not. associated(res)) then
+       allocate(res)
+    endif
+    
+    call tensor_duplicate(res, operands(1)%ptr)
+    
+    do i = 1, size(operands)
+       operands_vec(i) = operands(i)%ptr%data
+    enddo
+    
+    call data_${op[2]}$(res%data, operands_vec, alpha, beta, args, ierr)
+
+
+    ! if(B%is_implicit) then
+    !    call tensor_copy(A, B)
+    !    call data_plus(A%data, C%data, ierr) !A = A + C
+    !    if(C%is_implicit) then
+    !       call tensor_destroy(C, ierr)
+    !    endif
+    ! else
+    !    if(C%is_implicit) then
+    !       call tensor_copy(A, C)
+    !       call data_plus(A%data, B%data, ierr)
+    !    else
+    !       call tensor_duplicate(A, B)
+    !       call data_plus(A%data, B%data, C%data, ierr)
+    !    end if
+    ! end if
   end subroutine
-
-  
-  !A = B - C
-  subroutine tensor_minus(A, B, C)
-    implicit none
-    type(tensor), intent(inout) :: A
-    type(tensor), intent(inout) :: B, C
-    integer :: ierr
-
-    if(B%is_implicit) then
-       call tensor_copy(A, B)
-       call data_minus(A%data, C%data, ierr) !A = A + C
-       if(C%is_implicit) then
-          call tensor_destroy(C, ierr)
-       endif
-    else
-       if(C%is_implicit) then
-          call tensor_copy(A, C)
-          call data_minus(A%data, B%data, ierr)
-       else
-          call tensor_duplicate(A, B)
-          call data_minus(A%data, B%data, C%data, ierr)
-       end if
-    end if
-  end subroutine 
-
-  subroutine tensor_mult(A, B, C)
-    implicit none
-    type(tensor), intent(inout) :: C
-    type(tensor), intent(inout) :: A, B
-    integer :: ierr
-    
-    if(B%is_implicit) then
-       call tensor_copy(A, B)
-       call data_mult(A%data, C%data, ierr) !A = A + C
-       if(C%is_implicit) then
-          call tensor_destroy(C, ierr)
-       endif
-    else
-       if(C%is_implicit) then
-          call tensor_copy(A, C)
-          call data_mult(A%data, B%data, ierr)
-       else
-          call tensor_duplicate(A, B)
-          call data_mult(A%data, B%data, C%data, ierr)
-       end if
-    end if
-  end subroutine 
-
-  subroutine tensor_divd(A, B, C)
-    implicit none
-    type(tensor), intent(inout) :: C
-    type(tensor), intent(inout) :: A, B
-    integer :: ierr
-    
-    if(B%is_implicit) then
-       call tensor_copy(A, B)
-       call data_divd(A%data, C%data, ierr) !A = A + C
-       if(C%is_implicit) then
-          call tensor_destroy(C, ierr)
-       endif
-    else
-       if(C%is_implicit) then
-          call tensor_copy(A, C)
-          call data_divd(A%data, B%data, ierr)
-       else
-          call tensor_duplicate(A, B)
-          call data_divd(A%data, B%data, C%data, ierr)
-       end if
-    end if
-  end subroutine 
+  #:endif
+#:endfor
 
   subroutine tensor_copy_structure(A, B)
     implicit none
     type(tensor), intent(inout) :: A
     type(tensor), intent(in) :: B
 
-    A%m_dim = B%m_dim
+    A%m_dim   = B%m_dim
     A%m_shape = B%m_shape
     
   end subroutine

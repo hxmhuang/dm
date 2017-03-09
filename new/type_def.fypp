@@ -1,0 +1,29 @@
+#:set L = &
+  [["type_data",	1,	"",	"data"],	&
+   ["type_scalar",	2,	"",	"scalar"],	&         
+   ["type_ref",		3,	"",	"ref"],    	&         
+   ["type_plus",	50,	"plus", "+"], 	&
+   ["type_minus",	51,	"minus","-"], 	&
+   ["type_mult", 	52,	"mult", "*"], 	&
+   ["type_divd", 	53,	"divd", "/"], 	&
+   ["type_gt", 		54,	"gt", 	">"], 	&
+   ["type_ge", 		55,	"ge", 	">="], 	&
+   ["type_lt", 		56,	"lt", 	"<"], 	&   
+   ["type_le", 		57,	"le", 	"<="], 	&
+   ["type_eq", 		58,	"eq", 	"=="], 	&
+   ["type_nq", 		59,	"nq", 	"/="], 	&      
+   ["type_pow",  	110,	"pow", 	"pow"], &
+   ["type_exp", 	111,	"exp", 	"exp"], &
+   ["type_sin", 	112,	"sin", 	"sin"], &
+   ["type_tan", 	113,	"tan", 	"tan"], &
+   ["type_cos", 	114,	"cos", 	"cos"], &
+   ["type_rcp", 	115,	"rcp", 	"rcp"], &
+   ["type_sqrt",	116,	"sqrt",	"sqrt"], &
+   ["type_asin",	117,	"asin",	"asin"], &
+   ["type_acos",	118,	"acos",	"acos"], &
+   ["type_atan",	119,	"atan",	"atan"], &
+   ["type_abs",		120,	"abs",	"abs"], &         
+   ["type_log",    	121,	"log",	"log"]]
+
+
+

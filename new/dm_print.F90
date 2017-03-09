@@ -38,8 +38,8 @@ contains
     character(len=*), intent(in)  :: msg
     real(kind=8),intent(in) :: arr(:)
     
-    write(*,"(A)"), msg
-    write(*, "(5X, 100g12.5)"), arr
+    write(*,"(A)") msg
+    write(*, "(5X, 100g12.5)") arr
 
   end subroutine
 
@@ -76,7 +76,7 @@ contains
     integer :: dim(2)
 
     dim = shape(arr)
-    write(*,"(2X, A)"), msg
+    write(*,"(2X, A)") msg
     do i = 1, dim(2)
        write(*,"(2X, 100g15.6)") arr(i, :)
     enddo
@@ -85,7 +85,7 @@ contains
   subroutine dm_print3d_i(msg, arr)
     implicit none
     character(len=*), intent(in)  :: msg
-    integer,intent(in), pointer :: arr(:,:,:)
+    integer, pointer :: arr(:,:,:)
 
     integer :: dim(3), i, j, k
 
@@ -93,7 +93,7 @@ contains
     
     print*, msg
     do k = 1, dim(3)
-       write(*,"(4X, A, I0.1)"), "k = ",k
+       write(*,"(4X, A, I0.1)") "k = ",k
        do j = 1, dim(2)
           write(*,"(5X, 100g12.5)") arr(:,j,k)
        enddo
@@ -103,7 +103,7 @@ contains
   subroutine dm_print3d_f(msg, arr)
     implicit none
     character(len=*), intent(in)  :: msg
-    real,intent(in), pointer :: arr(:,:,:)
+    real, pointer :: arr(:,:,:)
 
     integer :: dim(3), i, j, k
 
@@ -111,7 +111,7 @@ contains
     
     print*, msg
     do k = 1, dim(3)
-       write(*,"(4X, A, I0.1)"), "k = ",k
+       write(*,"(4X, A, I0.1)") "k = ",k
        do j = 1, dim(2)
           !(/(arr(i,j,k), i=0,dim(1)-1)/)          
           write(*,"(5X, 100g12.5)") arr(:,j,k) 
@@ -122,7 +122,7 @@ contains
   subroutine dm_print3d_d(msg, arr)
     implicit none
     character(len=*), intent(in)  :: msg
-    real(kind=8),intent(in), pointer :: arr(:,:,:)
+    real(kind=8), pointer :: arr(:,:,:)
     integer :: dim(3), i, j, k
 
     !write(*, "(Z16.6)"), loc(arr)    
@@ -130,7 +130,7 @@ contains
     
     print*, msg
     do k = 1, dim(3)
-       write(*,"(4X, A, I0.1)"), "k = ",k
+       write(*,"(4X, A, I0.1)") "k = ",k
        do j = 1, dim(2)
           write(*,"(5X, 100g12.5)") arr(:,j,k)
        enddo

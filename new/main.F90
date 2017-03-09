@@ -1,16 +1,56 @@
 
+module test
+  
+contains
+  subroutine fun1()
+    print*, "hello1!"
+  end subroutine
+  subroutine fun2()
+    print*, "hello2!"
+  end subroutine
+  subroutine fun3()
+    print*, "hello3!"
+  end subroutine
+  subroutine fun4()
+    print*, "hello4!"
+  end subroutine
+
+  subroutine sin()
+    print*, "hello4!"
+  end subroutine  
+end module test
+
 program main
   use dm_expr
   use dm_tensor
   use dm_basics
   use dispmodule
+  use test
+  use dm_common
+  use ot_init_mod
   implicit none
-
+  
   type(tensor) :: A, B, C, D, E, F, G, H, BB
   type(tensor) :: U, V, W, X, Y, Z
   integer, parameter :: NN = 1000
   integer :: ierr
   integer :: pos(2)
+
+  type(node) :: NA, NB, NC, ND
+  
+  call ot_init(ierr)
+  print*, op_names(50)
+  ! call insert_pointer(loc(fun1), 0)
+  ! call insert_pointer(loc(fun2), 1)
+  ! call insert_pointer(loc(fun3), 2)
+  ! call insert_pointer(loc(fun4), 3)
+  
+
+  ! call invoke(3)
+  ! call invoke(2)
+  ! call invoke(1)  
+  ! call invoke(0)
+
   ! integer, allocatable, target :: base_r(:)
   ! integer, pointer :: r(:)=>null()
 
@@ -33,7 +73,6 @@ program main
   ! print*, find_range(r(0:11))
   ! print*, find_range(r(2:15))  
   
-  call dm_init(ierr)
 
   CALL disp('A = ', (/1,2,3,4/), orient='row')
   
@@ -44,7 +83,7 @@ program main
   D = ones(2, 2, 2)  
   E = ones(2, 2, 2)
 
-  !call display(A, "A=")
+  !call display(A, "A = ")
   
   !C = 1.0 + A + B + C * D + E
   !C = 1.0 + 2. * A + 4.0 / B * C * D
@@ -53,9 +92,18 @@ program main
   !C = A - B
   !C = 2.0 + (1.0 / B) + A
   !C = 2.0 * (A - 0.1) + B  
-  E = A * B * C + D
-  ! call display(C)
+  !E = A * B * C + (D)
 
+  ! NA = B + sin(cos(exp(D+C)) + A) * 2 - 3
+  ! NB = 2.0 + (1.0 / B) + A + tan(NA)
+  ! F = NB
+
+  C = A + B
+  call display(C)
+
+  D = log(C)
+  call display(D, "D=")
+  
   ! !show the result of A-B
   ! call display(A-B, "A-B=")
   
@@ -87,16 +135,16 @@ program main
   ! !call toc(1)
   ! call toc(1, 8*int8(NN)*NN*4, 2*int8(NN)*NN)
 
-  call tensor_destroy(A, ierr)
-  call tensor_destroy(B, ierr)
-  call tensor_destroy(C, ierr)
-  call tensor_destroy(D, ierr)
-  call tensor_destroy(E, ierr)
-  call tensor_destroy(F, ierr)
-  call tensor_destroy(G, ierr)
+  ! call tensor_destroy(A, ierr)
+  ! call tensor_destroy(B, ierr)
+  ! call tensor_destroy(C, ierr)
+  ! call tensor_destroy(D, ierr)
+  ! call tensor_destroy(E, ierr)
+  ! call tensor_destroy(F, ierr)
+  ! call tensor_destroy(G, ierr)
   
-  call tensor_destroy(U, ierr)
-  call tensor_destroy(V, ierr)
+  ! call tensor_destroy(U, ierr)
+  ! call tensor_destroy(V, ierr)
 
-  call dm_finalize(ierr)
+  !call dm_finalize(ierr)
 end program main

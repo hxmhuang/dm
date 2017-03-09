@@ -1,9 +1,12 @@
 module dm_expr
   use dm_common
   use dm_tensor
+  
 #include "dm_type.h"
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
 #:set DEBUG = 1
+#define DEBUG
+#:include "type_def.fypp"
   
   public :: operator(+),operator(-)
   public :: operator(*),operator(/)
@@ -37,10 +40,49 @@ module dm_expr
      real(8) :: scalar = 0
      logical :: is_implicit
      integer :: id
+
+     real(8) :: args(10)
   end type node
 
+  interface display
+     module procedure display1, display2
+  end interface
+  
+  interface assignment (=)
+     module procedure tensor_assign_tensor
+     module procedure node_assign_tensor
+     module procedure node_assign_node
+  end interface assignment (=)
+
+  interface node_new
+     module procedure node_new1, node_new2, node_new3
+     module procedure node_new4, node_new5, node_new6
+     module procedure node_new7, node_new8     
+  end interface node_new
+  
+  interface reallocate
+     module procedure reallocate1,reallocate2
+  end interface reallocate
+
+  interface operator (-)
+     module procedure uminus_node, uminus_tensor
+  end interface operator (-)
+
+  interface operator (+)
+     module procedure uplus_node, uplus_tensor
+  end interface operator (+)
+
+  interface operator (**)
+#:for type1 in ['node', 'tensor']     
+#:for type2 in ['integer', 'real', 'real8']
+     module procedure ${type1}$_pow_${type2}$
+#:endfor
+#:endfor
+  end interface operator (**)
+  
   !the following code using preprossor to create interfaces
-#:for op in [['plus','+'], ['minus','-'], ['mult','*'], ['divd','/']]
+#:for op in [['plus','+'], ['minus','-'], ['mult','*'], ['divd','/'], &
+  ['gt','>'], ['ge', '>='], ['lt', '<'],['le', '<='],['eq','=='],['nq','/=']]
   interface operator (${op[1]}$)
 #:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
 #:for type2 in ['real(8)', 'real', 'integer', 'tensor', 'node']
@@ -55,123 +97,36 @@ module dm_expr
 #:endfor
   end interface operator (${op[1]}$)
 #:endfor
-  
-  interface display
-     module procedure display1, display2
+
+!interface for exp, log, pow, ...
+#:for e in L
+#:if e[1] >= 111
+  interface ${e[2]}$
+#:for type in ['tensor', 'node']
+     module procedure ${e[2]}$_${type}$
+#:endfor
   end interface
-  
-  interface assignment (=)
-     module procedure tensor_assign_tensor
-     module procedure node_assign_tensor
-     module procedure node_assign_node
-  end interface assignment (=)
 
-  interface node_new
-     module procedure node_new1, node_new2, node_new3
-     module procedure node_new4, node_new5, node_new6
-  end interface node_new
-  
-  interface reallocate
-     module procedure reallocate1,reallocate2
-  end interface reallocate
+#:endif
+#:endfor
 
-  interface operator (-)
-     module procedure uminus_node, uminus_tensor
-  end interface operator (-)
-
-  interface operator (+)
-     module procedure uplus_node, uplus_tensor
-  end interface operator (+)
+#:include "type_def.fypp"
+  character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names
   
 contains
 
-  !the following code using preprossor to create subroutines  
-#:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
-#:for type2 in ['real(8)', 'real', 'integer', 'tensor', 'node']
-#:for op in ['plus', 'minus', 'mult', 'divd']
-#:if any(type1 in s for s in ['real(8)', 'real', 'integer']) & 
-     and any(type2 in s for s in ['real(8)', 'real', 'integer'])  
-#:else  
-#:set name1 = re.sub('\(8\)', '8', type1)
-#:set name2 = re.sub('\(8\)', '8', type2)
-  function ${name1}$_${op}$_${name2}$ (A, B) result(res)
-    implicit none       
-    type(${type1}$),intent(in),target  :: A
-    type(${type2}$),intent(in),target  :: B
-    type(node), target :: res
-    type(node), pointer :: C, D
+  subroutine init_expr(ierr)
+    use dm_tensor
+    implicit none
+    integer, intent(out) :: ierr
 
-    allocate(C, D)
-
-    call node_new(C, A)
-    call node_new(D, B)
-#:if (name2 == 'real8')
-    write(*,*) "AA=", C%node_type
-    write(*,*) "C=",  C%m_shape
-#:endif
-    call node_new(res, type_${op}$, C, D)
-  end function
-  
-#:endif
+#:for e in L
+    op_names(${e[1]}$) = "${e[3]}$"
 #:endfor
-#:endfor
-#:endfor
-
-  function uminus_node (A) result(res)
-    implicit none       
-    type(node),intent(in),target  :: A
-    type(node), target :: res
-    type(node), pointer :: C, D
-
-    allocate(C, D)
     
-    call node_new(C, 0)
-    call node_new(D, A)
+    call init_tensor(ierr)
     
-    call node_new(res, type_minus, C, D)
-  end function
-
-  function uminus_tensor (A) result(res)
-    implicit none       
-    type(tensor),intent(in),target  :: A
-    type(node), target :: res
-    type(node), pointer :: C, D
-
-    allocate(C, D)
-    
-    call node_new(C, 0)
-    call node_new(D, A)
-    
-    call node_new(res, type_minus, C, D)
-  end function
-
-  function uplus_node (A) result(res)
-    implicit none       
-    type(node),intent(in),target  :: A
-    type(node), target :: res
-    type(node), pointer :: C, D
-
-    allocate(C, D)
-    
-    call node_new(C, 0)
-    call node_new(D, A)
-    
-    call node_new(res, type_plus, C, D)
-  end function
-
-  function uplus_tensor (A) result(res)
-    implicit none       
-    type(tensor),intent(in),target  :: A
-    type(node), target :: res
-    type(node), pointer :: C, D
-
-    allocate(C, D)
-    
-    call node_new(C, 0)
-    call node_new(D, A)
-    
-    call node_new(res, type_plus, C, D)
-  end function
+  end subroutine
   
   subroutine node_new1(B, A) 
     implicit none
@@ -182,7 +137,8 @@ contains
     B%data => A
     B%node_type = type_data
   end subroutine
-  
+
+  !copy node A to node B
   subroutine node_new2(B, A) 
     implicit none
     type(node), intent(in)   :: A
@@ -210,10 +166,20 @@ contains
     real(8) :: x
 
     if((.not. is_scalar(left)) .and. (.not. is_scalar(right))) then
+       if(left%m_dim /= right%m_dim .or. &
+            left%m_dim /= right%m_dim) then
+          
+          write(*,*) "left%type=", left%node_type, &
+               "right%type=", right%node_type
+          write(*,*) "left%dim=", left%m_shape, "right%dim=", right%m_shape
+          
+       end if
+       
        call assert(left%m_dim == right%m_dim .and. &
             left%m_dim == right%m_dim, &
             __FILE__, __LINE__, &
             "shape of the left and right leaf does not match.")
+
     endif
     
     if(is_scalar(left)) then
@@ -286,14 +252,21 @@ contains
        allocate(C%operands(2))
        C%operands(1)%ptr => left
        C%operands(2)%ptr => right
-       
-       C%m_dim   = left%m_dim
-       C%m_shape = left%m_shape
+
+       if(is_scalar(left)) then
+          C%m_dim   = right%m_dim
+          C%m_shape = right%m_shape
+       else
+          C%m_dim   = left%m_dim
+          C%m_shape = left%m_shape
+       endif
+    
        C%node_type = op_type
        C%is_implicit = .true.
     end if
   end subroutine
 
+  !> create a node from a real*8 scalar
   subroutine node_new4(B, scalar) 
     implicit none
     real(8), intent(in), target :: scalar
@@ -305,6 +278,7 @@ contains
     B%node_type = type_scalar
   end subroutine
 
+  !> create a node from a real*8 scalar  
   subroutine node_new5(B, scalar)
     implicit none
     real, intent(in):: scalar
@@ -313,12 +287,46 @@ contains
     call node_new4(B, real(scalar,8))
   end subroutine
 
+  !> create a node from a real*8 scalar  
   subroutine node_new6(B, scalar)
     implicit none
     integer, intent(in) :: scalar
     type(node), intent(out) :: B
 
     call node_new4(B, real(scalar,8))
+  end subroutine
+
+  subroutine node_new7(dst, op_type, src)
+    implicit none
+    type(node), intent(out) :: dst
+    integer :: op_type
+    type(tensor), intent(in) :: src
+    type(node) :: dst1
+    
+    call node_new(dst1, src)
+    
+    call node_new(dst, op_type, dst1)
+
+    !dst%node_type = op_type
+    !print*, trim(op_names(op_type))
+  end subroutine
+
+  subroutine node_new8(dst, op_type, src)
+    implicit none
+    type(node), intent(out) :: dst
+    integer :: op_type
+    type(node), intent(in) :: src
+    type(node), pointer :: p
+    
+    dst%node_type = op_type
+    dst%m_dim   = src%m_dim
+    dst%m_shape = src%m_shape
+    dst%is_implicit = .true.
+
+    allocate(dst%operands(1))
+    allocate(p)
+    call node_new(p, src)
+    dst%operands(1)%ptr => p
   end subroutine
   
   subroutine display1(A, msg)
@@ -331,38 +339,6 @@ contains
        call display2(A%data)
     end if
   end subroutine
-
-  ! recursive subroutine eval(B)
-  !   implicit none
-  !   type(node), intent(inout) :: B
-
-  !   if(B%node_type == type_data) return 
-
-  !   call assert(associated(B%left) .and. &
-  !        associated(B%right), __FILE__, __LINE__, &
-  !        "pointer not associated.")
-
-  !   !evaluate left and right leaves recursively.
-  !   if(B%left%node_type  /= type_data) call eval(B%left)
-  !   if(B%right%node_type /= type_data) call eval(B%right)       
-
-  !   select case(B%node_type)
-  !   case (type_plus)
-  !      !C = A + B       
-  !      call tensor_plus(B%data, B%left%data, B%right%data)  
-  !   case (type_minus)
-  !      !C = A - B       
-  !      call tensor_minus(B%data, B%left%data, B%right%data) 
-  !   case (type_mult)
-  !      !C = A .* B       
-  !      call tensor_mult(B%data, B%left%data, B%right%data)  
-  !   case (type_divd)
-  !      !C = A ./ B       
-  !      call tensor_divd(B%data, B%left%data, B%right%data)  
-  !   end select
-    
-  !   B%node_type = type_data
-  ! end subroutine 
 
   subroutine node_assign_node(A, B)
     implicit none
@@ -380,7 +356,7 @@ contains
     A%alpha = B%alpha
     A%beta = B%beta
     A%scalar = B%scalar
-    
+    A%is_implicit = B%is_implicit
     call copy_node_array(A%operands, B%operands)
     call copy_node_array(A%opt_operands, B%opt_operands)
     
@@ -388,6 +364,7 @@ contains
   
   subroutine node_assign_tensor(A, B)
     implicit none
+
     type(tensor), intent(out) :: A
     
     !the type of B must be "intent(in)"
@@ -401,12 +378,16 @@ contains
     call node_combine(C, res)
     
     call write_graph(C, .true., "graph.dot")
+    
     call write_opt_graph(C, .true., "opt_graph.dot")
+
+    call eval(C, ierr)
+
+    A = C%data
+    
+    call display(C%data)
     
     ! call node_destroy(C, ierr)
-    
-    !write(*, "(I3)") size(C%opt_operands)
-    !call eval(B)
     
     !call tensor_copy(A, B%data)
     
@@ -422,6 +403,77 @@ contains
     if(allocated(res)) deallocate(res)    
   end subroutine
 
+  recursive subroutine eval(A, ierr)
+    implicit none
+
+    type(node), intent(inout) :: A
+    integer :: i, num_oprands
+    integer, intent(out) :: ierr
+    real(8), allocatable :: alpha(:), beta(:)
+    type(tensor_ptr), allocatable :: t_operands(:)
+
+    interface
+       subroutine invoke(p, res, operands, alpha, beta, args, n) &
+            bind(C, name="invoke")
+
+         implicit none
+
+         integer :: p
+         C_POINTER :: res
+         C_POINTER :: operands
+         C_POINTER :: alpha
+         C_POINTER :: beta
+         C_POINTER :: args
+         integer :: n
+       end subroutine
+    end interface
+  
+    if(is_data(A)) return
+
+    num_oprands = size(A%operands)
+    
+    do i = 1, num_oprands
+       call eval(A%operands(i)%ptr, ierr)
+    end do
+
+    allocate(t_operands(num_oprands), &
+         alpha(num_oprands), beta(num_oprands))
+
+    do i = 1, num_oprands
+       t_operands(i)%ptr => A%operands(i)%ptr%data
+       alpha(i) = A%operands(i)%ptr%alpha
+       beta(i)  = A%operands(i)%ptr%beta
+    enddo
+
+    ! if(A%node_type == type_rcp) &
+    !      print*, "num_operands=", num_oprands
+
+    !allocate(A%data)
+    !write(*, "(A, Z16.6)") "A1=", loc(A%data)
+    
+    !call invoke(A%node_type, loc(A%data), loc(t_operands), &
+    !     loc(alpha), loc(beta), loc(A%args), num_oprands)
+    !write(*, "(A, Z16.6)") "A2=", loc(A%data)
+
+    select case(A%node_type)
+#:for e in L
+#:if e[1] >= 50
+    case (${e[1]}$)
+       call tensor_${e[2]}$ (A%data, t_operands, alpha, beta, A%args)
+#:endif
+#:endfor
+    end select
+    
+    if(.not. associated(A%data)) then
+       print*, "execute function ", op_names(A%node_type), " failed."
+       call abort()
+    end if
+
+
+      
+    print*, "evalation of ", trim(op_names(A%node_type)), " is complete."
+  end subroutine
+  
   !> this function will be called in the following two situations:
   !> 1) A = B, where A and B are both tensors
   !> 2) func(A), where A is a tensor and passed to a function as an argument.
@@ -455,10 +507,11 @@ contains
        !combine the left node
        call node_combine(A%operands(i)%ptr, subs)
 
-       !if the node_type does not match its leaf node_type,
+       ! if the node_type does not match its leaf node_type,
        ! not accept the returned list from leaf
-       if(A%node_type /= A%operands(i)%ptr%node_type) then
-          if(allocated(subs))  deallocate(subs)
+       if(A%node_type /= A%operands(i)%ptr%node_type .or. &
+            (.not. is_arithmetic(A))) then
+          if(allocated(subs)) deallocate(subs)
           allocate(subs(1))
           subs(1)%ptr => A%operands(i)%ptr
        end if
@@ -489,6 +542,68 @@ contains
     
   end subroutine
 
+
+!   recursive subroutine node_optimize(A, res) 
+!     implicit none
+!     type(node), intent(inout), target :: A
+!     type(node_array),  allocatable, intent(out) :: res(:)
+!     type(node_array),  allocatable :: subs(:), tmp(:)
+!     integer i, cnt, num_oprands
+!     type(node), pointer :: child
+    
+!     cnt = 0
+    
+!     if(is_data(A)) return
+
+!     num_oprands = size(A%operands)
+
+!     do i = 1, num_oprands
+
+!        child => A%operands(i)%ptr
+       
+!        if(A%node_type == child%node_type .and. &
+!             is_arithmetic(A)) then
+!           call reallocate(A%operands, num_oprands+size(A%operands))
+!           A%operands()
+!        end if
+       
+!        ! if the node_type does not match its leaf node_type,
+!        ! not accept the returned list from leaf
+!        if(A%node_type == A%operands(i)%ptr%node_type) then
+!           if(allocated(subs)) deallocate(subs)
+!           allocate(subs(1))
+!           subs(1)%ptr => A%operands(i)%ptr
+!        end if
+       
+!        if(allocated(subs)) then
+!           cnt = cnt + size(subs)
+
+!           call reallocate(res, cnt)
+!           res(cnt-size(subs)+1 : cnt) = subs
+!        endif
+!     enddo
+
+!     do i = 1, size(A%operands) 
+!        !combine the left node
+!        call node_optimize(A%operands(i)%ptr, subs)
+!     enddo
+!     call copy_node_array(A%opt_operands, res)
+
+! #ifdef DEBUG
+!     write(*,*) "**********************"
+!     write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
+    
+!     if(allocated(A%opt_operands)) then
+!        do i = 1, size(A%opt_operands)
+!           write(*, "(5X, Z16.16, A, I0.3)"), &
+!                loc(A%opt_operands(i)%ptr), &
+!                " type=", A%opt_operands(i)%ptr%node_type 
+
+!        enddo
+!     endif
+! #endif
+!    end subroutine
+  
   recursive subroutine node_destroy(A, ierr)
     implicit none
     type(node), intent(inout), target :: A
@@ -537,14 +652,11 @@ contains
     character(len=10) :: op_name
     
     character(len=*), parameter :: &
-         format_label = "(I0.1,A,A,A,F4.1,A,F4.1,A)"
+         format_label = "(I0.1,A,A,A,I0.1,A,F4.1,A,F4.1,A)"
     character(len=*), parameter :: &
          format_label1 = "(I0.1,A,A,A)"
     character(len=*), parameter :: &
          format_map = "(I0.1,A,I0.1,A)"
-    
-    id = get_global_counter()
-    A%id = id
     
     if(present(is_root)) then
        am_i_root = is_root
@@ -553,6 +665,9 @@ contains
     endif
 
     if(am_i_root) then
+       call reset_global_id()
+       print*, "global_counter=", global_counter
+       
        if(present(file)) then
           open(unit=out_unit,file=file, &
                action="write", status="replace")
@@ -563,32 +678,20 @@ contains
        write(out_unit, *) "digraph G {"
     end if
 
-    select case (A%node_type)
-    case (type_scalar)
-       write(op_name, "(F4.1)") A%scalar
-    case (type_data)
-       write(op_name, *) "Matrix"
-    case (type_plus)
-       write(op_name, *) "(+)"
-    case (type_minus)
-       write(op_name, *) "(-)"
-    case (type_mult)
-       write(op_name, *) "(.*)"
-    case (type_divd)
-       write(op_name, *) "(./)"
-    case default
-       write(op_name, *) "func"
-    end select
+    write(op_name, *) trim(op_names(A%node_type))
 
+    id = get_global_id()
+    A%id = id
+    
 #:set SHOW_ALPHA_BETA = 1
     
 #:if SHOW_ALPHA_BETA > 0
     write(out_unit, format_label) id, &
-         '[label="',trim(op_name), '\n(',&
+         '[label="[',trim(adjustl(op_name)),']\n id=', A%id, '\n(',&
          A%alpha, ',',A%beta, ')"];'
 #:else
     write(out_unit, format_label1) id, &
-         '[label="',trim(op_name), '"];'
+         '[label="',trim((adjustl(op_name)), '"];'
 #:endif
     
     !print*, label1
@@ -607,7 +710,10 @@ contains
        write(*, "(I0.1, A, Z16.16)"), &
             i," = ", loc(A%${o}$operands(i)%ptr)           
     end do
-#endif    
+#endif
+
+    write(*, *) "type=", op_names(A%node_type)
+    
     do i = 1, size(A%${o}$operands)
        call write_${o}$graph(A%${o}$operands(i)%ptr,  .false.)
        write(out_unit, format_map), &
@@ -618,7 +724,6 @@ contains
        write(out_unit, *) "}"
        close (out_unit)
     end if
-
     
   end subroutine
 #:endfor
@@ -628,6 +733,25 @@ contains
     type(node) :: A
     logical :: res
     res = (A%node_type == type_scalar)
+  end function
+
+  function is_data(A) result(res)
+    implicit none
+    type(node) :: A
+    logical :: res
+    res = (A%node_type == type_scalar) .or. &
+         (A%node_type == type_data) .or. &
+         (A%node_type == type_ref) 
+  end function
+
+  function is_arithmetic(A) result(res)
+    implicit none
+    type(node) :: A
+    logical :: res
+    res = (A%node_type == type_plus) .or. &
+         (A%node_type == type_minus) .or. &
+         (A%node_type == type_mult)  .or. &
+         (A%node_type == type_divd)
   end function
 
   subroutine copy_node_array(dst, src)
@@ -691,6 +815,129 @@ contains
        allocate(arr(len))
     endif
   end subroutine
+  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+  function uminus_node (A) result(res)
+    implicit none       
+    type(node),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_minus, C, D)
+  end function
+
+  function uminus_tensor (A) result(res)
+    implicit none       
+    type(tensor),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_minus, C, D)
+  end function
+
+  function uplus_node (A) result(res)
+    implicit none       
+    type(node),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_plus, C, D)
+  end function
+
+  function uplus_tensor (A) result(res)
+    implicit none       
+    type(tensor),intent(in),target  :: A
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+    
+    call node_new(C, 0)
+    call node_new(D, A)
+    
+    call node_new(res, type_plus, C, D)
+  end function
+
+  !the following code using preprossor to create subroutines  
+#:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
+#:for type2 in ['real(8)', 'real', 'integer', 'tensor', 'node']
+#:for op in ['plus', 'minus', 'mult', 'divd', 'gt', 'ge', 'lt', 'le', 'eq', 'nq']
+#:if any(type1 in s for s in ['real(8)', 'real', 'integer']) & 
+     and any(type2 in s for s in ['real(8)', 'real', 'integer'])  
+#:else  
+#:set name1 = re.sub('\(8\)', '8', type1)
+#:set name2 = re.sub('\(8\)', '8', type2)
+  function ${name1}$_${op}$_${name2}$ (A, B) result(res)
+    implicit none       
+    type(${type1}$),intent(in),target  :: A
+    type(${type2}$),intent(in),target  :: B
+    type(node), target :: res
+    type(node), pointer :: C, D
+
+    allocate(C, D)
+
+    call node_new(C, A)
+    call node_new(D, B)
+#:if (name2 == 'real8')
+    write(*,*) "AA=", C%node_type
+    write(*,*) "C=",  C%m_shape
+#:endif
+    call node_new(res, type_${op}$, C, D)
+  end function
+  
+#:endif
+#:endfor
+#:endfor
+#:endfor
+
+#:for e in L
+#:if e[1] >= 111
+  #:for type in ['tensor', 'node']
+
+  !> function ${e[3]}$, return a tree node 
+  function ${e[2]}$_${type}$ (o) result(res)
+    implicit none
+    type(${type}$), intent(in) :: o
+    type(node) :: res
+    call node_new(res, ${e[0]}$, o)
+  end function
+
+#:endfor
+#:endif
+#:endfor
+
+
+#:for type1 in ['node', 'tensor']
+#:for type2 in ['integer', 'real', 'real(8)']
+#:set name2 = re.sub('\(8\)', '8', type2)
+  !> power function ${type1}$**${type2}$
+  function ${type1}$_pow_${name2}$(A, n) result(res)
+    implicit none
+    type(${type1}$), intent(in) :: A
+    type(${type2}$), intent(in) :: n
+    type(node) :: res
+    
+    call node_new(res, A)
+    res%args(1) = n
+  end function
+  
+#:endfor
+#:endfor
   
 end module
 

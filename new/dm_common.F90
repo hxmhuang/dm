@@ -1,7 +1,7 @@
 module dm_common
   use dm_print_mod
   
-  public :: assert, abort, tic, toc
+  public :: assert, abort, tic, toc, init
   
   interface
      subroutine abort() bind(C, name="abort")
@@ -21,26 +21,22 @@ module dm_common
      module procedure toc1, toc2
   end interface toc
 
-  ! interface int8
-  !    module procedure int8_from_i4
-  !    module procedure int8_from_r4
-  !    module procedure int8_from_r8
-  ! end interface int8
-
-  ! interface real4
-  !    module procedure real4_from_i4
-  !    module procedure real4_from_i8
-  !    module procedure real4_from_r8
-  ! end interface real4
-
   integer :: global_counter = 0
+
+  
 contains
-  function get_global_counter() result (res)
+
+  function get_global_id() result (res)
     implicit none
     integer res 
     res = global_counter
     global_counter = global_counter + 1
   end function
+
+  subroutine reset_global_id()
+    implicit none
+    global_counter = 0
+  end subroutine
   
   subroutine assert(condition, file, linenum, msg)
     implicit none

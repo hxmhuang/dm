@@ -16,7 +16,7 @@ contains
     integer :: ierr
     
     call tensor_new(res, (/m/))
-    call data_constants(res%data, val, (/m/), ierr)
+    call data_consts(res%data, val, (/m/), ierr)
   end function
 
   function consts_2d(val,m, n) result(res)
@@ -25,7 +25,7 @@ contains
     type(tensor) :: res
     
     call tensor_new(res, (/m, n/))
-    call data_constants(res%data,  val, (/m,n/), ierr)
+    call data_consts(res%data,  val, (/m,n/), ierr)
   end function
 
   function consts_3d(val,m, n, k) result(res)
@@ -34,7 +34,7 @@ contains
     type(tensor) :: res
     
     call tensor_new(res, (/m,n,k/))
-    call data_constants(res%data,  val, (/m,n,k/), ierr)
+    call data_consts(res%data,  val, (/m,n,k/), ierr)
   end function
 end module
 
