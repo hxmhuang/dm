@@ -1,5 +1,9 @@
 
 module test
+
+  type obj_ptr
+     integer, pointer, dimension(:) :: p
+  end type obj_ptr
   
 contains
   subroutine fun1()
@@ -17,17 +21,20 @@ contains
 
   subroutine sin()
     print*, "hello4!"
-  end subroutine  
+  end subroutine
+
+
 end module test
 
 program main
-  use dm_expr
-  use dm_tensor
-  use dm_basics
+  use ot_expr
+  use ot_tensor
+  use mod_all_func
   use dispmodule
   use test
-  use dm_common
+  use ot_common
   use ot_init_mod
+  use ot_type
   implicit none
   
   type(tensor) :: A, B, C, D, E, F, G, H, BB
@@ -35,16 +42,18 @@ program main
   integer, parameter :: NN = 1000
   integer :: ierr
   integer :: pos(2)
-
+  type(obj_ptr), allocatable, dimension(:) :: pp
+  type(tensor_ptr), allocatable, dimension(:) :: tp
+  
   type(node) :: NA, NB, NC, ND
   
   call ot_init(ierr)
-  print*, op_names(50)
+
+  call test_size()
   ! call insert_pointer(loc(fun1), 0)
   ! call insert_pointer(loc(fun2), 1)
   ! call insert_pointer(loc(fun3), 2)
   ! call insert_pointer(loc(fun4), 3)
-  
 
   ! call invoke(3)
   ! call invoke(2)
@@ -74,17 +83,18 @@ program main
   ! print*, find_range(r(2:15))  
   
 
-  CALL disp('A = ', (/1,2,3,4/), orient='row')
+  !CALL disp('A = ', (/1,2,3,4/), orient='row')
   
   !three-dimensional array
-  A = ones(2, 2, 2)
-  B = ones(2, 2, 2)
-  C = ones(2, 2, 2)
-  D = ones(2, 2, 2)  
-  E = ones(2, 2, 2)
+  !A = ones(2, 2, 2)
+  B = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + log(ones(2,2,2) * 3.0)
+  ! C = ones(2, 2, 2)
+  ! D = ones(2, 2, 2)  
+  ! E = ones(2, 2, 2)
 
-  !call display(A, "A = ")
-  
+  ! call display(A, "A = ")
+
+  call display(B, "B = ")  
   !C = 1.0 + A + B + C * D + E
   !C = 1.0 + 2. * A + 4.0 / B * C * D
   !D = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
@@ -98,11 +108,11 @@ program main
   ! NB = 2.0 + (1.0 / B) + A + tan(NA)
   ! F = NB
 
-  C = A + B
-  call display(C)
+  ! C = A + B
+  ! call display(C)
 
-  D = log(C)
-  call display(D, "D=")
+  ! D = log(C)
+  ! call display(D, "D=")
   
   ! !show the result of A-B
   ! call display(A-B, "A-B=")

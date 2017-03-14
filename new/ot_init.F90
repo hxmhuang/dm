@@ -1,5 +1,5 @@
 module ot_init_mod
-  use dm_expr
+  use ot_expr
   
 contains
   subroutine ot_init(ierr)
