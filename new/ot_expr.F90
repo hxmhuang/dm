@@ -3,6 +3,7 @@ module ot_expr
   use ot_tensor
   use dispmodule
   use ot_type
+  use ot_vector
   
 #include "node_type.h"
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
@@ -114,6 +115,7 @@ contains
     B%m_dim = A%m_dim
     B%m_shape = A%m_shape
     B%data => A
+    B%local_block = A%local_block
     B%node_type = type_data
   end subroutine
 
@@ -132,7 +134,8 @@ contains
     B%scalar = A%scalar
     B%args = A%args
     B%node_type = A%node_type
-
+    B%local_block = A%local_block
+    
     call copy_node_ptr(B%opt_operands, A%opt_operands)
     call copy_node_ptr(B%operands, A%operands)
   end subroutine
@@ -182,8 +185,9 @@ contains
           C%is_implicit = .true.
           C%beta = x
           C%node_type = type_rcp
-          allocate(C%operands(1))
-          C%operands(1)%ptr => right
+          ! allocate(C%operands(1))
+          ! C%operands(1)%ptr => right
+          call push_back(C%operands, right)
        end select
     else if(is_scalar(right)) then
        x = right % scalar
@@ -274,11 +278,14 @@ contains
     dst%m_dim     = src%m_dim
     dst%m_shape   = src%m_shape
     dst%is_implicit = .true.
+    dst%local_block = src%local_block
 
-    allocate(dst%operands(1))
     allocate(p)
     call node_new(p, src)
-    dst%operands(1)%ptr => p
+
+    call push_back(dst%operands, p)    
+    ! allocate(dst%operands(1))
+    ! dst%operands(1)%ptr => p
   end subroutine
 
   subroutine disp_info_node(o, prefix)
@@ -296,7 +303,7 @@ contains
 
     write(*, "(4X, A, I0.1)") "node id : ", o%id
 #ifdef DEBUG
-    write(*, "(4X, A, Z16.16)") "obj addr : ", loc(o)
+    write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
 #endif
     write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)    
     write(*, "(4X, A)", advance="no") "shape : ["
@@ -373,10 +380,6 @@ contains
 
     call node_combine(C, res)
     
-    call write_graph(C, file="graph.dot")
-    
-    call write_opt_graph(C, file="opt_graph.dot")
-
     call eval(A, C, ierr)
 
     !call display(C%data)
@@ -403,8 +406,9 @@ contains
     type(node), intent(in) :: A
     integer :: i, num_oprands
     integer, intent(out) :: ierr
-    real(8), allocatable :: alpha(:), beta(:)
-    type(tensor_ptr), allocatable :: tensor_operands(:)
+    real(8), allocatable :: ops_alpha(:), ops_beta(:)
+    real(8) :: alpha, beta
+    type(tensor_ptr), allocatable :: ops_tensor(:)
     logical, optional, intent(in) :: is_root_arg
     logical :: is_root
     type(node), pointer :: node_ptr
@@ -438,8 +442,8 @@ contains
     if(.not. is_data(A)) then       
        num_oprands = size(A%operands)
 
-       allocate(tensor_operands(num_oprands), &
-            alpha(num_oprands), beta(num_oprands))
+       allocate(ops_tensor(num_oprands), &
+            ops_alpha(num_oprands), ops_beta(num_oprands))
        
        !recusively evaluate sub-nodes
        do i = 1, num_oprands
@@ -452,37 +456,46 @@ contains
           if(.not. associated(node_ptr%data)) then
              allocate(node_ptr%data)
           endif
-
+          
           call eval(node_ptr%data, node_ptr, ierr, .false.)
           
-          tensor_operands(i)%ptr => node_ptr%data
-          alpha(i) = node_ptr%alpha
-          beta(i)  = node_ptr%beta
+          ops_tensor(i)%ptr => node_ptr%data
+          ops_alpha(i) = node_ptr%alpha
+          ops_beta(i)  = node_ptr%beta
        end do
     else
-       allocate(tensor_operands(1), alpha(1), beta(1))
-       tensor_operands(1)%ptr => A%data
-       alpha(1) = A%alpha
-       beta(1) = A%beta
+       allocate(ops_tensor(1), ops_alpha(1), ops_beta(1))
+       ops_tensor(1)%ptr => A%data
+       ops_alpha(1) = A%alpha
+       ops_beta(1)  = A%beta
     endif
 
-    call tensor_duplicate(res, tensor_operands(1)%ptr)
+    call tensor_duplicate(res, ops_tensor(1)%ptr)
     
-    
-    !call invoke(A%node_type, loc(A%data), loc(tensor_operands), &
+    !call invoke(A%node_type, loc(A%data), loc(ops_tensor), &
     !     loc(alpha), loc(beta), loc(A%args), num_oprands)
     !write(*, "(A, Z16.6)") "A2=", loc(A%data)
 
+    if(is_root) then
+       alpha = A%alpha
+       beta = A%beta
+    else
+       alpha = 0
+       beta = 1.0
+    endif
+    
     if(need_eval(A) .or. is_root) then
        select case(A%node_type)
 #:for e in L
 #:if e[4]=='A' or e[4]=='B' or e[4]=='C'
        case (${e[1]}$)
-          call ${e[2]}$_tensors(res, tensor_operands, alpha, beta, A%args)
+          call ${e[2]}$_tensors(res, &
+               ops_tensor, ops_alpha, ops_beta, A%args, alpha, beta)
 #:endif
 #:endfor
        case default
-          call eval_tensors(res, tensor_operands, alpha, beta, A%args)
+          call eval_tensors(res, &
+               ops_tensor, ops_alpha, ops_beta, A%args, alpha, beta)
        end select
 
        ! if(.not. associated(A%data)) then
@@ -548,19 +561,19 @@ contains
 
     call copy_node_ptr(A%opt_operands, res)
 
-#ifdef DEBUG
-    write(*,*) "**********************"
-    write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
+! #ifdef DEBUG
+!     write(*,*) "**********************"
+!     write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
     
-    if(allocated(A%opt_operands)) then
-       do i = 1, size(A%opt_operands)
-          write(*, "(5X, Z16.16, A, I0.3)"), &
-               loc(A%opt_operands(i)%ptr), &
-               " type=", A%opt_operands(i)%ptr%node_type 
+!     if(allocated(A%opt_operands)) then
+!        do i = 1, size(A%opt_operands)
+!           write(*, "(5X, Z16.16, A, I0.3)"), &
+!                loc(A%opt_operands(i)%ptr), &
+!                " type=", A%opt_operands(i)%ptr%node_type 
 
-       enddo
-    endif
-#endif
+!        enddo
+!     endif
+! #endif
     
   end subroutine
 
@@ -735,12 +748,14 @@ contains
 !     end do
 ! #endif
 
-    do i = 1, size(A%${o}$operands)
-       call write_${o}$graph(A%${o}$operands(i)%ptr,  .false.)
-       write(out_unit, format_map), &
-            A%id, "->", A%${o}$operands(i)%ptr%id, ";"
-    end do
-
+    if(allocated(A%${o}$operands)) then
+       do i = 1, size(A%${o}$operands)
+          call write_${o}$graph(A%${o}$operands(i)%ptr,  .false.)
+          write(out_unit, format_map), &
+               A%id, "->", A%${o}$operands(i)%ptr%id, ";"
+       end do
+    endif
+    
     if(am_i_root) then
        write(out_unit, *) "}"
        close (out_unit)

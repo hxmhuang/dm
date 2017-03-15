@@ -87,17 +87,37 @@ program main
   
   !three-dimensional array
   !A = ones(2, 2, 2)
-  B = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + log(ones(2,2,2) * 3.0)
+  B = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
+  call display(B, "B = ")
+
+  NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
+
+  call write_graph(NB, file="NB.dot")
+  !call write_opt_graph(NB, file="opt_graph.dot")
+
   ! C = ones(2, 2, 2)
   ! D = ones(2, 2, 2)  
   ! E = ones(2, 2, 2)
 
   ! call display(A, "A = ")
 
-  call display(B, "B = ")  
+  C = 5.0 / (2.0 * ones(2, 2, 2))  
+  call display(C, "C = ")
+
+  D = 10.0 * sin(ones(2, 2, 2))
+  call display(D, "D = ")
+  
+
+  A = ones(2, 2, 2)  
+  B = ones(2, 2, 2)  
+  C = ones(2, 2, 2)
+  D = ones(2, 2, 2)  
+
   !C = 1.0 + A + B + C * D + E
   !C = 1.0 + 2. * A + 4.0 / B * C * D
-  !D = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
+  ND = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
+  call write_graph(ND, file="ND.dot")
+  call write_opt_graph(ND, file="OPT_ND.dot")
   
   !C = A - B
   !C = 2.0 + (1.0 / B) + A

@@ -26,7 +26,7 @@ OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o petsc_helper.o \
 ABC = $(addprefix ./, ot_data.o  ot_tensor.o \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ot_print.o ot_common.o ot_type.o ot_vector.o \
+OBJS  = ot_geom.o ot_print.o ot_common.o  ot_type.o ot_vector.o \
 	${OBJS_UTIL} ${OBJS_DATA} ${ABC} ${OBJS_FUNC}$
 
 OBJ_MAIN= ${OBJS} main.o

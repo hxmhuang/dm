@@ -6,6 +6,8 @@
 #include "node_type.h"
 
 module ot_type
+  use ot_geom
+  
   type grid
      character(1) :: grid_type !'B' or 'C'
      type(tensor), pointer :: dx_3d => null()
@@ -23,8 +25,11 @@ module ot_type
      logical :: is_implicit = .false.
 
      logical :: is_field = .false.
+     
      integer :: grid_pos
 
+     type(block) :: local_block
+     
   end type tensor
 
   type tensor_ptr
@@ -43,6 +48,8 @@ module ot_type
   type node
      type(tensor), pointer :: data => null()
 
+     type(block) :: local_block
+     
      !the operands for a operation, e.g. A + B,, A and B are operands
      !for a binary operator, the number operands is always 2
      type(node_ptr), allocatable, dimension(:) :: operands

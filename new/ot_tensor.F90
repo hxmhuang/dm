@@ -149,13 +149,14 @@ contains
   
 #:for op in L
   #:if op[1] >= 50
-  subroutine ${op[2]}$_tensors(res, tensor_operands, alpha, beta, args) 
+subroutine ${op[2]}$_tensors(res, tensor_operands, &
+     ops_alpha, ops_beta, args, alpha, beta) 
     implicit none
 #include "petsc.h"
     type(tensor), intent(inout) :: res
     type(tensor_ptr), intent(in), allocatable  :: tensor_operands(:)
     Vec,allocatable :: vec_operands(:)
-    real(8), intent(in) :: alpha(:), beta(:)
+    real(8), intent(in) :: ops_alpha(:), ops_beta(:), alpha, beta
     real(8), intent(in) :: args(10)
     integer :: n
     integer :: ierr, i
@@ -166,14 +167,6 @@ contains
 
     n = size(tensor_operands)    
     allocate(vec_operands(n))
-
-    !call tensor_duplicate(res, tensor_operands(1)%ptr)
-
-    !print*, "n=", loc(tensor_operands(1)%ptr)
-    
-    ! if(.not. associated(res)) then
-    !    allocate(res)
-    ! endif
 
     !print*, "loc(res)=", loc(res)
     !print*, "loc(ptr)=", loc(tensor_operands(1)%ptr)    
@@ -190,7 +183,7 @@ contains
     
     !call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-    call data_${op[2]}$(res%data, vec_operands, alpha, beta, args, ierr)
+    call data_${op[2]}$(res%data, vec_operands, ops_alpha, ops_beta, args, alpha, beta, ierr)
 
     !call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
     

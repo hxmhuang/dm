@@ -18,7 +18,7 @@ contains
     implicit none
     type(${t}$_ptr), allocatable,  intent(inout) :: v(:)
     type(${t}$_ptr), allocatable :: tmp(:)
-    type(${t}$), intent(in), target :: a
+    type(${t}$), intent(in), pointer :: a
     integer :: pos
 
     pos = 1

@@ -1,6 +1,8 @@
-! -----------------------------------------------------------------------
-!> Distributed Matrix Computing Library
-! -----------------------------------------------------------------------
+
+#define D1 xs:xe
+#define D2 xs:xe,ys:ye
+#define D3 xs:xe,ys:ye,zs:ze
+
 module ot_data
   use ot_common
   use petsc_helper
@@ -179,13 +181,12 @@ contains
 #:if op[4] == 'A'
 #:set fun_name = 'data_' + op[2]
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, alpha, beta, args, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in) :: B(:)
-    PetscScalar :: alpha(:)
-    PetscScalar :: beta(:)
+    PetscScalar :: ops_alpha(:), ops_beta(:), alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -198,6 +199,7 @@ contains
     real(8), intent(in) :: args(10)
     integer :: i
 
+    
     if(size(B) < 2) then
        print*, &
             "Error! the number of operands for ${fun_name}$ &
@@ -231,25 +233,19 @@ contains
        
        call DMDAVecGetArrayF90(A_dm, A, a_${d}$d, ierr)
 
+       a_${d}$d(D${d}$) = 0.
+       
        do i = 1, size(B)
           call DMDAVecGetArrayF90(B_dm, B(i), b_${d}$d, ierr)
 
-#:if d == 1
-          a_${d}$d(xs:xe) = a_${d}$d(xs:xe) ${op[3]}$ &
-               (alpha(i) + beta(i) * b_${d}$d(xs:xe))
-#:elif d == 2
-          a_${d}$d(xs:xe,ys:ye) = &
-               a_${d}$d(xs:xe,ys:ye) ${op[3]}$ &
-               (alpha(i) + beta(i) * b_${d}$d(xs:xe, ys:ye))
-#:elif d == 3
-          a_${d}$d(xs:xe,ys:ye,zs:ze) = &
-               a_${d}$d(xs:xe,ys:ye,zs:ze) ${op[3]}$ &
-               (alpha(i) + beta(i) * b_${d}$d(xs:xe,ys:ye,zs:ze))
-#:endif
+          a_${d}$d(D${d}$) = a_${d}$d(D${d}$) ${op[3]}$ &
+               (ops_alpha(i) + ops_beta(i) * b_${d}$d(D${d}$))
           
           call DMDAVecRestoreArrayF90(B_dm, B(i), b_${d}$d, ierr)
        enddo
 
+       a_${d}$d(D${d}$) = alpha + beta * a_${d}$d(D${d}$)
+       
        call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
 #:endfor
     end select
@@ -271,13 +267,12 @@ contains
 #:if op[4] == 'B'
 #:set fun_name = 'data_' + op[2]  
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, alpha, beta, args, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in) :: B(:)
-    PetscScalar :: alpha(:)
-    PetscScalar :: beta(:)
+    PetscScalar :: ops_alpha(:), ops_beta(:), alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -299,8 +294,6 @@ contains
 
     call PetscLogEventRegister("${fun_name}$", 0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-
-
     
     if(A == 0) &
          call VecDuplicate(A, B(1), ierr)
@@ -327,25 +320,13 @@ contains
        call DMDAVecGetArrayF90(B_dm, B(1), b1_${d}$d, ierr)
        call DMDAVecGetArrayF90(B_dm, B(2), b2_${d}$d, ierr)       
 
-#:if   d == 1
-       a_${d}$d(xs:xe) =  &
-            merge(1.d0, 0.d0, &
-            (alpha(1) + beta(1) * b1_${d}$d(xs:xe)) &
+       a_${d}$d(D${d}$) =  &
+            alpha + beta * &
+            (merge(1.d0, 0.d0, &
+            (ops_alpha(1) + ops_beta(1) * b1_${d}$d(D${d}$)) &
             ${op[3]}$ &
-            (alpha(2) + beta(2) * b2_${d}$d(xs:xe)))
-#:elif d == 2
-       a_${d}$d(xs:xe,ys:ye) =  &
-            merge(1.d0, 0.d0, &
-            (alpha(1) + beta(1) * b1_${d}$d(xs:xe,ys:ye)) &
-            ${op[3]}$ &
-            (alpha(2) + beta(2) * b2_${d}$d(xs:xe,ys:ye)))
-#:elif d == 3
-       a_${d}$d(xs:xe,ys:ye,zs:ze) =  &
-            merge(1.d0, 0.d0, &
-            (alpha(1) + beta(1) * b1_${d}$d(xs:xe,ys:ye,zs:ze)) &
-            ${op[3]}$ &
-            (alpha(2) + beta(2) * b2_${d}$d(xs:xe,ys:ye,zs:ze)))
-#:endif
+            (ops_alpha(2) + ops_beta(2) * b2_${d}$d(D${d}$))))
+              
           call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
           call DMDAVecRestoreArrayF90(B_dm, B(2), b2_${d}$d, ierr)          
           call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
@@ -367,13 +348,12 @@ contains
 #:if op[4] == 'C'
 #:set fun_name = 'data_' + op[2]
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, alpha, beta, args, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in)  :: B(:)
-    PetscScalar  :: alpha(:)
-    PetscScalar  :: beta(:)
+    PetscScalar  :: ops_alpha(:), ops_beta(:), alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -420,51 +400,34 @@ contains
        call DMDAVecGetArrayF90(A_dm, A, a_${d}$d, ierr)
        call DMDAVecGetArrayF90(B_dm, B(1), b1_${d}$d, ierr)
 
-#:if   d == 1
+#:if op[0] == 'type_pow'
+       a_${d}$d(D${d}$) = &
+            alpha + beta * &
+            ((ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$))**args(1))
+#:else
+       a_${d}$d(D${d}$) = &
+            alpha + beta * &
+            (${op[3]}$(ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$)))
+#:endif
        
-#:if op[0] == 'type_pow'
-       a_${d}$d(xs:xe) = &
-            (alpha(1) + beta(1) * b1_${d}$d (xs:xe))**args(1)
-#:else
-       a_${d}$d(xs:xe) = &
-            ${op[3]}$(alpha(1) + beta(1) * b1_${d}$d (xs:xe))
-#:endif       
-#:elif d == 2
+       call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
+       call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
 
-#:if op[0] == 'type_pow'
-       a_${d}$d(xs:xe,ys:ye) = &
-            (alpha(1) + beta(1) * b1_${d}$d (xs:xe,ys:ye))**args(1)
-#:else
-       a_${d}$d(xs:xe,ys:ye) = &
-            ${op[3]}$(alpha(1) + beta(1) * b1_${d}$d (xs:xe,ys:ye))
-#:endif              
-#:elif d == 3
-
-#:if op[0] == 'type_pow'
-       a_${d}$d(xs:xe,ys:ye,zs:ze) = &
-            (alpha(1) + beta(1) * b1_${d}$d (xs:xe,ys:ye,zs:ze))**args(1)
-
-       ! print*, a_${d}$d(xs:xe,ys:ye,zs:ze)
-       ! print*, b1_${d}$d(xs:xe,ys:ye,zs:ze)
-#:else
-       a_${d}$d(xs:xe,ys:ye,zs:ze) = &
-            ${op[3]}$(alpha(1) + beta(1) * b1_${d}$d (xs:xe,ys:ye,zs:ze))
-#:endif
-              
-#:endif
-          call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
-          call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
-
-          ! print*, "aaaaaaaaaaaaaaaaaaaaabbbbbbbb"
-          ! print*, "alpha=", alpha(1), "beta=", beta(1)
+       ! print*, "aaaaaaaaaaaaaaaaaaaaabbbbbbbb"
+       ! print*, "ops_alpha=", ops_alpha(1), "ops_beta=", ops_beta(1)
        !call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
 #:endfor
     end select
-
     
     call PetscLogEventEnd(ievent, ierr)
   end subroutine
   
-  #:endif
+#:endif
 #:endfor
 end module
+
+#undef D1
+#undef D2
+#undef D3
+
+
