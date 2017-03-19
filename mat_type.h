@@ -16,3 +16,6 @@
 #define MAT_COMPARE_EQ  5
 #define MAT_COMPARE_NQ  6
 
+
+#define MAT_XTYPE_IMPLICIT 1
+#define MAT_XTYPE_EXPLICIT 2

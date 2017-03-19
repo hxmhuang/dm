@@ -26,25 +26,30 @@ contains
     call dm_option_real('-ep',ep,ierr)
     call dm_option_bool('-debug',debug,ierr)
 
-    if(myrank==0) print *, "==============Test dm_zeros==============="
-    A=dm_zeros(m,n,k)
-    B=dm_zeros(m,n,k,.true.)
-    C=dm_zeros(m,n,2,.false.)
-    D=dm_zeros(m,m,m)
-    if(debug) then
-       if(myrank==0) print *, ">A=dm_zeros(m,n,k)"
-       call dm_view(A,ierr)
-       if(myrank==0) print *, ">B=dm_zeros(m,n,k,.true.)"
-       call dm_view(B,ierr)
-       if(myrank==0) print *, ">C=dm_zeros(m,n,2,.false.)"
-       if(myrank==0) call dm_view(C,ierr)
-       if(myrank==0) print *, ">D=dm_zeros(m,m,m)"
-       call dm_view(D,ierr)
-    endif
-    call dm_destroy(A,ierr)
-    call dm_destroy(B,ierr)
-    call dm_destroy(C,ierr)
-    call dm_destroy(D,ierr)
+    A=dm_eye(m,n,k)+dm_eye(m,n,k) * 3
+    print*, ">A="
+    call dm_view(A, ierr)
+
+
+    ! if(myrank==0) print *, "==============Test dm_zeros==============="
+    ! A=dm_zeros(m,n,k)
+    ! B=dm_zeros(m,n,k,.true.)
+    ! C=dm_zeros(m,n,2,.false.)
+    ! D=dm_zeros(m,m,m)
+    ! if(debug) then
+    !    if(myrank==0) print *, ">A=dm_zeros(m,n,k)"
+    !    call dm_view(A,ierr)
+    !    if(myrank==0) print *, ">B=dm_zeros(m,n,k,.true.)"
+    !    call dm_view(B,ierr)
+    !    if(myrank==0) print *, ">C=dm_zeros(m,n,2,.false.)"
+    !    if(myrank==0) call dm_view(C,ierr)
+    !    if(myrank==0) print *, ">D=dm_zeros(m,m,m)"
+    !    call dm_view(D,ierr)
+    ! endif
+    ! call dm_destroy(A,ierr)
+    ! call dm_destroy(B,ierr)
+    ! call dm_destroy(C,ierr)
+    ! call dm_destroy(D,ierr)
   end subroutine test_dm_zeros
 
 
