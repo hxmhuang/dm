@@ -2,15 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* extern "C"{ */
-/*   void c_gettimeofday(int *ierr2, long long* val); */
-/* } */
 
 void gettimeofday(int *ierr2, long long* val)
 {
   struct timeval time1;
   int ierr;
-  double elap;
     
   ierr = gettimeofday(&time1, NULL);
   *ierr2 = ierr;

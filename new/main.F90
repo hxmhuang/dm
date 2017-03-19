@@ -29,12 +29,14 @@ end module test
 program main
   use ot_expr
   use ot_tensor
+  use ot_node
+  use ot_type
   use mod_all_func
   use dispmodule
   use test
   use ot_common
   use ot_init_mod
-  use ot_type
+
   implicit none
   
   type(tensor) :: A, B, C, D, E, F, G, H, BB
@@ -49,7 +51,7 @@ program main
   
   call ot_init(ierr)
 
-  call test_size()
+  ! call test_size()
   ! call insert_pointer(loc(fun1), 0)
   ! call insert_pointer(loc(fun2), 1)
   ! call insert_pointer(loc(fun3), 2)
@@ -124,10 +126,13 @@ program main
   !C = 2.0 * (A - 0.1) + B  
   !E = A * B * C + (D)
 
-  ! NA = B + sin(cos(exp(D+C)) + A) * 2 - 3
-  ! NB = 2.0 + (1.0 / B) + A + tan(NA)
-  ! F = NB
+  NA = B + sin(cos(exp(D+C)) + A) * 2 - 3
+  NB = 2.0 + (1.0 / B) + A + tan(NA)
 
+  call write_graph(NB, file="NB.dot")
+  
+  F = NB
+  call display(F, "F = ")
   ! C = A + B
   ! call display(C)
 

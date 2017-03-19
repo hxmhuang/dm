@@ -26,7 +26,11 @@
    ["type_abs",	    120, "abs",	    "abs", "C"],&       
    ["type_log",     121, "log",	    "log", "C"],&  
    ["type_uplus",   122, "uplus",   "+",   "C"],&
-   ["type_uminus",  123, "uminus",  "-",   "C"]]
+   ["type_uminus",  123, "uminus",  "-",   "C"],&
+   ["type_log10",   124, "log10",   "log10",  "C"],&
+   ["type_tanh",    125, "tanh",    "tanh",   "C"],&
+   ["type_sinh",    126, "sinh",    "sinh",   "C"],&
+   ["type_cosh",    127, "cosh",    "cosh",   "C"]]
 
 
 

@@ -1,6 +1,8 @@
 
 CFLAGS           =
-FFLAGS		 = -fcheck=all -fbacktrace -J /Users/sxzhang/Projects/dm/new/build/
+FFLAGS		 = -Wno-unused-parameter -fcheck=all \
+		   -fbacktrace -J /Users/sxzhang/Projects/dm/new/build/ \
+		   -Wno-unused-variable
 CPPFLAGS         =
 FPPFLAGS         =
 LOCDIR		 = tutorials/python/
@@ -23,11 +25,14 @@ OBJS_DATA = $(addprefix ./data/, data_consts.o data_rand.o )
 OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o petsc_helper.o \
 	    ot_display.o )
 
-ABC = $(addprefix ./, ot_data.o  ot_tensor.o \
+ABC = $(addprefix ./, ot_data.o ot_type.o ot_vector.o \
+	ot_ref.o  ot_tensor.o \
+	ot_node.o  \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ot_geom.o ot_print.o ot_common.o  ot_type.o ot_vector.o \
-	${OBJS_UTIL} ${OBJS_DATA} ${ABC} ${OBJS_FUNC}$
+OBJS  = ${OBJS_UTIL} ot_geom.o ot_print.o \
+	ot_common.o   \
+	${OBJS_DATA} ${ABC} ${OBJS_FUNC}$
 
 OBJ_MAIN= ${OBJS} main.o
 

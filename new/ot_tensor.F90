@@ -7,16 +7,14 @@
 module ot_tensor
   use ot_common
   use ot_data
-  use ot_type
-  
+  use ot_type  
+  use ot_ref
+
   public :: tensor_new, tensor_destroy
-  
-  integer, parameter :: zero3(3) = (/0,0,0/)
   
   !here we use a trick to extract range information from an empty array
   !see find_range function
-  integer, allocatable :: r(:)
-
+  !integer, allocatable :: r(:)
   interface
      subroutine reg_func(p, id) &
           bind(C, name="reg_func")
@@ -25,7 +23,27 @@ module ot_tensor
        integer :: id
      end subroutine
   end interface
-  
+
+  interface shape
+     module procedure tensor_shape     
+  end interface shape
+
+  interface dim
+     module procedure tensor_dim
+  end interface dim
+
+  interface box
+     module procedure tensor_box
+  end interface box
+
+  interface lbox
+     module procedure tensor_lbox
+  end interface lbox
+
+  interface disp_info
+     module procedure disp_info_tensor
+  end interface disp_info
+
 contains
 
   subroutine init_tensor(ierr)
@@ -48,6 +66,41 @@ contains
 
   end function
 
+  function tensor_dim(o) result(res)
+    implicit none
+    type(tensor), intent(in) :: o
+    integer :: res
+    res = o%m_dim
+  end function
+  
+  function tensor_shape(o) result(res)
+    implicit none
+    type(tensor), intent(in) :: o
+    integer :: res(3)
+    res = o%m_shape
+  end function
+  
+  function tensor_box(o) result(res)
+    implicit none
+    type(tensor), intent(in) :: o
+    type(box_info) :: res
+
+    res%starts = 0
+    res%ends = shape(o) - 1
+  end function
+
+  function tensor_lbox(o) result(res)
+    implicit none
+    type(tensor), intent(in) :: o
+    type(box_info) :: res
+    integer :: xs, ys, zs, xl, yl, zl
+
+    call vec_get_corners(o%data, xs, ys, zs, xl, yl, zl)
+
+    res%starts = (/xs, ys, zs/)
+    res%ends = res%starts + (/xl, yl, zl/) - 1
+  end function
+  
   subroutine disp_info_tensor(o, prefix)
     implicit none
     type(tensor), intent(in) :: o
@@ -271,6 +324,22 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     ! call tensor_copy_structure(dst, src)
     ! call data_destroy(dst%data,  ierr) !safe destroy
     ! call data_duplicate(dst%data,  src%data,  ierr)
-  end subroutine 
+  end subroutine
+
+  subroutine bind_data(o, data)
+    implicit none
+    type(tensor), intent(inout) :: o
+    Vec, intent(in) :: data
+    integer :: d_shape(3)
+    integer :: xs, xl, ys, yl, zs, zl
+
+    call vec_get_corners(data, xs, ys, zs, xl, yl, zl)
+
+    o%data = data
+    o%local_block%starts = (/xs, ys, zs/)
+    o%local_block%ends = o%local_block%starts &
+         + (/xl, yl, zl/) - 1
+  end subroutine
+  
 end module 
 

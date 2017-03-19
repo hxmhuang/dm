@@ -2,6 +2,7 @@
 module ot_vector
   use ot_type
   use ot_common
+  
 #:for op in ['push_back', 'pop', 'remove']  
   interface ${op}$
 #:for t in ['tensor', 'node']
@@ -9,6 +10,11 @@ module ot_vector
 #:endfor
   end interface ${op}$
 #:endfor
+
+  interface assign_ptr
+     module procedure assign_node_ptr
+     module procedure assign_tensor_ptr
+  end interface assign_ptr
   
 contains
 
@@ -36,6 +42,15 @@ contains
     v(pos)%ptr => a
   end subroutine
 
+  subroutine assign_${t}$_ptr(p, o)
+    implicit none
+    type(${t}$), pointer,intent(out) :: p
+    type(${t}$), target, intent(in)  :: o
+    p => o
+    ! add reference counter
+    p%ref_cnt = p%ref_cnt + 1
+  end subroutine
+    
   !> pop out the first element of ${t}$_ptr array
   subroutine pop_${t}$(v, a)
     implicit none
