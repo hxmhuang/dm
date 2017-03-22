@@ -1,4 +1,8 @@
 
+#define I1 :
+#define I2 :,:
+#define I3 :,:,:
+
 #define D1 xs:xe
 #define D2 xs:xe,ys:ye
 #define D3 xs:xe,ys:ye,zs:ze
@@ -16,6 +20,7 @@ module ot_data
      module procedure get_local_ptr3d
   end interface get_local_ptr
 
+  
 contains
 
 #include "data/data_rand.F90"
@@ -181,12 +186,12 @@ contains
 #:if op[4] == 'A'
 #:set fun_name = 'data_' + op[2]
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in) :: B(:)
-    PetscScalar :: ops_alpha(:), ops_beta(:), alpha, beta
+    PetscScalar :: ops_alpha(:), ops_beta(:) !, alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -198,7 +203,7 @@ contains
     PetscScalar, pointer :: a_3d(:,:,:), b_3d(:,:,:)
     real(8), intent(in) :: args(10)
     integer :: i
-
+    type(box_info) :: box
     
     if(size(B) < 2) then
        print*, &
@@ -219,11 +224,19 @@ contains
     call VecGetDM(A, A_dm, ierr)
     call VecGetDM(B(1), B_dm, ierr)
 
-    call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
+    call dm_get_corners(A_dm, box)
 
-    xe = xs + xl - 1
-    ye = ys + yl - 1
-    ze = zs + zl - 1
+    xs = box%starts(1)
+    ys = box%starts(2)
+    zs = box%starts(3)
+
+    xe = box%ends(1)
+    ye = box%ends(2)
+    ze = box%ends(3)
+
+    ! xe = xs + xl - 1
+    ! ye = ys + yl - 1
+    ! ze = zs + zl - 1
     
     call dm_get_dim(A_dm, num_dim)
 
@@ -244,7 +257,7 @@ contains
           call DMDAVecRestoreArrayF90(B_dm, B(i), b_${d}$d, ierr)
        enddo
 
-       a_${d}$d(D${d}$) = alpha + beta * a_${d}$d(D${d}$)
+       !a_${d}$d(D${d}$) = alpha + beta * a_${d}$d(D${d}$)
        
        call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
 #:endfor
@@ -267,12 +280,12 @@ contains
 #:if op[4] == 'B'
 #:set fun_name = 'data_' + op[2]  
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in) :: B(:)
-    PetscScalar :: ops_alpha(:), ops_beta(:), alpha, beta
+    PetscScalar :: ops_alpha(:), ops_beta(:)!, alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -284,6 +297,7 @@ contains
     PetscScalar, pointer :: a_3d(:,:,:), b1_3d(:,:,:), b2_3d(:,:,:)
     integer :: i
     real(8), intent(in) :: args(10)
+    type(box_info) :: box
     
     if(size(B) /= 2) then
        print*, &
@@ -304,11 +318,19 @@ contains
     call VecGetDM(A, A_dm, ierr)
     call VecGetDM(B, B_dm, ierr)
     
-    call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
-    
-    xe = xs + xl - 1
-    ye = ys + yl - 1
-    ze = zs + zl - 1
+    call dm_get_corners(A_dm, box)
+
+    xs = box%starts(1)
+    ys = box%starts(2)
+    zs = box%starts(3)
+
+    xe = box%ends(1)
+    ye = box%ends(2)
+    ze = box%ends(3)
+
+    ! xe = xs + xl - 1
+    ! ye = ys + yl - 1
+    ! ze = zs + zl - 1
     
     call dm_get_dim(A_dm, num_dim)
 
@@ -321,7 +343,7 @@ contains
        call DMDAVecGetArrayF90(B_dm, B(2), b2_${d}$d, ierr)       
 
        a_${d}$d(D${d}$) =  &
-            alpha + beta * &
+ !           alpha + beta * &
             (merge(1.d0, 0.d0, &
             (ops_alpha(1) + ops_beta(1) * b1_${d}$d(D${d}$)) &
             ${op[3]}$ &
@@ -348,12 +370,12 @@ contains
 #:if op[4] == 'C'
 #:set fun_name = 'data_' + op[2]
   !> array ${op[2]}$
-  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, alpha, beta, ierr) 
+  subroutine ${fun_name}$ (A, B, ops_alpha, ops_beta, args, ierr) 
     implicit none
 #include "petsc.h"
     Vec, intent(inout) :: A
     Vec, intent(in)  :: B(:)
-    PetscScalar  :: ops_alpha(:), ops_beta(:), alpha, beta
+    PetscScalar  :: ops_alpha(:), ops_beta(:) !, alpha, beta
     DM :: A_dm, B_dm
     PetscErrorCode, intent(out) ::ierr
     PetscInt :: m, n, k
@@ -365,6 +387,7 @@ contains
     PetscScalar, pointer :: a_3d(:,:,:), b1_3d(:,:,:)
     integer :: i
     real(8) :: args(10)
+    type(box_info) :: box
     
     if(size(B) /= 1) then
        print*, &
@@ -385,11 +408,20 @@ contains
     call VecGetDM(A, A_dm, ierr)
     call VecGetDM(B, B_dm, ierr)
     
-    call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
+    !call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
+    call dm_get_corners(A_dm, box)
+
+    xs = box%starts(1)
+    ys = box%starts(2)
+    zs = box%starts(3)
+
+    xe = box%ends(1)
+    ye = box%ends(2)
+    ze = box%ends(3)
     
-    xe = xs + xl - 1
-    ye = ys + yl - 1
-    ze = zs + zl - 1
+    ! xe = xs + xl - 1
+    ! ye = ys + yl - 1
+    ! ze = zs + zl - 1
     
     call dm_get_dim(A_dm, num_dim)
 
@@ -402,20 +434,21 @@ contains
 
 #:if op[0] == 'type_pow'
        a_${d}$d(D${d}$) = &
-            alpha + beta * &
+!            alpha + beta * &
             ((ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$))**args(1))
 #:else
        a_${d}$d(D${d}$) = &
-            alpha + beta * &
+!            alpha + beta * &
             (${op[3]}$(ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$)))
 #:endif
        
        call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
        call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
 
-       ! print*, "aaaaaaaaaaaaaaaaaaaaabbbbbbbb"
        ! print*, "ops_alpha=", ops_alpha(1), "ops_beta=", ops_beta(1)
-       !call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
+       ! print*, b1_${d}$d (D${d}$)
+       ! call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
+       ! call VecView(B(1), PETSC_VIEWER_STDOUT_WORLD,ierr)       
 #:endfor
     end select
     
@@ -424,6 +457,82 @@ contains
   
 #:endif
 #:endfor
+
+  subroutine data_get_arr(src, box, arr)
+    implicit none
+    Vec :: src
+    type(box_info) :: box
+    real(8), intent(out), allocatable :: arr(:)
+
+
+  end subroutine
+
+!   subroutine data_get_sub(dst, src, box)
+!     implicit none
+!     Vec :: src
+!     type(box_info) :: src_box
+!     type(box_info) :: box
+!     type(box_info) :: new_local
+!     Vec, intent(out) :: dst
+!     integer :: src_dim
+!     integer :: xs, ys, zs, xe, ye, ze
+!     PetscScalar, pointer :: src_data1(:), src_data2(:,:), src_data3(:,:,:)
+!     PetscScalar, pointer :: dst_data1(:), dst_data2(:,:), dst_data3(:,:,:)    
+    
+!     call vec_get_corners(src, src_box)
+!     call vec_get_dim(src, src_dim)
+    
+!     dst_local = (src_box .and. box)
+
+!     dst_local_shape = shape(dst_local)
+!     dst_shape = shape(box)
+    
+!     select case(src_dim)
+! #:for d in [1,2,3]
+!     case(${d}$)
+       
+! #:if d <= 1
+!        xs = dst_local%starts(1)
+!        xe = dst_local%ends(1)
+! #:elif d <=2
+!        ys = dst_local%starts(2)
+!        zs = dst_local%ends(2)
+! #:else
+!        zs = dst_local%starts(3)
+!        ze = dst_local%ends(3)
+! #:endif
+       
+!        call get_local_arr(src, src_data${d}$)
+!        allocate(dst_data(D${d}))
+!        dst_data${d}$(D${d}$) = src_data${d}$(D${d}$)
+       
+! #:endfor
+!     end select
+    
+!   end subroutine
+
+  ! subroutine data_create(data, box, local_box)
+  !   implicit none
+    
+  ! end subroutine
+  
+  ! subroutine data_assign_scalar(dst, dst_box, v)
+  !   implicit none
+  !   Vec, intent(inout) :: dst
+  !   type(box_info) :: dst_box
+  !   PetscScalar :: v
+
+  ! end subroutine
+  
+  ! subroutine data_assign_ref_to_ref(dst, dst_box, src, src_box)
+  !   implicit none
+  !   Vec, intent(inout) :: dst
+  !   type(box_info) :: dst_box, src_box
+  !   Vec, intent(in) :: src
+
+
+  ! end subroutine
+  
 end module
 
 #undef D1

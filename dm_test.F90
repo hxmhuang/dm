@@ -26,11 +26,32 @@ contains
     call dm_option_real('-ep',ep,ierr)
     call dm_option_bool('-debug',debug,ierr)
 
-    A=dm_eye(m,n,k)+dm_eye(m,n,k) * 3
-    print*, ">A="
+    ! A=dm_eye(m,n,k) * 3
+    ! if(myrank==0)&
+    !      print*, ">A="
+    ! call dm_view(A, ierr)
+
+    ! B = dm_exp(A)    
+    ! if(myrank==0)&
+    !      print*, ">B=exp(A)"
+    ! call dm_view(B, ierr)
+    
+    ! C = dm_sqrt(A)
+    ! if(myrank==0)&    
+    !      print*, ">C=sqrt(A)"
+    ! call dm_view(C, ierr)
+    ! 
+
+    A=dm_eye(m,n,k) * 3
+    B=dm_eye(m,n,k) * 2
+    call dm_axpy(B, 2.0, A, ierr)
+
+    if(myrank==0) print*, ">A="
     call dm_view(A, ierr)
 
-
+    if(myrank==0) print*, ">B="
+    call dm_view(B, ierr)
+    
     ! if(myrank==0) print *, "==============Test dm_zeros==============="
     ! A=dm_zeros(m,n,k)
     ! B=dm_zeros(m,n,k,.true.)
@@ -1635,9 +1656,9 @@ contains
     call dm_option_bool('-debug',debug,ierr)
 
     if(myrank==0) print *, "==============Test dm_setvalues==========="
-    A=dm_ones(2*m,2*m, 2)
-    B=dm_ones(2*m,2*m, 2, .false.)
-    C=dm_ones(2*m,2*m, 2)
+    A=dm_ones(m,m, 2)
+    B=dm_ones(m,m, 2, .false.)
+    C=dm_ones(m,m, 2)
 
     call dm_setvalues(A,(/0,2/),(/1,2/),(/0/),(/9,8,7,6/),ierr)	
     call dm_setvalues(B,(/0,2/),(/1,2/),(/1/),(/9,8,7,6/),ierr)	
@@ -1681,16 +1702,16 @@ contains
     call dm_option_bool('-debug',debug,ierr)
 
     if(myrank==0) print *, "==============Test dm_getvalues==========="
-    A=dm_seqs(2*m,2*m,1)
-    B=dm_seqs(2*m,2*m,2)
-    C=dm_seqs(2*m,2*m,2, .false.)
+    A=dm_seqs(4,4,1)
+    B=dm_seqs(4,4,2)
+    C=dm_seqs(4,4,2, .false.)
     
     allocate(array(2))
     array=0
 
     call dm_getvalues(A,(/0/),(/1,2/),(/0/),array,ierr)	
     if(debug) then
-       if(myrank==0) print *,">A=dm_seqs(2*m,2*m,1)"
+       if(myrank==0) print *,">A=dm_seqs(4,4,1)"
        call dm_view(A,ierr)
        if(myrank==0) &
             print *, ">A=dm_getvalues(A,(/0/),(/1,2/),(/0/),array,ierr) : ",array
@@ -1702,7 +1723,7 @@ contains
     call dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr)
     
     if(debug) then
-       if(myrank==0) print *,">B=dm_seqs(2*m,2*m,2)" 
+       if(myrank==0) print *,">B=dm_seqs(4,4,2)" 
        call dm_view(B,ierr)
        if(myrank==0) &
             print *, ">B=dm_getvalues(B,(/0,1/),(/3,2/),(/0,1/),array,ierr) : ",array
@@ -1713,7 +1734,7 @@ contains
     call dm_getvalues(C,(/0,3/),(/3,2/),(/0,1/), array,ierr)
     
     if(debug) then
-       if(myrank==0) print*, ">C=dm_seqs(2*m,2*m,3,.false.)"
+       if(myrank==0) print*, ">C=dm_seqs(4,4,3,.false.)"
        if(myrank==0) call dm_view(C,ierr)
        if(myrank==0) then
           print *, ">C=dm_getvalues(C,(/0,3/),(/3,2/),(/0,1/),array,ierr) : ", array
@@ -1796,7 +1817,8 @@ contains
     if(myrank==0) print *, "==============Test dm_lt=================="
     A=dm_seqs(m,m,2)
     B=5*dm_ones(m,m,2)
-    C=(A<B)
+    !C=(A<B)
+    C = ((A>=5) .em. A) + (5 * (A < 5))
     D=(A<5)
     E=(A<5.0)
     F=(A<real(5.0, kind=8))

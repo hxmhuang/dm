@@ -27,16 +27,9 @@ contains
 end module test
 
 program main
-  use ot_expr
-  use ot_tensor
-  use ot_node
-  use ot_type
-  use mod_all_func
-  use dispmodule
+  use ot_mod
   use test
-  use ot_common
-  use ot_init_mod
-
+  
   implicit none
   
   type(tensor) :: A, B, C, D, E, F, G, H, BB
@@ -84,17 +77,39 @@ program main
   ! print*, find_range(r(0:11))
   ! print*, find_range(r(2:15))  
   
+  A = ones(2, 2)  
+  B = ones(2, 2, 2)  
+  C = ones(2, 2, 2)
+  ! D = A + B + C
+  call display(A, "A = ")
+  
+  ! call display(B, "B = ")
+  ! call display(C, "C = ")
+  ! call display(D, "D = ")    
 
+  call disp_info(slice(A, r(0,1), r(0,1), 0))
+  
+  !call write_graph(NB, file="NB.dot")
+  ! D = A + B + C
+  !return
+  
   !CALL disp('A = ', (/1,2,3,4/), orient='row')
   
   !three-dimensional array
   !A = ones(2, 2, 2)
-  B = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
-  call display(B, "B = ")
+  E = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
+  !E = 1.0/sin(ones(2,2,2) * 3.0)
+  !E = ones(2,2,2) * 3.0
+  call display(E, 'E = ')
 
+  !fix this
+  !call display(A * 2, '')
+  
+  return
+  
   NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
-
   call write_graph(NB, file="NB.dot")
+  call display(NB, 'NB = ')
   !call write_opt_graph(NB, file="opt_graph.dot")
 
   ! C = ones(2, 2, 2)
@@ -119,7 +134,6 @@ program main
   !C = 1.0 + 2. * A + 4.0 / B * C * D
   ND = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
   call write_graph(ND, file="ND.dot")
-  call write_opt_graph(ND, file="OPT_ND.dot")
   
   !C = A - B
   !C = 2.0 + (1.0 / B) + A

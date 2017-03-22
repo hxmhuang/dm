@@ -1,3 +1,5 @@
+#include "node_type.h"
+
 module ot_expr
   use ot_common
   use ot_tensor
@@ -6,8 +8,7 @@ module ot_expr
   use ot_vector
   use ot_geom
   use ot_node
-  
-#include "node_type.h"
+
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
 #:set DEBUG = 1
 #define DEBUG
@@ -29,10 +30,13 @@ module ot_expr
 
 
   interface slice
+#:set slice_idx_type=[['int', 'integer'], &
+     ['arr', 'integer, dimension(:)'], &
+          ['range', 'type(range)']]
 #:for data in ['node', 'tensor']
-#:for ta in [['int', 'integer'], ['arr', 'integer, dimension(:)']]
-#:for tb in [['int', 'integer'], ['arr', 'integer, dimension(:)']]
-#:for tc in [['int', 'integer'], ['arr', 'integer, dimension(:)']]    
+#:for ta in slice_idx_type
+#:for tb in slice_idx_type
+#:for tc in slice_idx_type
      module procedure slice_${data}$_${ta[0]}$_${tb[0]}$_${tc[0]}$
 #:endfor
 #:endfor
@@ -82,7 +86,6 @@ module ot_expr
 
 #:endif
 #:endfor
-
   
 contains
 
@@ -112,7 +115,6 @@ contains
     A%scalar = B%scalar
     A%is_implicit = B%is_implicit
     call copy_node_ptr(A%operands, B%operands)
-    call copy_node_ptr(A%opt_operands, B%opt_operands)
     
   end subroutine
   
@@ -129,7 +131,16 @@ contains
     
     call node_new(C, B)
 
-    call node_combine(C, res)
+    !call node_optimize(C)
+
+    call disp_tree(C)
+    
+    !call disp_info(C, 'C=')
+    
+    ! write(*, "(A, Z16.16)"), "op1=", loc(C%operands(1)%ptr)
+    ! write(*, "(A, Z16.16)"), "op2=", loc(C%operands(2)%ptr)
+    
+    call write_graph(C, file='C.dot')
     
     call eval(A, C, ierr)
 
@@ -150,97 +161,6 @@ contains
     
     if(allocated(res)) deallocate(res)    
   end subroutine
-
-  subroutine set(obj1, obj2)
-    implicit none
-    type(node), intent(inout) :: obj1
-    type(node), intent(in) :: obj2
-    ! ref_node, ref_node
-    ! node, ref_node
-    ! ref_node, node
-    ! node, node
-  end subroutine
-
-  !*****************************
-  !> slice functions
-  !*****************************
-#:set itype=[['int', 'integer'], &
-       ['range', 'type(range)'], &
-       ['arr', 'integer,dimension(:)']]
-       
-#:for data in ['node', 'tensor']  
-#:for ta in itype
-#:for tb in itype
-#:for tc in itype
-  function slice_${data}$_${ta[0]}$_${tb[0]}$_${tc[0]}$ &
-       (obj, a, b, c) result(res)
-    implicit none
-    type(${data}$),target :: obj    
-    ${ta[1]}$ :: a
-    ${tb[1]}$ :: b    
-    ${tc[1]}$ :: c
-    type(node), pointer :: res, tmp
-    integer :: dim
-    integer :: xs, xe, ys, ye, zs, ze
-    integer :: dim_x, dim_y, dim_z
-
-    allocate(res)
-    
-#:if ta[0] == 'int'
-    xs = a; xe = a;
-    dim_x = xe - xs + 1
-#:elif ta[0] == 'range'
-    xs = a%lower; xe = a%upper
-    dim_x = xe - xs + 1
-#:else
-    allocate(res%ref%ix(size(a)))
-    res%ref%ix = a
-    dim_x = size(a)
-#:endif
-
-#:if tb[0] == 'int'
-    ys = b; ye = b;
-    dim_y = ye - ys + 1
-#:elif tb[0] == 'range'
-    ys = b%lower; ye = b%upper
-    dim_y = ye - ys + 1    
-#:else
-    allocate(res%ref%iy(size(b)))
-    res%ref%iy = b
-    dim_y = size(b)
-#:endif
-
-#:if tc[0] == 'int'
-    zs = c; ze = c;
-    dim_z = ze - zs + 1    
-#:elif tc[0] == 'range'
-    zs = c%lower; ze = c%upper
-    dim_z = ze - zs + 1    
-#:else
-    allocate(res%ref%iz(size(c)))
-    res%ref%iz = c
-    dim_z = size(c)
-#:endif
-    
-#:if data == 'tensor'
-    allocate(tmp)
-    call node_new(tmp, obj) !create a data node
-    call node_add_operand(res, tmp)
-#:else
-    call assign_ptr(tmp, obj) 
-    call node_add_operand(res, tmp)
-#:endif
-
-    res%m_dim = 3
-    res%m_shape = (/dim_x, dim_y, dim_z/)
-    res%node_type = type_ref
-
-  end function
-  
-#:endfor
-#:endfor
-#:endfor
-#:endfor  
 
   !*********************************
   !> evaluate expression nodes
@@ -303,7 +223,11 @@ contains
           endif
           
           call eval(node_ptr%data, node_ptr, ierr, .false.)
-          
+
+          print*, "============================"
+          call disp_info(node_ptr, 'NODE')
+          call display(node_ptr%data, 'TENSOR = ')
+
           call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
           ops_alpha(i) = node_ptr%alpha
           ops_beta(i)  = node_ptr%beta
@@ -321,33 +245,38 @@ contains
     !     loc(alpha), loc(beta), loc(A%args), num_oprands)
     !write(*, "(A, Z16.6)") "A2=", loc(A%data)
 
-    if(is_root) then
-       alpha = A%alpha
-       beta = A%beta
-    else
-       alpha = 0
-       beta = 1.0
-    endif
+    ! if(is_root) then
+    !    alpha = A%alpha
+    !    beta = A%beta
+    ! else
+    !    alpha = 0
+    !    beta = 1.0
+    ! endif
+    ! alpha = 0
+    ! beta = 1.0
     
-    if(need_eval(A) .or. is_root) then
+    !if(need_eval(A) .or. is_root) then
        select case(A%node_type)
 #:for e in L
 #:if e[4]=='A' or e[4]=='B' or e[4]=='C'
        case (${e[1]}$)
+#ifdef DEBUG
+          print*, "calling function ${e[2]}$ ..."
+#endif
           call ${e[2]}$_tensors(res, &
-               ops_tensor, ops_alpha, ops_beta, A%args, alpha, beta)
+               ops_tensor, ops_alpha, ops_beta, A%args)
 #:endif
 #:endfor
        case default
           call eval_tensors(res, &
-               ops_tensor, ops_alpha, ops_beta, A%args, alpha, beta)
+               ops_tensor, ops_alpha, ops_beta, A%args)
        end select
 
        ! if(.not. associated(A%data)) then
        !    print*, "execute function ", op_names(A%node_type), " failed."
        !    call abort()
        ! end if
-    endif
+    !endif
       
     print*, "evalation of ", trim(op_names(A%node_type)), " is complete."
   end subroutine
@@ -370,123 +299,44 @@ contains
     end if
   end subroutine
   
-  recursive subroutine node_combine(A, res) 
+
+  recursive subroutine node_optimize(A) 
     implicit none
     type(node), intent(inout), target :: A
-    type(node_ptr),  allocatable, intent(out) :: res(:)
-    type(node_ptr),  allocatable :: left(:), right(:)
     type(node_ptr),  allocatable :: subs(:), tmp(:)
-    integer i, cnt
-
-    cnt = 0
+    integer i, cnt, num_operands, j
+    type(node), pointer :: child
     
-    if(A%node_type == type_data &
-         .or. A%node_type==type_scalar) return
+    if(is_data(A)) return
 
-    do i = 1,size(A%operands)
-       !combine the left node
-       call node_combine(A%operands(i)%ptr, subs)
+    num_operands = size(A%operands)
 
-       ! if the node_type does not match its leaf node_type,
-       ! not accept the returned list from leaf
-       if(A%node_type /= A%operands(i)%ptr%node_type .or. &
-            (.not. is_arithmetic(A))) then
-          if(allocated(subs)) deallocate(subs)
-          allocate(subs(1))
-          call assign_ptr(subs(1)%ptr, A%operands(i)%ptr)
+    call disp_info(A)
+
+    i = 1
+    do while(i <= num_operands)
+       child => A%operands(i)%ptr
+       if(A%node_type == child%node_type &
+            .and. is_arithmetic(A)) then
+
+          call remove(A%operands, i)
+          call push_back(A%operands, child%operands)
+
+          num_operands = size(A%operands)
+       else
+          i = i + 1
        end if
-       
-       if(allocated(subs)) then
-          cnt = cnt + size(subs)
-
-          call reallocate(res, cnt)
-          res(cnt-size(subs)+1 : cnt) = subs
-       endif
     enddo
 
-    call copy_node_ptr(A%opt_operands, res)
-
-! #ifdef DEBUG
-!     write(*,*) "**********************"
-!     write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
+    !call disp_info(A)
     
-!     if(allocated(A%opt_operands)) then
-!        do i = 1, size(A%opt_operands)
-!           write(*, "(5X, Z16.16, A, I0.3)"), &
-!                loc(A%opt_operands(i)%ptr), &
-!                " type=", A%opt_operands(i)%ptr%node_type 
+    do i = 1, size(A%operands) 
+       call node_optimize(A%operands(i)%ptr)
+    enddo
 
-!        enddo
-!     endif
-! #endif
-    
   end subroutine
-
-
-!   recursive subroutine node_optimize(A, res) 
-!     implicit none
-!     type(node), intent(inout), target :: A
-!     type(node_ptr),  allocatable, intent(out) :: res(:)
-!     type(node_ptr),  allocatable :: subs(:), tmp(:)
-!     integer i, cnt, num_oprands
-!     type(node), pointer :: child
-    
-!     cnt = 0
-    
-!     if(is_data(A)) return
-
-!     num_oprands = size(A%operands)
-
-!     do i = 1, num_oprands
-
-!        child => A%operands(i)%ptr
-       
-!        if(A%node_type == child%node_type .and. &
-!             is_arithmetic(A)) then
-!           call reallocate(A%operands, num_oprands+size(A%operands))
-!           A%operands()
-!        end if
-       
-!        ! if the node_type does not match its leaf node_type,
-!        ! not accept the returned list from leaf
-!        if(A%node_type == A%operands(i)%ptr%node_type) then
-!           if(allocated(subs)) deallocate(subs)
-!           allocate(subs(1))
-!           subs(1)%ptr => A%operands(i)%ptr
-!        end if
-       
-!        if(allocated(subs)) then
-!           cnt = cnt + size(subs)
-
-!           call reallocate(res, cnt)
-!           res(cnt-size(subs)+1 : cnt) = subs
-!        endif
-!     enddo
-
-!     do i = 1, size(A%operands) 
-!        !combine the left node
-!        call node_optimize(A%operands(i)%ptr, subs)
-!     enddo
-!     call copy_node_ptr(A%opt_operands, res)
-
-! #ifdef DEBUG
-!     write(*,*) "**********************"
-!     write(*, "(1X, Z16.16, A, I0.3)"), loc(A), " type=", A%node_type
-    
-!     if(allocated(A%opt_operands)) then
-!        do i = 1, size(A%opt_operands)
-!           write(*, "(5X, Z16.16, A, I0.3)"), &
-!                loc(A%opt_operands(i)%ptr), &
-!                " type=", A%opt_operands(i)%ptr%node_type 
-
-!        enddo
-!     endif
-! #endif
-!    end subroutine
   
-
-#:for o in ['', 'opt_']
-  recursive subroutine write_${o}$graph(A, is_root, file)
+  recursive subroutine write_graph(A, is_root, file)
     implicit none
     type(node), intent(inout) :: A
     integer :: i
@@ -548,23 +398,11 @@ contains
        return
     end if
     
-! #ifdef DEBUG
-! #:if o == "opt_"
-!     print*, "-------------------------"
-! #:else
-!     print*, "~~~~~~~~~~~~~~~~~~~~~~~~~"
-! #:endif
-!     do i = 1, size(A%${o}$operands)
-!        write(*, "(I0.1, A, Z16.16)"), &
-!             i," = ", loc(A%${o}$operands(i)%ptr)           
-!     end do
-! #endif
-
-    if(allocated(A%${o}$operands)) then
-       do i = 1, size(A%${o}$operands)
-          call write_${o}$graph(A%${o}$operands(i)%ptr,  .false.)
+    if(allocated(A%operands)) then
+       do i = 1, size(A%operands)
+          call write_graph(A%operands(i)%ptr,  .false.)
           write(out_unit, format_map), &
-               A%id, "->", A%${o}$operands(i)%ptr%id, ";"
+               A%id, "->", A%operands(i)%ptr%id, ";"
        end do
     endif
     
@@ -574,7 +412,6 @@ contains
     end if
     
   end subroutine
-#:endfor
 
   !the following code using preprossor to create subroutines  
 #:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
@@ -641,5 +478,88 @@ contains
   
 #:endfor
 #:endfor
+
+
+  !*****************************
+  !> slice functions
+  !*****************************
+#:set itype=[['int', 'integer'], &
+       ['range', 'type(range)'], &
+       ['arr', 'integer,dimension(:)']]
+       
+#:for data in ['node', 'tensor']  
+#:for ta in itype
+#:for tb in itype
+#:for tc in itype
+  function slice_${data}$_${ta[0]}$_${tb[0]}$_${tc[0]}$ &
+       (obj, a, b, c) result(res)
+    implicit none
+    type(${data}$),target :: obj    
+    ${ta[1]}$ :: a
+    ${tb[1]}$ :: b    
+    ${tc[1]}$ :: c
+    type(node), pointer :: res, tmp
+    integer :: dim
+    integer :: xs, xe, ys, ye, zs, ze
+    integer :: dim_x, dim_y, dim_z
+
+    allocate(res)
+    
+#:if ta[0] == 'int'
+    xs = a; xe = a;
+    dim_x = xe - xs + 1
+#:elif ta[0] == 'range'
+    xs = a%lower; xe = a%upper
+    dim_x = xe - xs + 1
+#:else
+    allocate(res%ref%ix(size(a)))
+    res%ref%ix = a
+    dim_x = size(a)
+#:endif
+
+#:if tb[0] == 'int'
+    ys = b; ye = b;
+    dim_y = ye - ys + 1
+#:elif tb[0] == 'range'
+    ys = b%lower; ye = b%upper
+    dim_y = ye - ys + 1    
+#:else
+    allocate(res%ref%iy(size(b)))
+    res%ref%iy = b
+    dim_y = size(b)
+#:endif
+
+#:if tc[0] == 'int'
+    zs = c; ze = c;
+    dim_z = ze - zs + 1    
+#:elif tc[0] == 'range'
+    zs = c%lower; ze = c%upper
+    dim_z = ze - zs + 1    
+#:else
+    allocate(res%ref%iz(size(c)))
+    res%ref%iz = c
+    dim_z = size(c)
+#:endif
+    
+#:if data == 'tensor'
+    allocate(res)
+    call node_new(res, obj) !create a data node
+    !call node_add_operand(res, tmp)
+#:else
+    call assign_ptr(tmp, obj) 
+    call node_add_operand(res, tmp)
+#:endif
+
+    res%m_dim = 3
+    res%m_shape = (/dim_x, dim_y, dim_z/)
+    res%node_type = type_ref
+
+  end function
+  
+#:endfor
+#:endfor
+#:endfor
+#:endfor  
+
 end module
 

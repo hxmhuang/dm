@@ -1,16 +1,21 @@
+#include "node_type.h"
+#:include "type_def.fypp"
+
 module ot_node
   use ot_ref
   use ot_type  
   use ot_tensor
   use ot_vector
-
-#include "node_type.h"
-#:include "type_def.fypp"
   
   interface node_new
-     module procedure node_new1, node_new2, node_new3
-     module procedure node_new4, node_new5, node_new6
-     module procedure node_new7, node_new8
+     module procedure node_new_from_tensor
+     module procedure node_new_from_node
+     module procedure node_new_op_binary
+     module procedure node_new_op_tensor
+     module procedure node_new_op_node     
+#:for t in ['integer', 'real', 'real8']
+     module procedure node_new_from_${t}$
+#:endfor
   end interface node_new
   
   !private :: shape 
@@ -55,10 +60,15 @@ contains
   !***********************
   !> node constructers
   !***********************
-  subroutine node_new1(B, A) 
+  subroutine node_new_from_tensor(B, A) 
     implicit none
     type(tensor), intent(in), target :: A
     type(node),   intent(out) :: B
+
+    !call tensor_ensure_valid(A)
+    TENSOR_ENSURE_VALID(A)
+    
+    B%id = get_global_id()
     B%m_dim = A%m_dim
     B%m_shape = A%m_shape
     call assign_ptr(B%data, A)
@@ -66,30 +76,29 @@ contains
   end subroutine
 
   !copy node A to node B
-  subroutine node_new2(B, A) 
+  subroutine node_new_from_node(B, A) 
     implicit none
     type(node), intent(in)   :: A
     type(node), intent(out)  :: B
     integer i
-    
+
+    B%id = A%id
     B%m_dim = A%m_dim
     B%m_shape = A%m_shape
     B%alpha = A%alpha
     B%beta = A%beta
-    !B%data => A%data
+
     if(associated(A%data)) &
          call assign_ptr(B%data, A%data)
     
     B%scalar = A%scalar
     B%args = A%args
     B%node_type = A%node_type
-    !B%local_block = A%local_block
     
-    call copy_node_ptr(B%opt_operands, A%opt_operands)
     call copy_node_ptr(B%operands, A%operands)
   end subroutine
 
-  subroutine node_new3(C, op_type, left, right)
+  subroutine node_new_op_binary(C, op_type, left, right)
     implicit none
     integer, intent(in) :: op_type
     type(node), intent(in), target :: left, right
@@ -159,6 +168,8 @@ contains
        allocate(C%operands(2))
        ! C%operands(1)%ptr => left
        ! C%operands(2)%ptr => right
+       ! write(*, "(A, Z16.16)"), "left=", loc(left)
+       ! write(*, "(A, Z16.16)"), "right=", loc(right)
        call assign_ptr(C%operands(1)%ptr, left)
        call assign_ptr(C%operands(2)%ptr, right)
        if(is_scalar(left)) then
@@ -173,43 +184,32 @@ contains
     end if
   end subroutine
 
-  !> create a node from a real*8 scalar
-  subroutine node_new4(B, scalar) 
+#:for t in ['integer', 'real', 'real8']
+  !> create a node from a ${t}$ scalar
+  subroutine node_new_from_${t}$(B, scalar) 
     implicit none
-    real(8), intent(in), target :: scalar
+    type(${t}$), intent(in), target :: scalar
     type(node), intent(out) :: B
-    
+
+    B%id = get_global_id()
     B%m_dim = 0
     B%m_shape = (/1, 1, 1/)
-    B%scalar = scalar
+    B%scalar = real(scalar, 8)
     B%node_type = type_scalar
   end subroutine
+#:endfor
 
-  !> create a node from a real*8 scalar  
-  subroutine node_new5(B, scalar)
-    implicit none
-    real, intent(in):: scalar
-    type(node),intent(out) :: B
-
-    call node_new4(B, real(scalar,8))
-  end subroutine
-
-  !> create a node from a real*8 scalar  
-  subroutine node_new6(B, scalar)
-    implicit none
-    integer, intent(in) :: scalar
-    type(node), intent(out) :: B
-
-    call node_new4(B, real(scalar,8))
-  end subroutine
-
-  subroutine node_new7(dst, op_type, src)
+  !> operation on a tensor
+  subroutine node_new_op_tensor(dst, op_type, src)
     implicit none
     type(node), intent(out) :: dst
     integer :: op_type
     type(tensor), intent(in) :: src
     type(node) :: dst1
-    
+
+    !call tensor_ensure_valid(src)
+    TENSOR_ENSURE_VALID(src)
+
     call node_new(dst1, src)
     
     call node_new(dst, op_type, dst1)
@@ -217,7 +217,8 @@ contains
     !print*, trim(op_names(op_type))
   end subroutine
 
-  subroutine node_new8(dst, op_type, src)
+  !> operation on a node
+  subroutine node_new_op_node(dst, op_type, src)
     implicit none
     type(node), intent(out) :: dst
     integer :: op_type
@@ -273,7 +274,7 @@ contains
     if(.not. is_data(o)) then
        write(*, "(4X, A)") "operands : "
        do i = 1, size(o%operands)
-          write(*, "(6X, A, Z16.16)") "0x", loc(o%operands(1)%ptr)
+          write(*, "(6X, A, Z16.16)") "0x", loc(o%operands(i)%ptr)
        enddo
     else
        write(*, "(4X, A, Z16.16)") "data : 0x", loc(o%data)
@@ -365,14 +366,15 @@ contains
     logical :: res
     integer :: i
 
-    do i = 1, size(A%args)
-       if(A%args(i) .ne. 0.) then
-          res = .true.
-          return
-       endif
-    enddo
+    res = any(A%args /= 0)
+    ! do i = 1, size(A%args)
+    !    if(A%args(i) .ne. 0.) then
+    !       res = .true.
+    !       return
+    !    endif
+    ! enddo
     
-    res = (A%alpha /= 0 .or. &
+    res =res .or. (A%alpha /= 0 .or. &
          A%beta /= 1.0 .or. &
          (.not. associated(A%data)))
     
@@ -461,22 +463,12 @@ contains
     if(A%node_type == type_data .or. &
          A%node_type == type_scalar) return
     
-    ! do i = 1, size(A%opt_operands)
-    !    write(*, "(Z16.16, A, I4, A, I4)"), &
-    !         loc(A%opt_operands(i)%ptr), &
-    !         " = ", A%opt_operands(i)%ptr%node_type, &
-    !         " = ", size(A%opt_operands(i)%ptr%opt_operands)
-    ! enddo
-    
     if(allocated(A%operands)) then
        do i = 1, size(A%operands)
           call node_destroy(A%operands(i)%ptr, ierr)
        enddo
     endif
     
-    !destroy the operands
-    deallocate(A%opt_operands)
-    !A%opt_operands => null()
 
     !destroy data if the data is implicit
     if(associated(A%data)) then
@@ -487,4 +479,17 @@ contains
     end if
   end subroutine
 
+  recursive subroutine disp_tree(o)
+    implicit none
+    type(node), intent(in) :: o
+    integer :: i
+    
+    if(is_data(o)) return
+    call disp_info(o)
+    
+    do i = 1, size(o%operands)
+       call disp_tree(o%operands(i)%ptr)
+    end do
+    
+  end subroutine
 end module

@@ -7,6 +7,9 @@ module ot_vector
   interface ${op}$
 #:for t in ['tensor', 'node']
      module procedure ${op}$_${t}$
+#:if op == 'push_back'
+     module procedure ${op}$_${t}$_arr
+#:endif
 #:endfor
   end interface ${op}$
 #:endfor
@@ -19,7 +22,38 @@ module ot_vector
 contains
 
 #:for t in ['tensor', 'node']
-  !> append a to the end of v
+  !> append array of ${t}$ pointers into vector
+  subroutine push_back_${t}$_arr(v, a)
+    implicit none
+    type(${t}$_ptr), allocatable,  intent(inout) :: v(:)
+    type(${t}$_ptr), allocatable :: tmp(:)
+    type(${t}$_ptr), intent(in), dimension(:) :: a
+    integer :: pos, i
+
+    pos = 1
+    if(.not. allocated(v)) then
+       allocate(v(size(a)))
+    else
+       allocate(tmp(size(v)))
+       tmp = v
+       
+       deallocate(v)
+       allocate(v(size(tmp)+size(a)))
+       
+       v(1:size(tmp)) = tmp
+       pos = size(tmp) + 1
+       deallocate(tmp)
+    end if
+    
+    do i = pos, size(v)
+       call assign_ptr(v(i)%ptr, a(i-pos+1)%ptr)
+    enddo
+    
+  end subroutine
+#:endfor
+  
+#:for t in ['tensor', 'node']
+  !> append a pointer of ${t}$ to the end of v
   subroutine push_back_${t}$(v, a)
     implicit none
     type(${t}$_ptr), allocatable,  intent(inout) :: v(:)
@@ -36,7 +70,7 @@ contains
        deallocate(v)
        allocate(v(size(tmp)+1))
        v(1:size(tmp)) = tmp
-       pos = size(v) + 1
+       pos = size(tmp) + 1
        deallocate(tmp)
     end if
     v(pos)%ptr => a

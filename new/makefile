@@ -30,11 +30,11 @@ ABC = $(addprefix ./, ot_data.o ot_type.o ot_vector.o \
 	ot_node.o  \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ${OBJS_UTIL} ot_geom.o ot_print.o \
+OBJS  = ot_geom.o ${OBJS_UTIL} ot_print.o \
 	ot_common.o   \
-	${OBJS_DATA} ${ABC} ${OBJS_FUNC}$
+	${OBJS_DATA} ${ABC} ${OBJS_FUNC}$ 
 
-OBJ_MAIN= ${OBJS} main.o
+OBJ_MAIN= ${OBJS} ot_mod.o main.o
 
 #--------------------------------------------------------------------------
 

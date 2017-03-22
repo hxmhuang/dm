@@ -44,7 +44,7 @@ program main
      print *, "****************************************"
   endif
 
-  call test_dm_zeros()
+  !call test_dm_zeros()
   ! call test_dm_ones()
   ! call test_dm_eye()
   ! call test_dm_copy()
@@ -78,7 +78,7 @@ program main
   ! call test_dm_setvalues()
   ! call test_dm_getvalues()
   ! call test_dm_norm()
-  ! call test_dm_lt()
+  call test_dm_lt()
   ! call test_dm_le()
   ! call test_dm_gt()
   ! call test_dm_ge()

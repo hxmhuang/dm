@@ -95,11 +95,18 @@ contains
     type(box_info) :: res
     integer :: xs, ys, zs, xl, yl, zl
 
-    call vec_get_corners(o%data, xs, ys, zs, xl, yl, zl)
+    call vec_get_corners(o%data, res)
 
-    res%starts = (/xs, ys, zs/)
-    res%ends = res%starts + (/xl, yl, zl/) - 1
   end function
+
+  ! subroutine tensor_ensure_valid(o)
+  !   implicit none
+  !   type(tensor), intent(in) :: o
+
+  !   call assert(o%data /= 0, __FILE__, __LINE__, &
+  !        "tensor must be associated with data")
+    
+  ! end subroutine
   
   subroutine disp_info_tensor(o, prefix)
     implicit none
@@ -115,9 +122,7 @@ contains
           write(*, "(A)") "ans = "
        endif
 
-#ifdef DEBUG
        write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
-#endif
 
        write(*, "(4X, A)", advance="no") "shape : ["
        do i = 1, o%m_dim
@@ -203,13 +208,13 @@ contains
 #:for op in L
   #:if op[1] >= 50
 subroutine ${op[2]}$_tensors(res, tensor_operands, &
-     ops_alpha, ops_beta, args, alpha, beta) 
+     ops_alpha, ops_beta, args) 
     implicit none
 #include "petsc.h"
     type(tensor), intent(inout) :: res
     type(tensor_ptr), intent(in), allocatable  :: tensor_operands(:)
     Vec,allocatable :: vec_operands(:)
-    real(8), intent(in) :: ops_alpha(:), ops_beta(:), alpha, beta
+    real(8), intent(in) :: ops_alpha(:), ops_beta(:)!, alpha, beta
     real(8), intent(in) :: args(10)
     integer :: n
     integer :: ierr, i
@@ -232,29 +237,18 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
        vec_operands(i) = tensor_operands(i)%ptr%data
     enddo
 
-    !print*, "n=", n
+#ifdef DEBUG
+    print*, "calling data_${op[2]}$"
+#endif
     
-    !call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
-
-    call data_${op[2]}$(res%data, vec_operands, ops_alpha, ops_beta, args, alpha, beta, ierr)
-
-    !call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
+    ! call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
+    ! call VecView(vec_operands(1), PETSC_VIEWER_STDOUT_WORLD,ierr)
     
-    ! if(B%is_implicit) then
-    !    call tensor_copy(A, B)
-    !    call data_plus(A%data, C%data, ierr) !A = A + C
-    !    if(C%is_implicit) then
-    !       call tensor_destroy(C, ierr)
-    !    endif
-    ! else
-    !    if(C%is_implicit) then
-    !       call tensor_copy(A, C)
-    !       call data_plus(A%data, B%data, ierr)
-    !    else
-    !       call tensor_duplicate(A, B)
-    !       call data_plus(A%data, B%data, C%data, ierr)
-    !    end if
-    ! end if
+    call data_${op[2]}$(res%data, vec_operands, &
+         ops_alpha, ops_beta, args, ierr)
+
+    ! call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
+    
   end subroutine
   #:endif
 #:endfor
@@ -333,12 +327,9 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     integer :: d_shape(3)
     integer :: xs, xl, ys, yl, zs, zl
 
-    call vec_get_corners(data, xs, ys, zs, xl, yl, zl)
+    o%data = data    
+    call vec_get_corners(data, o%local_block)
 
-    o%data = data
-    o%local_block%starts = (/xs, ys, zs/)
-    o%local_block%ends = o%local_block%starts &
-         + (/xl, yl, zl/) - 1
   end subroutine
   
 end module 

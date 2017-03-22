@@ -43,9 +43,6 @@ module ot_type
      !for a binary operator, the number operands is always 2
      type(node_ptr), allocatable, dimension(:) :: operands
 
-     !optimized operands, e.g. A + B + C, opt_operands are (A,B,C)
-     type(node_ptr), allocatable, dimension(:) :: opt_operands
-
      !node type, 0 for data, 1 for '+', 2 for '-',
      !3 for '*', 4 for '/', etc.
      integer :: node_type
@@ -56,7 +53,7 @@ module ot_type
      ! the node shape inherit from its left/right
      ! expression or the tensor within it
      integer :: m_dim = 0
-     integer :: m_shape(3) = (/0,0,0/)
+     integer :: m_shape(3) = 0
 
      real(8) :: alpha = 0
      real(8) :: beta  = 1

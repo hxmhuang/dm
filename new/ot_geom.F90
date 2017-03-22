@@ -6,8 +6,8 @@ module ot_geom
   end type range
   
   type box_info
-     integer :: starts(3) = (/0,0,0/)
-     integer :: ends(3)   = (/0,0,0/)
+     integer :: starts(3) = 0
+     integer :: ends(3)   = 0
   end type box_info
 
   interface operator (.eq.)

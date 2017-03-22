@@ -43,7 +43,7 @@ do
     	#./fypp ${filename}.${extension} > \
 	#  ${build_dir}/$filename.${extension} -m re
 	
-    	#cp makefile  ${build_dir}/makefile
+    	cp makefile  ${build_dir}/makefile
 
 	#echo ./${build_dir}/$f
     	#echo $f | cut -d '\.\/' -f 2

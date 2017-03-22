@@ -46,5 +46,10 @@
 #:endfor
 
 #define eval_tensors uplus_tensors
+
+#define real8 real(8)
+
+#define  TENSOR_ENSURE_VALID(obj)  call assert(obj%data /= 0, __FILE__, __LINE__, "tensor must be associated with data")
+         
   
 #endif
