@@ -2,7 +2,7 @@
 #include <petsc/finclude/petscvecdef.h>
 #include <petsc/finclude/petscdmdef.h> 
 #:include "type_def.fypp"
-#include "node_type.h"
+#include "type.h"
 
 module ot_tensor
   use ot_common
@@ -10,8 +10,6 @@ module ot_tensor
   use ot_type  
   use ot_ref
 
-  public :: tensor_new, tensor_destroy
-  
   !here we use a trick to extract range information from an empty array
   !see find_range function
   !integer, allocatable :: r(:)
@@ -28,9 +26,9 @@ module ot_tensor
      module procedure tensor_shape     
   end interface shape
 
-  interface dim
-     module procedure tensor_dim
-  end interface dim
+  ! interface dim
+  !    module procedure tensor_dim
+  ! end interface dim
 
   interface box
      module procedure tensor_box
@@ -44,6 +42,13 @@ module ot_tensor
      module procedure disp_info_tensor
   end interface disp_info
 
+  interface tensor_new
+     module procedure tensor_new_from_data
+  end interface tensor_new
+
+  interface disp
+     module procedure disp_tensor
+  end interface disp
 contains
 
   subroutine init_tensor(ierr)
@@ -53,6 +58,30 @@ contains
     !initialize data module
     call init_data(ierr)
 
+  end subroutine
+
+  subroutine tensor_new_from_data(t, data)
+    implicit none
+    type(tensor), intent(out) :: t
+    Vec, intent(in) :: data
+
+    call assert(data /= 0, __FILE__, __LINE__, &
+         "data can not be null.")
+    
+    call tensor_bind_data(t, data)
+  end subroutine
+
+  subroutine tensor_bind_data(o, data)
+    implicit none
+    type(tensor), intent(inout) :: o
+    Vec, intent(in) :: data
+    integer :: d_shape(3)
+    integer :: dx, dy, dz
+
+    o%data = data    
+    call petsc_get_corners(data, o%local_block)
+    call petsc_data_info(data, dx, dy, dz)
+    o%m_shape = (/dx, dy, dz/)
   end subroutine
   
   function find_range(range) result(res)
@@ -64,13 +93,6 @@ contains
     res(1) = (loc(range) - loc(r)) / 4
     res(2) = ((loc(range) + size(range) * 4) - loc(r) - 4)/4
 
-  end function
-
-  function tensor_dim(o) result(res)
-    implicit none
-    type(tensor), intent(in) :: o
-    integer :: res
-    res = o%m_dim
   end function
   
   function tensor_shape(o) result(res)
@@ -95,19 +117,9 @@ contains
     type(box_info) :: res
     integer :: xs, ys, zs, xl, yl, zl
 
-    call vec_get_corners(o%data, res)
-
+    call petsc_get_corners(o%data, res)
   end function
 
-  ! subroutine tensor_ensure_valid(o)
-  !   implicit none
-  !   type(tensor), intent(in) :: o
-
-  !   call assert(o%data /= 0, __FILE__, __LINE__, &
-  !        "tensor must be associated with data")
-    
-  ! end subroutine
-  
   subroutine disp_info_tensor(o, prefix)
     implicit none
     type(tensor), intent(in) :: o
@@ -125,76 +137,74 @@ contains
        write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
 
        write(*, "(4X, A)", advance="no") "shape : ["
-       do i = 1, o%m_dim
+       do i = 1, size(o%m_shape)
           write(*, "(I0.1)", advance="no") o%m_shape(i)
-          if(i < o%m_dim) write(*, "(A)", advance="no") "x"
+          if(i < size(o%m_shape)) &
+               write(*, "(A)", advance="no") "x"
        enddo
        write(*, "(A)") "]"
 
-       write(*, "(4X, A, L1)") "is_implicit : ", o%is_implicit
        write(*, "(4X, A, L1)") "is_field    : ", o%is_field
-       if(o%is_field) write(*, "(4X, A, I0.2)") "grid_pos : ", o%grid_pos
+       if(o%is_field) &
+            write(*, "(4X, A, I0.2)") "grid_pos : ", o%grid_pos
        write(*, "(4X, A, Z16.16)") "data : 0x", o%data
     end if
   end subroutine
   
-  subroutine display2(objA, prefix)
+  subroutine disp_tensor(objA, prefix)
 #include "petsc.h"            
     type(tensor), intent(in),target :: objA
     type(tensor), pointer :: A
     character(len=*), optional, intent(in) :: prefix
     real(kind=8), pointer :: x1(:), x2(:,:), x3(:,:,:)
-    integer :: i
+    integer :: i, ierr, rank
+    
+    call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 
     A => objA
-
     !call VecView(objA%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
-    
-    write(*,*) ""
-    if(present(prefix)) then
-       write(*, "(A)") prefix
-    else
-       write(*, "(A)") "ans = "
+
+    if(rank == 0) then        
+       write(*,*) ""
+       if(present(prefix)) then
+          write(*, "(A)") prefix
+       else
+          write(*, "(A)") "ans = "
+       endif
+
+       write(*, "(4X, A)", advance="no") "shape : ["
+       do i = 1, size(A%m_shape)
+          write(*, "(I0.1)", advance="no") A%m_shape(i)
+          if(i < size(A%m_shape)) write(*, "(A)", advance="no") "x"
+       enddo
+       write(*, "(A)") "]"
     endif
     
-    !write(*, "(4X, A, 100I2)") "node_type : ", A%node_type
-    
-    write(*, "(4X, A)", advance="no") "shape : ["
-    do i = 1, A%m_dim
-       write(*, "(I0.1)", advance="no") A%m_shape(i)
-       if(i < A%m_dim) write(*, "(A)", advance="no") "x"
-    enddo
-    write(*, "(A)") "]"
-    
-    write(*, "(4X, A, L1)") "is_implicit : ", A%is_implicit
-    write(*, "(A)") ""
-
     if(A%data /= 0) then
-       select case (A%m_dim)
-       case (1)
-          call get_local_ptr(A%data,  x1)
-          call dm_print("data=", x1)
-       case (2)
-          call get_local_ptr(A%data,  x2)
-          call dm_print("data=", x2)          
-       case (3)
-          call get_local_ptr(A%data,  x3)
-          call dm_print("data=", x3)
-       end select
-    else
-       !write(*, "(4X, A, Z16.6)"), "left  = 0x", loc(A%left)
-       !write(*, "(4X, A, Z16.6)"), "right = 0x", loc(A%right)       
+       call petsc_print(A%data)
     end if
-    write(*,*) ""    
   end subroutine
 
-  subroutine tensor_new(A, m_shape)
+  subroutine tensor_set_shape(A, m_shape)
     implicit none
+    type(tensor), intent(out) :: A    
     integer, intent(in) :: m_shape(:)
-    type(tensor), intent(out) :: A
-
-    A%m_dim = size(m_shape)
-    A%m_shape(1:A%m_dim) = m_shape
+    
+    select case (size(m_shape))
+    case (1)
+       A%m_shape(1) = m_shape(1)
+       A%m_shape(2) = 1
+       A%m_shape(3) = 1       
+    case (2)
+       A%m_shape(1) = m_shape(1)
+       A%m_shape(2) = m_shape(2)
+       A%m_shape(3) = 1       
+    case (3)
+       A%m_shape(1) = m_shape(1)
+       A%m_shape(2) = m_shape(2)
+       A%m_shape(3) = m_shape(3)
+    end select
+    
   end subroutine
 
   subroutine tensor_destroy(A, ierr)
@@ -204,7 +214,7 @@ contains
 
     call data_destroy(A%data, ierr)
   end subroutine 
-  
+
 #:for op in L
   #:if op[1] >= 50
 subroutine ${op[2]}$_tensors(res, tensor_operands, &
@@ -258,9 +268,7 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     type(tensor), intent(inout) :: dst
     type(tensor), intent(in) :: src
 
-    dst%m_dim   = src%m_dim
     dst%m_shape = src%m_shape
-    dst%is_implicit = src%is_implicit
     dst%is_field = src%is_field
     dst%grid_pos = src%grid_pos
   end subroutine
@@ -303,7 +311,6 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     call data_duplicate(dst%data,  src%data,  ierr)
   end subroutine 
 
-
   subroutine test_tensor(dst, v)
     implicit none
 #include "petsc.h"
@@ -320,17 +327,20 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     ! call data_duplicate(dst%data,  src%data,  ierr)
   end subroutine
 
-  subroutine bind_data(o, data)
+  subroutine slice_tensors(dst, src, box)
     implicit none
-    type(tensor), intent(inout) :: o
-    Vec, intent(in) :: data
-    integer :: d_shape(3)
-    integer :: xs, xl, ys, yl, zs, zl
+#include "petsc.h"
+    type(tensor), intent(inout) :: dst
+    type(tensor), intent(in) :: src
+    type(box_info), intent(in) :: box
+    Vec :: dst_data
+    integer :: ierr
+    
+    !call data_get_sub(dst%data, src%data, box)
+    call data_get_sub(dst_data, src%data, box)
+    call tensor_new(dst, dst_data)
 
-    o%data = data    
-    call vec_get_corners(data, o%local_block)
-
+    !call VecView(dst%data, PETSC_VIEWER_STDOUT_WORLD, ierr)
   end subroutine
-  
 end module 
 

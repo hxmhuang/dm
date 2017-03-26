@@ -1,4 +1,4 @@
-#include "node_type.h"
+#include "type.h"
 #:include "type_def.fypp"
 
 module ot_node
@@ -23,9 +23,9 @@ module ot_node
      module procedure node_shape
   end interface shape
 
-  interface dim
-     module procedure node_dim
-  end interface dim
+  ! interface dim
+  !    module procedure node_dim
+  ! end interface dim
 
   interface box
      module procedure node_box
@@ -44,6 +44,10 @@ module ot_node
   interface disp_info
      module procedure disp_info_node     
   end interface disp_info
+
+  interface disp
+     module procedure disp_node
+  end interface disp
   
 contains
 
@@ -69,7 +73,6 @@ contains
     TENSOR_ENSURE_VALID(A)
     
     B%id = get_global_id()
-    B%m_dim = A%m_dim
     B%m_shape = A%m_shape
     call assign_ptr(B%data, A)
     B%node_type = type_data
@@ -83,7 +86,6 @@ contains
     integer i
 
     B%id = A%id
-    B%m_dim = A%m_dim
     B%m_shape = A%m_shape
     B%alpha = A%alpha
     B%beta = A%beta
@@ -94,7 +96,7 @@ contains
     B%scalar = A%scalar
     B%args = A%args
     B%node_type = A%node_type
-    
+    B%ref = A%ref
     call copy_node_ptr(B%operands, A%operands)
   end subroutine
 
@@ -107,18 +109,8 @@ contains
 
     if((.not. is_scalar(left)) .and. &
          (.not. is_scalar(right))) then
-       if(left%m_dim /= right%m_dim .or. &
-            left%m_dim /= right%m_dim) then
-          
-          write(*,*) "left%type=", left%node_type, &
-               "right%type=", right%node_type
-          write(*,*) "left%dim=", left%m_shape, &
-               "right%dim=", right%m_shape
-          
-       end if
        
-       call assert(left%m_dim == right%m_dim .and. &
-            left%m_dim == right%m_dim, &
+       call assert(.not. any(left%m_shape /= right%m_shape), &
             __FILE__, __LINE__, &
             "shape of the left and right leaf does not match.")
     endif
@@ -138,9 +130,7 @@ contains
           C%alpha = x * C%alpha
           C%beta  = x * C%beta
        case (type_divd) ! x ./ A
-          C%m_dim   = right%m_dim
           C%m_shape = right%m_shape
-          C%is_implicit = .true.
           C%beta = x
           C%node_type = type_rcp
           ! allocate(C%operands(1))
@@ -173,14 +163,11 @@ contains
        call assign_ptr(C%operands(1)%ptr, left)
        call assign_ptr(C%operands(2)%ptr, right)
        if(is_scalar(left)) then
-          C%m_dim   = right%m_dim
           C%m_shape = right%m_shape
        else
-          C%m_dim   = left%m_dim
           C%m_shape = left%m_shape
        endif
        C%node_type = op_type
-       C%is_implicit = .true.
     end if
   end subroutine
 
@@ -192,7 +179,6 @@ contains
     type(node), intent(out) :: B
 
     B%id = get_global_id()
-    B%m_dim = 0
     B%m_shape = (/1, 1, 1/)
     B%scalar = real(scalar, 8)
     B%node_type = type_scalar
@@ -226,9 +212,7 @@ contains
     type(node), pointer :: p
     
     dst%node_type = op_type
-    dst%m_dim     = src%m_dim
     dst%m_shape   = src%m_shape
-    dst%is_implicit = .true.
     !dst%local_block = src%local_block
 
     allocate(p)
@@ -258,13 +242,11 @@ contains
 #endif
     write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)    
     write(*, "(4X, A)", advance="no") "shape : ["
-    do i = 1, o%m_dim
+    do i = 1, size(o%m_shape)
        write(*, "(I0.1)", advance="no") o%m_shape(i)
-       if(i < o%m_dim) write(*, "(A)", advance="no") "x"
+       if(i < size(o%m_shape)) write(*, "(A)", advance="no") "x"
     enddo
     write(*, "(A)") "]"
-    
-    write(*, "(4X, A, L1)") "is_implicit : ", o%is_implicit
 
     write(*, "(4X, A, F8.4)") "alpha : ", o%alpha
     write(*, "(4X, A, F8.4)") "beta  : ", o%beta
@@ -283,14 +265,14 @@ contains
     write(*, "(A)") ""
   end subroutine
 
-  subroutine display1(A, msg)
+  subroutine disp_node(A, msg)
     implicit none
     type(node) :: A
     character(len=*),intent(in),optional :: msg
     if(present(msg)) then
-       call display2(A%data, msg)
+       call disp(A%data, msg)
     else
-       call display2(A%data)
+       call disp(A%data)
     end if
   end subroutine
 
@@ -299,7 +281,7 @@ contains
     implicit none
     type(node), intent(in) :: o
     integer :: res
-    res = o%m_dim
+    
   end function
 
   function node_shape(o) result(res)
@@ -350,6 +332,13 @@ contains
          (A%node_type == type_ref) 
   end function
 
+  function is_ref(A) result(res)
+    implicit none
+    type(node) :: A
+    logical :: res
+    res = (A%node_type == type_ref) 
+  end function
+  
   function is_arithmetic(A) result(res)
     implicit none
     type(node) :: A
@@ -469,14 +458,6 @@ contains
        enddo
     endif
     
-
-    !destroy data if the data is implicit
-    if(associated(A%data)) then
-       if(A%data%is_implicit) then
-          call tensor_destroy(A%data, ierr)
-          A%data => null()
-       end if
-    end if
   end subroutine
 
   recursive subroutine disp_tree(o)

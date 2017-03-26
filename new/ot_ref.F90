@@ -3,11 +3,11 @@
 #include <petsc/finclude/petscvecdef.h>
 #include <petsc/finclude/petscdmdef.h> 
 #:include "type_def.fypp"
-#include "node_type.h"
+#include "type.h"
 
 module ot_ref
   use ot_geom
-  use petsc_helper
+  use ot_petsc
   ! use ot_tensor
   ! use ot_node
   ! type tensor_ptr_array

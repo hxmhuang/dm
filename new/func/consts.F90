@@ -15,9 +15,9 @@ contains
     real(kind=8) :: val
     type(tensor) :: res
     integer :: ierr
-    
-    call tensor_new(res, (/m/))
-    call data_consts(res%data, val, (/m/), ierr)
+
+    call tensor_set_shape(res, (/m/))        
+    call data_consts(res%data, val, res%m_shape, ierr)
   end function
 
   function consts_2d(val,m, n) result(res)
@@ -25,17 +25,17 @@ contains
     real(kind=8) :: val    
     type(tensor) :: res
     
-    call tensor_new(res, (/m, n/))
-    call data_consts(res%data,  val, (/m,n/), ierr)
+    call tensor_set_shape(res, (/m, n/))        
+    call data_consts(res%data, val, res%m_shape, ierr)
   end function
 
   function consts_3d(val,m, n, k) result(res)
     integer :: m, n, k
     real(kind=8) :: val    
     type(tensor) :: res
-    
-    call tensor_new(res, (/m,n,k/))
-    call data_consts(res%data,  val, (/m,n,k/), ierr)
+
+    call tensor_set_shape(res, (/m,n,k/))        
+    call data_consts(res%data, val, res%m_shape, ierr)
   end function
 end module
 

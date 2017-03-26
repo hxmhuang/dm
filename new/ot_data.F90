@@ -1,3 +1,5 @@
+#:include "type_def.fypp"
+#include "type.h"
 
 #define I1 :
 #define I2 :,:
@@ -9,22 +11,22 @@
 
 module ot_data
   use ot_common
-  use petsc_helper
-#:include "type_def.fypp"
+  use ot_petsc
+  use ot_geom
+
   implicit none
-#include "node_type.h"
   
   interface get_local_ptr
      module procedure get_local_ptr1d
      module procedure get_local_ptr2d
      module procedure get_local_ptr3d
   end interface get_local_ptr
-
   
 contains
 
 #include "data/data_rand.F90"
 #include "data/data_consts.F90"
+#include "data/data_seqs.F90"
   
   subroutine init_data(ierr)
     implicit none
@@ -33,11 +35,12 @@ contains
     call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
   end subroutine 
 
-  subroutine dm_finalize(ierr)
+  subroutine finalize_data(ierr)
+    implicit none
+#include "petsc.h"    
     integer, intent(out) :: ierr
     
     call PetscFinalize(ierr)
-    
   end subroutine 
 
   subroutine data_duplicate(dst, src, ierr)
@@ -198,8 +201,6 @@ contains
     integer  :: num_dim
     PetscLogEvent            ::  ievent
     PetscInt :: xs, xl, ys, yl, zs, zl, xe, ye, ze
-    PetscScalar, pointer :: a_1d(:),     b_1d(:)
-    PetscScalar, pointer :: a_2d(:,:),   b_2d(:,:)
     PetscScalar, pointer :: a_3d(:,:,:), b_3d(:,:,:)
     real(8), intent(in) :: args(10)
     integer :: i
@@ -215,8 +216,8 @@ contains
     call PetscLogEventRegister("${fun_name}$", 0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
-    if(A == 0) &
-         call VecDuplicate(B(1), A, ierr)
+    call assert(A /= 0, __FILE__, __LINE__, &
+         "${fun_name}$ : result vec not allocated!")
 
     ! we have to make sure the dm of A, B, C are exactly same.
     ! or we can not just use the local data
@@ -224,7 +225,7 @@ contains
     call VecGetDM(A, A_dm, ierr)
     call VecGetDM(B(1), B_dm, ierr)
 
-    call dm_get_corners(A_dm, box)
+    call petsc_get_corners(A, box)
 
     xs = box%starts(1)
     ys = box%starts(2)
@@ -234,34 +235,22 @@ contains
     ye = box%ends(2)
     ze = box%ends(3)
 
-    ! xe = xs + xl - 1
-    ! ye = ys + yl - 1
-    ! ze = zs + zl - 1
-    
-    call dm_get_dim(A_dm, num_dim)
+    call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
 
-    select case (num_dim)
-#:for d in [1, 2, 3]
-    case (${d}$)
-       
-       call DMDAVecGetArrayF90(A_dm, A, a_${d}$d, ierr)
+    a_3d(D3) = 0.
 
-       a_${d}$d(D${d}$) = 0.
-       
-       do i = 1, size(B)
-          call DMDAVecGetArrayF90(B_dm, B(i), b_${d}$d, ierr)
+    do i = 1, size(B)
+       call DMDAVecGetArrayF90(B_dm, B(i), b_3d, ierr)
 
-          a_${d}$d(D${d}$) = a_${d}$d(D${d}$) ${op[3]}$ &
-               (ops_alpha(i) + ops_beta(i) * b_${d}$d(D${d}$))
-          
-          call DMDAVecRestoreArrayF90(B_dm, B(i), b_${d}$d, ierr)
-       enddo
+       a_3d(D3) = a_3d(D3) ${op[3]}$ &
+            (ops_alpha(i) + ops_beta(i) * b_3d(D3))
 
-       !a_${d}$d(D${d}$) = alpha + beta * a_${d}$d(D${d}$)
-       
-       call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
-#:endfor
-    end select
+       call DMDAVecRestoreArrayF90(B_dm, B(i), b_3d, ierr)
+    enddo
+
+    !a_3d(D3) = alpha + beta * a_3d(D3)
+
+    call DMDAVecRestoreArrayF90(A_dm, A, a_3d, ierr)
 
     !call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
     
@@ -292,8 +281,6 @@ contains
     integer  :: num_dim
     PetscLogEvent            ::  ievent
     PetscInt :: xs, xl, ys, yl, zs, zl, xe, ye, ze
-    PetscScalar, pointer :: a_1d(:),     b1_1d(:),     b2_1d(:)    
-    PetscScalar, pointer :: a_2d(:,:),   b1_2d(:,:),   b2_2d(:,:)  
     PetscScalar, pointer :: a_3d(:,:,:), b1_3d(:,:,:), b2_3d(:,:,:)
     integer :: i
     real(8), intent(in) :: args(10)
@@ -308,9 +295,9 @@ contains
 
     call PetscLogEventRegister("${fun_name}$", 0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
-    
-    if(A == 0) &
-         call VecDuplicate(A, B(1), ierr)
+
+    call assert(A /= 0, __FILE__, __LINE__, &
+         "${fun_name}$ : result vec not allocated!")
     
     ! we have to make sure the dm of A, B, C are exactly same.
     ! or we can not just use the local data
@@ -318,7 +305,7 @@ contains
     call VecGetDM(A, A_dm, ierr)
     call VecGetDM(B, B_dm, ierr)
     
-    call dm_get_corners(A_dm, box)
+    call petsc_get_corners(A, box)
 
     xs = box%starts(1)
     ys = box%starts(2)
@@ -328,33 +315,21 @@ contains
     ye = box%ends(2)
     ze = box%ends(3)
 
-    ! xe = xs + xl - 1
-    ! ye = ys + yl - 1
-    ! ze = zs + zl - 1
-    
-    call dm_get_dim(A_dm, num_dim)
+    call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
+    call DMDAVecGetArrayF90(B_dm, B(1), b1_3d, ierr)
+    call DMDAVecGetArrayF90(B_dm, B(2), b2_3d, ierr)       
 
-    select case (num_dim)
-#:for d in [1, 2, 3]
-    case (${d}$)
-       
-       call DMDAVecGetArrayF90(A_dm, A, a_${d}$d, ierr)
-       call DMDAVecGetArrayF90(B_dm, B(1), b1_${d}$d, ierr)
-       call DMDAVecGetArrayF90(B_dm, B(2), b2_${d}$d, ierr)       
+    a_3d(D3) =  &
+         !alpha + beta * &
+         (merge(1.d0, 0.d0, &
+         (ops_alpha(1) + ops_beta(1) * b1_3d(D3)) &
+         ${op[3]}$ &
+         (ops_alpha(2) + ops_beta(2) * b2_3d(D3))))
 
-       a_${d}$d(D${d}$) =  &
- !           alpha + beta * &
-            (merge(1.d0, 0.d0, &
-            (ops_alpha(1) + ops_beta(1) * b1_${d}$d(D${d}$)) &
-            ${op[3]}$ &
-            (ops_alpha(2) + ops_beta(2) * b2_${d}$d(D${d}$))))
-              
-          call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
-          call DMDAVecRestoreArrayF90(B_dm, B(2), b2_${d}$d, ierr)          
-          call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
-#:endfor
-    end select
-    
+    call DMDAVecRestoreArrayF90(B_dm, B(1), b1_3d, ierr)
+    call DMDAVecRestoreArrayF90(B_dm, B(2), b2_3d, ierr)          
+    call DMDAVecRestoreArrayF90(A_dm, A, a_3d, ierr)
+
     call PetscLogEventEnd(ievent, ierr)
   end subroutine
 #:endif  
@@ -382,8 +357,6 @@ contains
     integer  :: num_dim
     PetscLogEvent            ::  ievent
     PetscInt :: xs, xl, ys, yl, zs, zl, xe, ye, ze
-    PetscScalar, pointer :: a_1d(:),     b1_1d(:)
-    PetscScalar, pointer :: a_2d(:,:),   b1_2d(:,:)
     PetscScalar, pointer :: a_3d(:,:,:), b1_3d(:,:,:)
     integer :: i
     real(8) :: args(10)
@@ -399,8 +372,8 @@ contains
     call PetscLogEventRegister("${fun_name}$", 0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
     
-    if(A == 0) &
-         call VecDuplicate(A, B(1), ierr)
+    call assert(A /= 0, __FILE__, __LINE__, &
+         "${fun_name}$ : result vec not allocated!")
     
     ! we have to make sure the dm of A, B, C are exactly same.
     ! or we can not just use the local data
@@ -409,7 +382,7 @@ contains
     call VecGetDM(B, B_dm, ierr)
     
     !call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
-    call dm_get_corners(A_dm, box)
+    call petsc_get_corners(A, box)
 
     xs = box%starts(1)
     ys = box%starts(2)
@@ -419,38 +392,24 @@ contains
     ye = box%ends(2)
     ze = box%ends(3)
     
-    ! xe = xs + xl - 1
-    ! ye = ys + yl - 1
-    ! ze = zs + zl - 1
-    
-    call dm_get_dim(A_dm, num_dim)
-
-    select case (num_dim)
-#:for d in [1, 2, 3]
-    case (${d}$)
-       
-       call DMDAVecGetArrayF90(A_dm, A, a_${d}$d, ierr)
-       call DMDAVecGetArrayF90(B_dm, B(1), b1_${d}$d, ierr)
+    call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
+    call DMDAVecGetArrayF90(B_dm, B(1), b1_3d, ierr)
 
 #:if op[0] == 'type_pow'
-       a_${d}$d(D${d}$) = &
-!            alpha + beta * &
-            ((ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$))**args(1))
+    a_3d(D3) = &
+         (ops_alpha(1) + ops_beta(1) * b1_3d (D3))**args(1)
 #:else
-       a_${d}$d(D${d}$) = &
-!            alpha + beta * &
-            (${op[3]}$(ops_alpha(1) + ops_beta(1) * b1_${d}$d (D${d}$)))
+    a_3d(D3) = &
+         ${op[3]}$(ops_alpha(1) + ops_beta(1) * b1_3d (D3))
 #:endif
-       
-       call DMDAVecRestoreArrayF90(B_dm, B(1), b1_${d}$d, ierr)
-       call DMDAVecRestoreArrayF90(A_dm, A, a_${d}$d, ierr)
 
-       ! print*, "ops_alpha=", ops_alpha(1), "ops_beta=", ops_beta(1)
-       ! print*, b1_${d}$d (D${d}$)
-       ! call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
-       ! call VecView(B(1), PETSC_VIEWER_STDOUT_WORLD,ierr)       
-#:endfor
-    end select
+    call DMDAVecRestoreArrayF90(B_dm, B(1), b1_3d, ierr)
+    call DMDAVecRestoreArrayF90(A_dm, A, a_3d, ierr)
+
+    ! print*, "ops_alpha=", ops_alpha(1), "ops_beta=", ops_beta(1)
+    ! print*, b1_3d (D3)
+    ! call VecView(A, PETSC_VIEWER_STDOUT_WORLD,ierr)
+    ! call VecView(B(1), PETSC_VIEWER_STDOUT_WORLD,ierr)       
     
     call PetscLogEventEnd(ievent, ierr)
   end subroutine
@@ -467,49 +426,89 @@ contains
 
   end subroutine
 
-!   subroutine data_get_sub(dst, src, box)
-!     implicit none
-!     Vec :: src
-!     type(box_info) :: src_box
-!     type(box_info) :: box
-!     type(box_info) :: new_local
-!     Vec, intent(out) :: dst
-!     integer :: src_dim
-!     integer :: xs, ys, zs, xe, ye, ze
-!     PetscScalar, pointer :: src_data1(:), src_data2(:,:), src_data3(:,:,:)
-!     PetscScalar, pointer :: dst_data1(:), dst_data2(:,:), dst_data3(:,:,:)    
+  subroutine data_get_sub(dst, src, dst_box)
+    implicit none
+#include "petsc.h"
+    Vec, intent(out) :: dst   
+    Vec, intent(in)  :: src
+    DM :: src_dm, dst_dm
+    type(box_info), intent(in) :: dst_box
+    type(box_info) :: dst_local, src_local, dst_local_dst, src_box
+    integer :: dst_shape(3), dst_local_shape(3)
+    integer :: m, n, k, bm, bn, bk
+    integer :: xs, ys, zs, xe, ye, ze
+    integer :: xs1, ys1, zs1, xe1, ye1, ze1
+    PetscScalar, pointer :: src_data(:,:,:), dst_data(:,:,:)
+    integer :: v_shape(3)
     
-!     call vec_get_corners(src, src_box)
-!     call vec_get_dim(src, src_dim)
-    
-!     dst_local = (src_box .and. box)
+    call petsc_get_corners(src, src_local)
 
-!     dst_local_shape = shape(dst_local)
-!     dst_shape = shape(box)
+    ! call petsc_get_shape(src_box, src)
+    ! call petsc_get_shape(v_shape, src)
+    ! call disp_box(src_box, 'src_box!!! = ')
+    ! print*, "src_box!!! = ", v_shape
     
-!     select case(src_dim)
-! #:for d in [1,2,3]
-!     case(${d}$)
-       
-! #:if d <= 1
-!        xs = dst_local%starts(1)
-!        xe = dst_local%ends(1)
-! #:elif d <=2
-!        ys = dst_local%starts(2)
-!        zs = dst_local%ends(2)
-! #:else
-!        zs = dst_local%starts(3)
-!        ze = dst_local%ends(3)
-! #:endif
-       
-!        call get_local_arr(src, src_data${d}$)
-!        allocate(dst_data(D${d}))
-!        dst_data${d}$(D${d}$) = src_data${d}$(D${d}$)
-       
-! #:endfor
-!     end select
+    call assert(dst_box .in. src_box, &
+         __FILE__, __LINE__, &
+         "dst box must be smaller than source box")
+
+    ! if(.not. dst_box .in. src_local) then
+    !    call disp_box(dst_box, 'dst_box = ')
+    !    call disp_box(src_box, 'src_box = ')
+    ! end if
+         
+    !dst_local : the coordinates refer to the source data
+    dst_local = (src_local .and. dst_box)
     
-!   end subroutine
+    call disp_box(src_local, 'src_local = ')
+    call disp_box(dst_box,   'dst_box = ')
+    call disp_box(dst_local, 'dst_local = ')
+    
+    dst_local_shape = shape(dst_local)
+    dst_shape = shape(dst_box)
+
+    ! m = dst_shape(1)
+    ! n = dst_shape(2)
+    ! k = dst_shape(3)
+    
+    ! bm = dst_local_shape(1)
+    ! bn = dst_local_shape(2)
+    ! bk = dst_local_shape(3)
+
+    call petsc_get_dm(src_dm, src)
+    call petsc_slice_dm(dst_dm, src_dm, dst_box)
+    call petsc_new3d(dst, dst_dm)
+    
+    !print*, "m=",m,"n=",n,"k=",k,"bm=",bm,"bn=",bn,"bk=",bk
+    !src_local : the coordinates refer to the dst data 
+    
+    call disp(src_local, 'src_local = ')
+
+    call petsc_get_corners(dst, dst_local_dst)
+    
+    xs1 = dst_local_dst%starts(1)
+    ys1 = dst_local_dst%starts(2)
+    zs1 = dst_local_dst%starts(3)
+    xe1 = dst_local_dst%ends(1)
+    ye1 = dst_local_dst%ends(2)
+    ze1 = dst_local_dst%ends(3)
+
+    xs = dst_local%starts(1)
+    ys = dst_local%starts(2)
+    zs = dst_local%starts(3)
+    xe = dst_local%ends(1)
+    ye = dst_local%ends(2)
+    ze = dst_local%ends(3)
+
+    call get_local_arr(dst, dst_data)
+    call get_local_arr(src, src_data)
+
+    dst_data(xs1:xe1,ys1:ye1,zs1:ze1) = &    
+         src_data(xs:xe,ys:ye,zs:ze)
+    
+    call restore_local_arr(dst, dst_data)
+
+  end subroutine
 
   ! subroutine data_create(data, box, local_box)
   !   implicit none

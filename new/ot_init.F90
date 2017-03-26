@@ -12,4 +12,11 @@ contains
     call init_expr(ierr)
 
   end subroutine
+
+  subroutine ot_finalize(ierr)
+    implicit none
+    integer, intent(out) :: ierr
+
+    call finalize_data(ierr)
+  end subroutine
 end module

@@ -1,6 +1,7 @@
 
-module test
+#define EXIT call ot_finalize(ierr); return
 
+module test
   type obj_ptr
      integer, pointer, dimension(:) :: p
   end type obj_ptr
@@ -22,13 +23,12 @@ contains
   subroutine sin()
     print*, "hello4!"
   end subroutine
-
-
 end module test
 
 program main
   use ot_mod
   use test
+  use ot_petsc
   
   implicit none
   
@@ -41,6 +41,7 @@ program main
   type(tensor_ptr), allocatable, dimension(:) :: tp
   
   type(node) :: NA, NB, NC, ND
+  integer :: v_shape(3)
   
   call ot_init(ierr)
 
@@ -76,18 +77,38 @@ program main
   ! print*, find_range(r(-1:2000))
   ! print*, find_range(r(0:11))
   ! print*, find_range(r(2:15))  
+
+  ! call test_petsc_slice_dm()
+  ! call ot_finalize(ierr)
+  ! return
+
   
-  A = ones(2, 2)  
-  B = ones(2, 2, 2)  
-  C = ones(2, 2, 2)
+
+  !C = ones(2, 2, 2)
+
+  !call petsc_get_shape(v_shape, A%data)
+  !print*, "v_shape = ", v_shape
+
+  A = seqs(2, 2, 2)
+  !call petsc_print(A%data)
+
+  ! B = ones(2, 2, 2)  
   ! D = A + B + C
-  call display(A, "A = ")
+  call disp(A, "A = ")
+  call disp(C, "C = ")
+
+  EXIT
+  
+  call disp_info(slice(A, r(0,5), r(0,5), 0))
   
   ! call display(B, "B = ")
   ! call display(C, "C = ")
   ! call display(D, "D = ")    
+  B = slice(A, r(0, 5), r(0, 5), 0)
+  
+  call disp(B, "B = ")
 
-  call disp_info(slice(A, r(0,1), r(0,1), 0))
+  return
   
   !call write_graph(NB, file="NB.dot")
   ! D = A + B + C
@@ -100,7 +121,7 @@ program main
   E = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
   !E = 1.0/sin(ones(2,2,2) * 3.0)
   !E = ones(2,2,2) * 3.0
-  call display(E, 'E = ')
+  call disp(E, 'E = ')
 
   !fix this
   !call display(A * 2, '')
@@ -109,7 +130,7 @@ program main
   
   NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
   call write_graph(NB, file="NB.dot")
-  call display(NB, 'NB = ')
+  call disp(NB, 'NB = ')
   !call write_opt_graph(NB, file="opt_graph.dot")
 
   ! C = ones(2, 2, 2)
@@ -119,10 +140,10 @@ program main
   ! call display(A, "A = ")
 
   C = 5.0 / (2.0 * ones(2, 2, 2))  
-  call display(C, "C = ")
+  call disp(C, "C = ")
 
   D = 10.0 * sin(ones(2, 2, 2))
-  call display(D, "D = ")
+  call disp(D, "D = ")
   
 
   A = ones(2, 2, 2)  
@@ -146,7 +167,7 @@ program main
   call write_graph(NB, file="NB.dot")
   
   F = NB
-  call display(F, "F = ")
+  call disp(F, "F = ")
   ! C = A + B
   ! call display(C)
 
@@ -195,5 +216,5 @@ program main
   ! call tensor_destroy(U, ierr)
   ! call tensor_destroy(V, ierr)
 
-  !call dm_finalize(ierr)
+  call ot_finalize(ierr)
 end program main

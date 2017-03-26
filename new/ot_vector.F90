@@ -18,6 +18,11 @@ module ot_vector
      module procedure assign_node_ptr
      module procedure assign_tensor_ptr
   end interface assign_ptr
+
+  interface delete_ptr
+     module procedure delete_node_ptr
+     module procedure delete_tensor_ptr
+  end interface delete_ptr
   
 contains
 
@@ -84,7 +89,20 @@ contains
     ! add reference counter
     p%ref_cnt = p%ref_cnt + 1
   end subroutine
+
+  subroutine delete_${t}$_ptr(p, o)
+    implicit none
+    type(${t}$), pointer,intent(out) :: p
+    type(${t}$), target, intent(in)  :: o
+    p => null()
+    ! add reference counter
+    p%ref_cnt = p%ref_cnt - 1
     
+    if(p%ref_cnt <= 0) then
+       !do somthing there to destroy the object
+    endif
+  end subroutine
+  
   !> pop out the first element of ${t}$_ptr array
   subroutine pop_${t}$(v, a)
     implicit none

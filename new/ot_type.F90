@@ -15,7 +15,9 @@ module ot_type
 
   type ref_info
      !0 for range, 1 for indices
-     integer :: ref_index_type
+     integer :: ref_index_type_x
+     integer :: ref_index_type_y
+     integer :: ref_index_type_z     
 
      !used only when ref_index_type = 0
      type(box_info) :: ref_box
@@ -52,14 +54,12 @@ module ot_type
 
      ! the node shape inherit from its left/right
      ! expression or the tensor within it
-     integer :: m_dim = 0
+     !integer :: m_dim = 0
      integer :: m_shape(3) = 0
 
      real(8) :: alpha = 0
      real(8) :: beta  = 1
      real(8) :: scalar = 0
-
-     logical :: is_implicit
 
      !the unique id for each node
      integer :: id
@@ -73,12 +73,10 @@ module ot_type
 
   type tensor
      !dim and shape should not be specified by user!
-     integer :: m_dim = 0, m_shape(3) = (/0,0,0/)
+     !integer :: m_dim = 0
+     integer :: m_shape(3) = (/0,0,0/)
 
      Vec :: data = 0
-
-     !check if it is an implicit variable
-     logical :: is_implicit = .false.
 
      logical :: is_field = .false.
      

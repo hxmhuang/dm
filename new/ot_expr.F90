@@ -1,4 +1,4 @@
-#include "node_type.h"
+#include "type.h"
 
 module ot_expr
   use ot_common
@@ -18,10 +18,6 @@ module ot_expr
   public :: operator(*),operator(/)
   public :: assignment(=)
 
-  interface display
-     module procedure display1, display2
-  end interface
-  
   interface assignment (=)
      module procedure tensor_assign_tensor
      module procedure node_assign_tensor
@@ -108,12 +104,10 @@ contains
          call assign_ptr(A%data, B%data)
     
     A%node_type = B%node_type
-    A%m_dim = B%m_dim
     A%m_shape = B%m_shape
     A%alpha = B%alpha
     A%beta = B%beta
     A%scalar = B%scalar
-    A%is_implicit = B%is_implicit
     call copy_node_ptr(A%operands, B%operands)
     
   end subroutine
@@ -130,6 +124,9 @@ contains
     integer ierr
     
     call node_new(C, B)
+
+    ! call disp(B%ref%ref_box, 'B%ref_box = ')
+    ! call disp(C%ref%ref_box, 'C%ref_box = ')       
 
     !call node_optimize(C)
 
@@ -199,6 +196,20 @@ contains
     endif
 
     call disp_info(A, 'A = ')
+
+    !process the reference node
+    if(is_ref(A)) then
+       if(allocated (A%operands)) then
+          call assert(size(A%operands) == 1, &
+               __FILE__, __LINE__, &
+               "the number of operands &
+               for ref node can not be larger than 1")
+          call eval(A%data, A%operands(1)%ptr, ierr, .false.)
+       end if
+
+       call slice_tensors(res, A%data, A%ref%ref_box)
+       return
+    end if
     
     !if this node is the root node, force to evaluate
     if(is_data(A) .and. .not. is_root) return
@@ -226,7 +237,7 @@ contains
 
           print*, "============================"
           call disp_info(node_ptr, 'NODE')
-          call display(node_ptr%data, 'TENSOR = ')
+          call disp(node_ptr%data, 'TENSOR = ')
 
           call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
           ops_alpha(i) = node_ptr%alpha
@@ -245,16 +256,6 @@ contains
     !     loc(alpha), loc(beta), loc(A%args), num_oprands)
     !write(*, "(A, Z16.6)") "A2=", loc(A%data)
 
-    ! if(is_root) then
-    !    alpha = A%alpha
-    !    beta = A%beta
-    ! else
-    !    alpha = 0
-    !    beta = 1.0
-    ! endif
-    ! alpha = 0
-    ! beta = 1.0
-    
     !if(need_eval(A) .or. is_root) then
        select case(A%node_type)
 #:for e in L
@@ -292,11 +293,7 @@ contains
 
     print*, "--> called tensor_assign_tensor"
     
-    if(B%is_implicit) then
-       call tensor_copy(A, B)
-    else
-       call tensor_deep_copy(A, B)
-    end if
+    call tensor_deep_copy(A, B)
   end subroutine
   
 
@@ -508,52 +505,80 @@ contains
 #:if ta[0] == 'int'
     xs = a; xe = a;
     dim_x = xe - xs + 1
+    res%ref%ref_box%starts(1) = xs
+    res%ref%ref_box%ends(1)   = xe
+    res%ref%ref_index_type_x = 0
 #:elif ta[0] == 'range'
     xs = a%lower; xe = a%upper
     dim_x = xe - xs + 1
+    res%ref%ref_box%starts(1) = xs
+    res%ref%ref_box%ends(1)   = xe
+    res%ref%ref_index_type_x = 0    
 #:else
     allocate(res%ref%ix(size(a)))
     res%ref%ix = a
     dim_x = size(a)
+    res%ref%ref_index_type_x = 1    
 #:endif
 
 #:if tb[0] == 'int'
     ys = b; ye = b;
     dim_y = ye - ys + 1
+    res%ref%ref_box%starts(2) = ys
+    res%ref%ref_box%ends(2)   = ye
+    res%ref%ref_index_type_y = 0    
 #:elif tb[0] == 'range'
     ys = b%lower; ye = b%upper
-    dim_y = ye - ys + 1    
+    dim_y = ye - ys + 1
+    res%ref%ref_box%starts(2) = ys
+    res%ref%ref_box%ends(2)   = ye
+    res%ref%ref_index_type_y = 0
+
+    call disp(res%ref%ref_box, "ref_box in slice xx= ")
+    
 #:else
     allocate(res%ref%iy(size(b)))
     res%ref%iy = b
     dim_y = size(b)
+    res%ref%ref_index_type_y = 1    
 #:endif
 
 #:if tc[0] == 'int'
     zs = c; ze = c;
-    dim_z = ze - zs + 1    
+    dim_z = ze - zs + 1
+    res%ref%ref_box%starts(3) = zs
+    res%ref%ref_box%ends(3)   = ze
+    res%ref%ref_index_type_z = 0    
 #:elif tc[0] == 'range'
     zs = c%lower; ze = c%upper
-    dim_z = ze - zs + 1    
+    dim_z = ze - zs + 1
+    res%ref%ref_box%starts(3) = zs
+    res%ref%ref_box%ends(3)   = ze
+    res%ref%ref_index_type_z = 0
+    
+    
 #:else
     allocate(res%ref%iz(size(c)))
     res%ref%iz = c
     dim_z = size(c)
+    res%ref%ref_index_type_z = 1    
 #:endif
     
 #:if data == 'tensor'
-    allocate(res)
-    call node_new(res, obj) !create a data node
+    !allocate(res)
+    !call node_new(res, obj) !create a data node
+    call assign_ptr(res%data, obj)
     !call node_add_operand(res, tmp)
 #:else
     call assign_ptr(tmp, obj) 
     call node_add_operand(res, tmp)
 #:endif
 
-    res%m_dim = 3
+    call disp(res%ref%ref_box, "ref_box in slice = ")
+    
     res%m_shape = (/dim_x, dim_y, dim_z/)
     res%node_type = type_ref
-
+    
   end function
   
 #:endfor

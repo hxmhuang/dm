@@ -24,35 +24,18 @@ subroutine data_rand(A, t_shape, ierr)
     num_dim = size(t_shape)
 
     m = t_shape(1)
-    if(num_dim >= 2) n = t_shape(2)
-    if(num_dim >= 3) k = t_shape(3)
+    n = t_shape(2)
+    k = t_shape(3)
 
-    call PetscRandomCreate(PETSC_COMM_WORLD, rctx, ierr)
-
-    select case(num_dim)
-    case (1)
-       call DMDACreate1d(PETSC_COMM_WORLD, &
-            &     DM_BOUNDARY_NONE,        &
-            &     m,  dof, s,     &
-            &     PETSC_NULL_INTEGER,ada,ierr)
-    case (2)
-       call DMDACreate2d(PETSC_COMM_WORLD, &
-            &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,        &
-            &     DMDA_STENCIL_STAR, m,n, PETSC_DECIDE,     &
-            &     PETSC_DECIDE,dof,s,                       &
-            &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,    &
-            &     ada,ierr)
-
-    case (3)
-       call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,               &
-            &     DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
-            &     DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
-            &     PETSC_DECIDE,dof,s,                                     &
-            &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
-            &     PETSC_NULL_INTEGER,ada,ierr)
-    end select
-
-   call DMCreateGlobalVector(ada, A, ierr)
-   call VecSetRandom(A, rctx)
-   call PetscLogEventEnd(ievent,ierr)
+    call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,         &
+         DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
+         DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
+         PETSC_DECIDE,dof,s,                                     &
+         PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
+         PETSC_NULL_INTEGER,ada,ierr)
+   
+    call DMCreateGlobalVector(ada, A, ierr)
+    call PetscRandomCreate(PETSC_COMM_WORLD, rctx, ierr)    
+    call VecSetRandom(A, rctx)
+    call PetscLogEventEnd(ievent,ierr)
  end subroutine

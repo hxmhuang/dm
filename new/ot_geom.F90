@@ -18,12 +18,34 @@ module ot_geom
      module procedure box_and
   end interface operator (.and.)
 
+  interface operator (.in.)
+     module procedure box_in
+  end interface operator (.in.)
+  
   interface shape
      module procedure box_shape
   end interface shape
 
+  interface disp
+     module procedure disp_box
+  end interface disp
 contains
 
+  subroutine disp_box(o, prefix)
+    implicit none
+    type(box_info) :: o
+    character(len=*),optional :: prefix
+    
+    if(present(prefix)) then
+       write(*, "(2X, A)") prefix
+    else
+       write(*, "(2X, A)") "ans =  "
+    endif
+    
+    write(*, "(6X, 3I4.1)") o%starts
+    write(*, "(6X, 3I4.1)") o%ends
+  end subroutine disp_box
+  
   function r(a, b) result(res)
     implicit none
     integer :: a
@@ -33,6 +55,16 @@ contains
     res%upper = b
   end function
 
+  !> if box a is inside box b
+  function box_in(a, b) result(res)
+    implicit none
+    type(box_info), intent(in) :: a, b
+    logical :: res
+
+    res = (.not. any(a%starts < b%starts)) &
+         .and. (.not. any(a%ends > b%ends))
+  end function
+  
   function has_intersection(a, b) result(res)
     implicit none
     type(box_info), intent(in) :: a, b
