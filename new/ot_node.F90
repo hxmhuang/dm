@@ -227,7 +227,7 @@ contains
     implicit none
     type(node), intent(in) :: o
     character(len=*), optional, intent(in) :: prefix
-    integer :: i
+    integer :: i, dim
     
     write(*,*) ""
     if(present(prefix)) then
@@ -242,9 +242,10 @@ contains
 #endif
     write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)    
     write(*, "(4X, A)", advance="no") "shape : ["
-    do i = 1, size(o%m_shape)
+    dim = find_dim(o%m_shape)
+    do i = 1, dim
        write(*, "(I0.1)", advance="no") o%m_shape(i)
-       if(i < size(o%m_shape)) write(*, "(A)", advance="no") "x"
+       if(i < dim) write(*, "(A)", advance="no") "x"
     enddo
     write(*, "(A)") "]"
 

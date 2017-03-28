@@ -29,6 +29,7 @@ program main
   use ot_mod
   use test
   use ot_petsc
+  use ot_test
   
   implicit none
   
@@ -42,8 +43,33 @@ program main
   
   type(node) :: NA, NB, NC, ND
   integer :: v_shape(3)
+  integer :: dim1, dim2, dim3, dim4
+  integer :: arr1(4)
+  integer :: arr(4,4)
   
   call ot_init(ierr)
+
+  arr1(1) = 1;  arr1(2) = 2;  arr1(3) = 3;  arr1(4) = 4;
+
+  arr(1,1) = 1;  arr(2,1) = 2;  arr(3,1) = 3;  arr(4,1) = 4;
+  arr(1,2) = 1;  arr(2,2) = 2;  arr(3,2) = 3;  arr(4,2) = 4;
+  arr(1,3) = 1;  arr(2,3) = 2;  arr(3,3) = 3;  arr(4,3) = 4;
+  arr(1,4) = 1;  arr(2,4) = 2;  arr(3,4) = 3;  arr(4,4) = 4;
+
+  print*, arr(:, (/1,2/))
+  
+  ! dim1 = find_dim((/3,1,1/))
+  ! dim2 = find_dim((/3,3,1/))
+  ! dim3 = find_dim((/3,3,3/))
+  ! dim4 = find_dim((/1,1,1/))
+  ! print*, "find_dim1 = ", dim1
+  ! print*, "find_dim2 = ", dim2
+  ! print*, "find_dim3 = ", dim3
+  ! print*, "find_dim4 = ", dim4  
+  
+  ! print*, "find_dim = ", find_dim((/10,1,1/))
+  ! print*, "find_dim = ", find_dim((/10,10,1/))
+  ! print*, "find_dim = ", find_dim((/10,10,10/))
 
   ! call test_size()
   ! call insert_pointer(loc(fun1), 0)
@@ -78,96 +104,37 @@ program main
   ! print*, find_range(r(0:11))
   ! print*, find_range(r(2:15))  
 
-  ! call test_petsc_slice_dm()
-  ! call ot_finalize(ierr)
-  ! return
+  !call test_petsc_slice_dm()
+  call test_ones()
+  call test_seqs()
+  call test_slice()
+  call test_set()
 
-  
+  EXIT
 
   !C = ones(2, 2, 2)
 
   !call petsc_get_shape(v_shape, A%data)
   !print*, "v_shape = ", v_shape
 
-  A = seqs(2, 2, 2)
+  ! call test_slice()
+  ! EXIT
+  
+  !A = seqs(10, 10)
   !call petsc_print(A%data)
 
   ! B = ones(2, 2, 2)  
   ! D = A + B + C
-  call disp(A, "A = ")
-  call disp(C, "C = ")
 
-  EXIT
-  
+  ! call disp(A, "A = ")
+  ! call disp(C, "C = ")
+
   call disp_info(slice(A, r(0,5), r(0,5), 0))
   
-  ! call display(B, "B = ")
-  ! call display(C, "C = ")
-  ! call display(D, "D = ")    
   B = slice(A, r(0, 5), r(0, 5), 0)
-  
   call disp(B, "B = ")
 
-  return
-  
-  !call write_graph(NB, file="NB.dot")
-  ! D = A + B + C
-  !return
-  
-  !CALL disp('A = ', (/1,2,3,4/), orient='row')
-  
-  !three-dimensional array
-  !A = ones(2, 2, 2)
-  E = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
-  !E = 1.0/sin(ones(2,2,2) * 3.0)
-  !E = ones(2,2,2) * 3.0
-  call disp(E, 'E = ')
 
-  !fix this
-  !call display(A * 2, '')
-  
-  return
-  
-  NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
-  call write_graph(NB, file="NB.dot")
-  call disp(NB, 'NB = ')
-  !call write_opt_graph(NB, file="opt_graph.dot")
-
-  ! C = ones(2, 2, 2)
-  ! D = ones(2, 2, 2)  
-  ! E = ones(2, 2, 2)
-
-  ! call display(A, "A = ")
-
-  C = 5.0 / (2.0 * ones(2, 2, 2))  
-  call disp(C, "C = ")
-
-  D = 10.0 * sin(ones(2, 2, 2))
-  call disp(D, "D = ")
-  
-
-  A = ones(2, 2, 2)  
-  B = ones(2, 2, 2)  
-  C = ones(2, 2, 2)
-  D = ones(2, 2, 2)  
-
-  !C = 1.0 + A + B + C * D + E
-  !C = 1.0 + 2. * A + 4.0 / B * C * D
-  ND = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
-  call write_graph(ND, file="ND.dot")
-  
-  !C = A - B
-  !C = 2.0 + (1.0 / B) + A
-  !C = 2.0 * (A - 0.1) + B  
-  !E = A * B * C + (D)
-
-  NA = B + sin(cos(exp(D+C)) + A) * 2 - 3
-  NB = 2.0 + (1.0 / B) + A + tan(NA)
-
-  call write_graph(NB, file="NB.dot")
-  
-  F = NB
-  call disp(F, "F = ")
   ! C = A + B
   ! call display(C)
 
@@ -212,7 +179,6 @@ program main
   ! call tensor_destroy(E, ierr)
   ! call tensor_destroy(F, ierr)
   ! call tensor_destroy(G, ierr)
-  
   ! call tensor_destroy(U, ierr)
   ! call tensor_destroy(V, ierr)
 

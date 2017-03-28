@@ -49,6 +49,10 @@ module ot_tensor
   interface disp
      module procedure disp_tensor
   end interface disp
+
+  interface destroy
+     module procedure tensor_destroy
+  end interface destroy
 contains
 
   subroutine init_tensor(ierr)
@@ -125,6 +129,7 @@ contains
     type(tensor), intent(in) :: o
     character(len=*), optional, intent(in) :: prefix
     integer :: i
+    integer :: dim
     
     if(get_rank() == 0) then
        write(*,*) ""
@@ -136,20 +141,38 @@ contains
 
        write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
 
+       dim = find_dim(o%m_shape)
        write(*, "(4X, A)", advance="no") "shape : ["
-       do i = 1, size(o%m_shape)
+       do i = 1, dim
           write(*, "(I0.1)", advance="no") o%m_shape(i)
-          if(i < size(o%m_shape)) &
+          if(i < dim) &
                write(*, "(A)", advance="no") "x"
        enddo
        write(*, "(A)") "]"
-
+       
        write(*, "(4X, A, L1)") "is_field    : ", o%is_field
        if(o%is_field) &
-            write(*, "(4X, A, I0.2)") "grid_pos : ", o%grid_pos
+            write(*, "(4X, A, I0.2)") &
+            "grid_pos : ", o%grid_pos
        write(*, "(4X, A, Z16.16)") "data : 0x", o%data
     end if
   end subroutine
+
+  !> if tensor shape is [2x3x1], the function returns 2
+  function find_dim(m_shape) result(dim)
+    implicit none
+    integer, intent(in) :: m_shape(3)
+    integer :: dim
+    integer :: i
+
+    do i = size(m_shape), 1, -1
+       if(m_shape(i) /= 1) then
+          dim = i
+          return
+       end if
+    end do
+    dim = 0
+  end function
   
   subroutine disp_tensor(objA, prefix)
 #include "petsc.h"            
@@ -158,7 +181,7 @@ contains
     character(len=*), optional, intent(in) :: prefix
     real(kind=8), pointer :: x1(:), x2(:,:), x3(:,:,:)
     integer :: i, ierr, rank
-    
+    integer :: dim
     call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 
     A => objA
@@ -172,10 +195,11 @@ contains
           write(*, "(A)") "ans = "
        endif
 
+       dim = find_dim(A%m_shape)
        write(*, "(4X, A)", advance="no") "shape : ["
-       do i = 1, size(A%m_shape)
+       do i = 1, dim
           write(*, "(I0.1)", advance="no") A%m_shape(i)
-          if(i < size(A%m_shape)) write(*, "(A)", advance="no") "x"
+          if(i < dim) write(*, "(A)", advance="no") "x"
        enddo
        write(*, "(A)") "]"
     endif
@@ -327,17 +351,17 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     ! call data_duplicate(dst%data,  src%data,  ierr)
   end subroutine
 
-  subroutine slice_tensors(dst, src, box)
+  subroutine slice_tensors(dst, src, ref)
     implicit none
 #include "petsc.h"
     type(tensor), intent(inout) :: dst
-    type(tensor), intent(in) :: src
-    type(box_info), intent(in) :: box
+    type(tensor), intent(in)    :: src
+    type(ref_info), intent(in)  :: ref
     Vec :: dst_data
     integer :: ierr
     
     !call data_get_sub(dst%data, src%data, box)
-    call data_get_sub(dst_data, src%data, box)
+    call data_get_sub(dst_data, src%data, ref)
     call tensor_new(dst, dst_data)
 
     !call VecView(dst%data, PETSC_VIEWER_STDOUT_WORLD, ierr)

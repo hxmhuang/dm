@@ -1,17 +1,10 @@
 
 module ot_geom
-  type range
-     integer :: lower = 0
-     integer :: upper = 0
-  end type range
+  use ot_type
   
-  type box_info
-     integer :: starts(3) = 0
-     integer :: ends(3)   = 0
-  end type box_info
-
   interface operator (.eq.)
      module procedure box_eq
+     module procedure range_eq
   end interface operator (.eq.)
   
   interface operator (.and.)
@@ -29,8 +22,52 @@ module ot_geom
   interface disp
      module procedure disp_box
   end interface disp
-contains
 
+  type(range) :: range_all
+contains
+  subroutine init_geom()
+    implicit none
+    range_all%lower = -huge(int(0))
+    range_all%lower = huge(int(0))
+  end subroutine
+
+  function range_eq(a, b) result(res)
+    implicit none
+    type(range), intent(in) :: a
+    type(range), intent(in) :: b
+    logical :: res
+        
+    res = (a%lower == b%lower) .and. &
+         (a%upper == b%upper)
+  end function
+
+  subroutine range_to_box(b, rx, ry, rz)
+    implicit none
+    type(box_info), intent(out) :: b
+    type(range), intent(in) :: rx, ry, rz
+    
+    b%starts(1) = rx%lower
+    b%starts(2) = ry%lower
+    b%starts(3) = rz%lower
+    b%ends(1) = rx%upper
+    b%ends(2) = ry%upper
+    b%ends(3) = rz%upper
+  end subroutine
+
+  subroutine range_to_ref(b, rx, ry, rz)
+    implicit none
+    type(ref_info), intent(out) :: b
+    type(range), intent(in) :: rx, ry, rz
+    
+    b%range_x = rx
+    b%range_y = ry
+    b%range_z = rz
+
+    b%ref_index_type_x = 0
+    b%ref_index_type_y = 0
+    b%ref_index_type_z = 0
+  end subroutine
+  
   subroutine disp_box(o, prefix)
     implicit none
     type(box_info) :: o
@@ -44,7 +81,7 @@ contains
     
     write(*, "(6X, 3I4.1)") o%starts
     write(*, "(6X, 3I4.1)") o%ends
-  end subroutine disp_box
+  end subroutine
   
   function r(a, b) result(res)
     implicit none

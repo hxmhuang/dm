@@ -27,6 +27,8 @@ module ot_petsc
   interface petsc_get_shape
      module procedure petsc_get_shape1
      module procedure petsc_get_shape2
+     module procedure petsc_get_shape3
+     module procedure petsc_get_shape4     
   end interface
   
 contains
@@ -78,29 +80,6 @@ contains
     CHKERRQ(ierr)
   end subroutine
   
-!   subroutine dm_get_corners(DM_A, xs, ys, zs, xl, yl, zl)
-!     implicit none
-! #include "petsc.h"
-!     DM :: DM_A
-!     integer :: ierr
-!     integer, intent(out) :: xs, ys, zs, xl, yl, zl
-    
-!     call DMDAGetCorners(DM_A, xs, ys, zs, xl, yl, zl,ierr)
-
-!   end subroutine
-
-  ! subroutine dm_get_corners(A, b)
-  !   implicit none
-  !   DM :: A
-  !   integer :: xs, ys, zs, xl, yl, zl
-  !   type(box_info), intent(out) :: b
-  !   integer :: ierr
-    
-  !   call DMDAGetCorners(A, xs, ys, zs, xl, yl, zl,ierr)    
-  !   b%starts = (/xs, ys, zs/)
-  !   b%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
-  ! end subroutine
-
   subroutine petsc_get_corners(A, b)
     implicit none
 #include "petsc.h"    
@@ -164,7 +143,69 @@ contains
     res%starts = 0
     res%ends = (/dx,dy,dz/) - 1
   end subroutine
-  
+
+  !> get global shape of the data and the local corners
+  subroutine petsc_get_shape3(global_shape, local_box, data)
+    implicit none
+#include "petsc.h"    
+    Vec :: data
+    DM  :: data_dm
+    integer :: dx, dy, dz, ierr
+    integer, intent(out) :: global_shape(3)
+    type(box_info), intent(out) :: local_box
+    integer :: xs, ys, zs, xl, yl, zl
+    
+    call VecGetDM(data, data_dm, ierr)
+
+    CHKERRQ(ierr)
+    call DMDAGetInfo(data_dm, PETSC_NULL_INTEGER, dx, dy, dz, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, ierr)
+
+    CHKERRQ(ierr)
+    global_shape = (/dx, dy, dz/)
+
+    call DMDAGetCorners(data_dm, xs, ys, zs, xl, yl, zl,ierr)
+    CHKERRQ(ierr)
+    
+    local_box%starts = (/xs, ys, zs/)
+    local_box%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+  end subroutine
+
+  !> get global shape of the data and the local corners
+  subroutine petsc_get_shape4(global_box, local_box, data)
+    implicit none
+#include "petsc.h"    
+    Vec :: data
+    DM :: data_dm
+    integer :: dx, dy, dz, ierr
+    integer :: xs, ys, zs, xl, yl, zl
+    type(box_info), intent(out) :: global_box, local_box
+    
+    call VecGetDM(data, data_dm, ierr)
+    CHKERRQ(ierr)
+    call DMDAGetInfo(data_dm, PETSC_NULL_INTEGER, dx, dy, dz, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, ierr)
+
+    CHKERRQ(ierr)
+    
+    global_box%starts = 0
+    global_box%ends = (/dx, dy, dz/)
+
+    call DMDAGetCorners(data_dm, xs, ys, zs, xl, yl, zl,ierr)
+    CHKERRQ(ierr)
+    
+    local_box%starts = (/xs, ys, zs/)
+    local_box%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+  end subroutine
+
 #:for d in [1,2,3]
   subroutine get_local_arr${d}$(data, arr)
     implicit none
@@ -175,7 +216,6 @@ contains
     integer :: ierr
     
     call VecGetDM(data, data_dm, ierr)
-    call VecView(data, PETSC_VIEWER_STDOUT_WORLD,ierr)
     call DMDAVecGetArrayF90(data_dm, data, arr, ierr)
   end subroutine
 
@@ -188,7 +228,6 @@ contains
     integer :: ierr
     
     call VecGetDM(data, data_dm, ierr)
-
     call DMDAVecRestoreArrayF90(data_dm, data, arr, ierr)
   end subroutine  
 #:endfor
@@ -211,9 +250,7 @@ contains
     CHKERRQ(ierr)
     
     call DMDAGetCorners(arr_dm,xs,ys,zs, xl,yl,zl,ierr)
-    
     call DMGetGlobalVector(arr_dm, arr, ierr)
-    call VecView(arr,PETSC_VIEWER_STDOUT_WORLD,ierr)    
   end subroutine
 
   subroutine petsc_new3d_by_dm(arr, arr_dm)
@@ -246,6 +283,38 @@ contains
          PETSC_NULL_INTEGER, ierr)
   end subroutine
 
+  !> update distribution with a new range from a to b
+  subroutine petsc_update_dist(ll, a, b)
+    implicit none
+    integer, intent(inout) :: ll(:)
+    integer :: a, b
+    integer :: cum, i, p
+    
+    cum = 0
+    do i = 0, size(ll) - 1
+       p = min(b, cum + ll(i+1) - 1) - max(a, cum) + 1
+       cum = cum + ll(i + 1)
+       if(p < 0) p = 0
+       ll(i+1) = p
+    enddo
+  end subroutine
+
+  ! subroutine petsc_update_dist(ll, ix, local)
+  !   implicit none
+  !   integer, intent(inout) :: ll(:)
+  !   integer, intent(in) :: ix(:)
+  !   integer, allocatable, dimension(:), intent(out) :: local
+  !   integer :: cum, i, p
+    
+  !   cum = 0
+  !   do i = 0, size(ll) - 1
+  !      p = min(b, cum + ll(i+1) - 1) - max(a, cum) + 1
+  !      cum = cum + ll(i + 1)
+  !      if(p < 0) p = 0
+  !      ll(i+1) = p
+  !   enddo
+  ! end subroutine
+  
   subroutine petsc_slice_dm(dst, src, box)
     implicit none
 #include  "petsc.h"
@@ -276,37 +345,39 @@ contains
     xe = box%ends(1)
     ye = box%ends(2)
     ze = box%ends(3)
-
-    print*,"before:", "lx=", lx, "ly=",ly, "lz=", lz
     
-    cum = 0
-    do i = 0, nx - 1
-       p = min(xe, cum + lx(i+1) - 1) - max(xs, cum) + 1
-       cum = cum + lx(i + 1)
-       if(p < 0) p = 0
-       lx(i+1) = p
-    enddo
+    ! cum = 0
+    ! do i = 0, nx - 1
+    !    p = min(xe, cum + lx(i+1) - 1) - max(xs, cum) + 1
+    !    cum = cum + lx(i + 1)
+    !    if(p < 0) p = 0
+    !    lx(i+1) = p
+    ! enddo
     
-    cum = 0
-    do i = 0, ny - 1
-       p = min(ye, cum + ly(i+1) - 1) - max(ys, cum) + 1
-       cum = cum + ly(i + 1)
-       if(p < 0) p = 0
-       ly(i+1) = p       
-    enddo
+    ! cum = 0
+    ! do i = 0, ny - 1
+    !    p = min(ye, cum + ly(i+1) - 1) - max(ys, cum) + 1
+    !    cum = cum + ly(i + 1)
+    !    if(p < 0) p = 0
+    !    ly(i+1) = p       
+    ! enddo
 
-    cum = 0
-    do i = 0, nz - 1
-       p = min(ze, cum + lz(i+1) - 1) - max(zs, cum) + 1
-       cum = cum + lz(i + 1)
-       if(p < 0) p = 0
-       lz(i+1) = p
-    enddo
+    ! cum = 0
+    ! do i = 0, nz - 1
+    !    p = min(ze, cum + lz(i+1) - 1) - max(zs, cum) + 1
+    !    cum = cum + lz(i + 1)
+    !    if(p < 0) p = 0
+    !    lz(i+1) = p
+    ! enddo
 
+    call petsc_update_dist(lx, xs, xe)
+    call petsc_update_dist(ly, ys, ye)
+    call petsc_update_dist(lz, zs, ze)
+    
     ! write(buffer, *) "lx=", lx, "ly=", ly, "lz=", lz, "\n"
     ! call PetscViewerASCIISynchronizedPrintf(&
     !      PETSC_VIEWER_STDOUT_WORLD, buffer, ierr)
-    print*,"after:", "lx=", lx, "ly=",ly, "lz=", lz
+    ! print*,"after:", "lx=", lx, "ly=",ly, "lz=", lz
     
     call DMDACreate3d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, &
          DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, &
@@ -314,8 +385,6 @@ contains
          nx, ny, nz, 1, 0, lx, ly, lz, dst, ierr)
 
     CHKERRQ(ierr)
-
-    ! call PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD, ierr)
 
   end subroutine
 
@@ -347,7 +416,6 @@ contains
     box%ends   = (/5, 9, 4/)
     
     call petsc_slice_dm(dst_dm, src_dm, box)
-    
   end subroutine
 
   subroutine petsc_print(global_vec, prefix)

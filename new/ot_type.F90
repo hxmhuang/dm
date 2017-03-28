@@ -3,7 +3,16 @@
 #include <petsc/finclude/petscdmdef.h> 
 
 module ot_type
-  use ot_geom
+
+  type range
+     integer :: lower = 0
+     integer :: upper = 0
+  end type range
+  
+  type box_info
+     integer :: starts(3) = 0
+     integer :: ends(3)   = 0
+  end type box_info
   
   type node_ptr
      type(node), pointer :: ptr => null()
@@ -20,18 +29,18 @@ module ot_type
      integer :: ref_index_type_z     
 
      !used only when ref_index_type = 0
-     type(box_info) :: ref_box
-     type(box_info) :: ref_lbox !local box
+     ! type(box_info) :: ref_box
+     ! type(box_info) :: ref_lbox !local box
 
-     !used only when ref_index_type = 1
-     integer, allocatable, dimension(:) :: ix
-     integer, allocatable, dimension(:) :: iy
-     integer, allocatable, dimension(:) :: iz     
-
-     integer, allocatable, dimension(:) :: local_ix
-     integer, allocatable, dimension(:) :: local_iy
-     integer, allocatable, dimension(:) :: local_iz     
+     type(range) :: range_x
+     type(range) :: range_y
+     type(range) :: range_z
      
+     !used only when ref_index_type = 1
+     integer, allocatable, dimension(:) :: iarr_x
+     integer, allocatable, dimension(:) :: iarr_y
+     integer, allocatable, dimension(:) :: iarr_z     
+
      !0 for tensor, 1 for node
      integer :: ref_target_type
      ! type(node),  pointer :: ref_node   => null()
@@ -96,4 +105,5 @@ module ot_type
      type(tensor), pointer :: dz_3d => null()     
   end type grid
 
+  
 end module

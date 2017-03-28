@@ -35,20 +35,29 @@ contains
     global_counter = global_counter + 1
   end function
 
-  function get_rank() result(res)
+  function get_rank(comm) result(res)
     implicit none
     integer :: ierr
     integer :: res
-    
-    call MPI_Comm_rank(MPI_COMM_WORLD, res, ierr)
+    integer, optional :: comm
+
+    if(present(comm)) then
+       call MPI_Comm_rank(comm, res, ierr)
+    else
+       call MPI_Comm_rank(MPI_COMM_WORLD, res, ierr)       
+    endif
   end function
 
-  function get_size() result(res)
+  function get_size(comm) result(res)
     implicit none
     integer :: ierr
     integer :: res
-    
-    call MPI_Comm_size(MPI_COMM_WORLD, res, ierr)
+    integer, optional :: comm
+    if(present(comm)) then
+       call MPI_Comm_size(comm, res, ierr)
+    else
+       call MPI_Comm_size(MPI_COMM_WORLD, res, ierr)
+    end if
   end function
   
   subroutine reset_global_id()

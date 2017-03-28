@@ -417,22 +417,95 @@ contains
 #:endif
 #:endfor
 
-  subroutine data_get_arr(src, box, arr)
-    implicit none
-    Vec :: src
-    type(box_info) :: box
-    real(8), intent(out), allocatable :: arr(:)
+subroutine data_get_sub(dst, src, ref)
+  implicit none
+#include "petsc.h"
+  Vec, intent(out) :: dst   
+  Vec, intent(in)  :: src
+  DM :: src_dm, dst_dm
+  type(ref_info) :: ref
+  type(box_info) :: dst_box
+  type(box_info) :: dst_local, src_local, dst_local_dst, src_box
+  integer :: dst_shape(3), dst_local_shape(3)
+  integer :: m, n, k, bm, bn, bk
+  integer :: xs, ys, zs, xe, ye, ze
+  integer :: xs1, ys1, zs1, xe1, ye1, ze1
+  PetscScalar, pointer :: src_data(:,:,:), dst_data(:,:,:)
+  integer :: v_shape(3)
 
+  call petsc_get_corners(src, src_local)
+  call petsc_get_shape(src_box, src)
 
-  end subroutine
+  ! if(.not. (dst_box .in. src_local)) then
+  !    call disp_box(dst_box, 'dst_box = ')
+  !    call disp_box(src_box, 'src_box = ')
+  ! end if
 
-  subroutine data_get_sub(dst, src, dst_box)
+  call assert(dst_box .in. src_box, &
+       __FILE__, __LINE__, &
+       "dst box must be smaller than source box")
+
+  if(ref%ref_index_type_x == 0 .and. &
+       ref%ref_index_type_y == 0 .and. ref%ref_index_type_z == 0) then
+
+     call range_to_box(dst_box, ref%range_x, ref%range_y, ref%range_z)
+
+     !dst_local : the coordinates refer to the source data
+     dst_local = (src_local .and. dst_box)
+
+     ! call disp_box(src_local, 'src_local = ')
+     ! call disp_box(dst_box,   'dst_box = ')
+     ! call disp_box(dst_local, 'dst_local = ')
+
+     dst_local_shape = shape(dst_local)
+     dst_shape = shape(dst_box)
+
+     call petsc_get_dm(src_dm, src)
+     call petsc_slice_dm(dst_dm, src_dm, dst_box)
+     call petsc_new3d(dst, dst_dm)
+
+     !call disp(src_local, 'src_local = ')
+
+     call petsc_get_corners(dst, dst_local_dst)
+
+     xs1 = dst_local_dst%starts(1)
+     ys1 = dst_local_dst%starts(2)
+     zs1 = dst_local_dst%starts(3)
+     xe1 = dst_local_dst%ends(1)
+     ye1 = dst_local_dst%ends(2)
+     ze1 = dst_local_dst%ends(3)
+
+     xs = dst_local%starts(1)
+     ys = dst_local%starts(2)
+     zs = dst_local%starts(3)
+     xe = dst_local%ends(1)
+     ye = dst_local%ends(2)
+     ze = dst_local%ends(3)
+
+     call get_local_arr(dst, dst_data)
+     call get_local_arr(src, src_data)
+
+     dst_data(xs1:xe1,ys1:ye1,zs1:ze1) = &    
+          src_data(xs:xe,ys:ye,zs:ze)
+
+     call restore_local_arr(dst, dst_data)
+  end if
+end subroutine
+
+#:set itype = [['range', 'type(range)'], ['iarr', 'integer, dimension(:)']]
+#:for tx in itype
+#:for ty in itype
+#:for tz in itype
+  subroutine data_get_sub_${tx[0]}$_${ty[0]}$_${tz[0]}$ &
+       (dst, src, ix, iy, iz)
     implicit none
 #include "petsc.h"
     Vec, intent(out) :: dst   
     Vec, intent(in)  :: src
+    ${tx[1]}$ :: ix
+    ${ty[1]}$ :: iy
+    ${tz[1]}$ :: iz    
     DM :: src_dm, dst_dm
-    type(box_info), intent(in) :: dst_box
     type(box_info) :: dst_local, src_local, dst_local_dst, src_box
     integer :: dst_shape(3), dst_local_shape(3)
     integer :: m, n, k, bm, bn, bk
@@ -441,75 +514,59 @@ contains
     PetscScalar, pointer :: src_data(:,:,:), dst_data(:,:,:)
     integer :: v_shape(3)
     
-    call petsc_get_corners(src, src_local)
-
+    ! call petsc_get_corners(src, src_local)
     ! call petsc_get_shape(src_box, src)
-    ! call petsc_get_shape(v_shape, src)
-    ! call disp_box(src_box, 'src_box!!! = ')
-    ! print*, "src_box!!! = ", v_shape
-    
-    call assert(dst_box .in. src_box, &
-         __FILE__, __LINE__, &
-         "dst box must be smaller than source box")
 
-    ! if(.not. dst_box .in. src_local) then
-    !    call disp_box(dst_box, 'dst_box = ')
-    !    call disp_box(src_box, 'src_box = ')
-    ! end if
-         
-    !dst_local : the coordinates refer to the source data
-    dst_local = (src_local .and. dst_box)
+    ! ! if(.not. (dst_box .in. src_local)) then
+    ! !    call disp_box(dst_box, 'dst_box = ')
+    ! !    call disp_box(src_box, 'src_box = ')
+    ! ! end if
     
-    call disp_box(src_local, 'src_local = ')
-    call disp_box(dst_box,   'dst_box = ')
-    call disp_box(dst_local, 'dst_local = ')
+    ! !dst_local : the coordinates refer to the source data
+    ! dst_local = (src_local .and. dst_box)
     
-    dst_local_shape = shape(dst_local)
-    dst_shape = shape(dst_box)
+    ! ! call disp_box(src_local, 'src_local = ')
+    ! ! call disp_box(dst_box,   'dst_box = ')
+    ! ! call disp_box(dst_local, 'dst_local = ')
+    
+    ! dst_local_shape = shape(dst_local)
+    ! dst_shape = shape(dst_box)
 
-    ! m = dst_shape(1)
-    ! n = dst_shape(2)
-    ! k = dst_shape(3)
+    ! call petsc_get_dm(src_dm, src)
+    ! call petsc_slice_dm(dst_dm, src_dm, dst_box)
+    ! call petsc_new3d(dst, dst_dm)
     
-    ! bm = dst_local_shape(1)
-    ! bn = dst_local_shape(2)
-    ! bk = dst_local_shape(3)
+    ! !call disp(src_local, 'src_local = ')
 
-    call petsc_get_dm(src_dm, src)
-    call petsc_slice_dm(dst_dm, src_dm, dst_box)
-    call petsc_new3d(dst, dst_dm)
+    ! call petsc_get_corners(dst, dst_local_dst)
     
-    !print*, "m=",m,"n=",n,"k=",k,"bm=",bm,"bn=",bn,"bk=",bk
-    !src_local : the coordinates refer to the dst data 
+    ! xs1 = dst_local_dst%starts(1)
+    ! ys1 = dst_local_dst%starts(2)
+    ! zs1 = dst_local_dst%starts(3)
+    ! xe1 = dst_local_dst%ends(1)
+    ! ye1 = dst_local_dst%ends(2)
+    ! ze1 = dst_local_dst%ends(3)
+
+    ! xs = dst_local%starts(1)
+    ! ys = dst_local%starts(2)
+    ! zs = dst_local%starts(3)
+    ! xe = dst_local%ends(1)
+    ! ye = dst_local%ends(2)
+    ! ze = dst_local%ends(3)
+
+    ! call get_local_arr(dst, dst_data)
+    ! call get_local_arr(src, src_data)
+
+    ! dst_data(xs1:xe1,ys1:ye1,zs1:ze1) = &    
+    !      src_data(xs:xe,ys:ye,zs:ze)
     
-    call disp(src_local, 'src_local = ')
-
-    call petsc_get_corners(dst, dst_local_dst)
-    
-    xs1 = dst_local_dst%starts(1)
-    ys1 = dst_local_dst%starts(2)
-    zs1 = dst_local_dst%starts(3)
-    xe1 = dst_local_dst%ends(1)
-    ye1 = dst_local_dst%ends(2)
-    ze1 = dst_local_dst%ends(3)
-
-    xs = dst_local%starts(1)
-    ys = dst_local%starts(2)
-    zs = dst_local%starts(3)
-    xe = dst_local%ends(1)
-    ye = dst_local%ends(2)
-    ze = dst_local%ends(3)
-
-    call get_local_arr(dst, dst_data)
-    call get_local_arr(src, src_data)
-
-    dst_data(xs1:xe1,ys1:ye1,zs1:ze1) = &    
-         src_data(xs:xe,ys:ye,zs:ze)
-    
-    call restore_local_arr(dst, dst_data)
+    ! call restore_local_arr(dst, dst_data)
 
   end subroutine
-
+#:endfor
+#:endfor
+#:endfor
+  
   ! subroutine data_create(data, box, local_box)
   !   implicit none
     
@@ -531,7 +588,44 @@ contains
 
 
   ! end subroutine
-  
+
+  subroutine data_set_scalar(data, val, ref)
+    implicit none
+    Vec :: data
+    real(8) :: val
+    type(ref_info) :: ref
+    PetscScalar, pointer :: local_arr(:,:,:)
+    type(box_info) :: local_box, global_box
+    type(box_info) :: set_local_box, set_box
+    integer :: xs, xe, ys, ye, zs, ze
+    integer :: ierr
+
+    if(ref%ref_index_type_x == 0 .and. &
+         ref%ref_index_type_y == 0 .and. &
+         ref%ref_index_type_z == 0) then
+
+       if(ref%range_x == range_all .and. &
+            ref%range_y == range_all .and. &
+            ref%range_z == range_all) then
+          call VecSet(data, val, ierr)
+       else
+          call range_to_box(set_box, ref%range_x, ref%range_y, ref%range_z)
+          call petsc_get_shape(global_box, local_box, data)
+          set_local_box = (local_box .and. set_box)
+
+          call get_local_arr(data, local_arr)
+          xs = set_local_box%starts(1)
+          ys = set_local_box%starts(2)
+          zs = set_local_box%starts(3)
+          xe = set_local_box%ends(1)
+          ye = set_local_box%ends(2)
+          ze = set_local_box%ends(3)
+          local_arr(xs:xe,ys:ye,zs:ze) = val
+          call restore_local_arr(data, local_arr)
+       endif
+    endif
+  end subroutine
+
 end module
 
 #undef D1
