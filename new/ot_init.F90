@@ -10,7 +10,7 @@ contains
     call init_tensor(ierr)
     call init_node(ierr)
     call init_expr(ierr)
-
+    call init_geom(ierr)
   end subroutine
 
   subroutine ot_finalize(ierr)

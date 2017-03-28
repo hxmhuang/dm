@@ -42,7 +42,7 @@ module ot_expr
 
   interface set
 #:for src_type in ['tensor', 'node', 'int', 'real', 'real8']
-#:for dst_type in ['tensor', 'ref']
+#:for dst_type in ['tensor', 'node']
      module procedure set_${dst_type}$_${src_type}$
 #:endfor
 #:endfor
@@ -504,39 +504,7 @@ contains
     integer :: xs, xe, ys, ye, zs, ze
     integer :: dim_x, dim_y, dim_z
 
-    allocate(res)
-    
-#:if ta[0] == 'int'
-    dim_x = 1
-    res%ref%range_x = r(a, a)
-    res%ref%ref_index_type_x = 0
-#:elif ta[0] == 'range'
-    dim_x = a%upper - a%lower + 1
-    res%ref%range_x = a
-    res%ref%ref_index_type_x = 0    
-#:else
-    allocate(res%ref%iarr_x(size(a)))
-    res%ref%iarr_x = a
-    dim_x = size(a)
-    res%ref%ref_index_type_x = 1    
-#:endif
-
-    res%ref%range_y = r(0, 0)
-    res%ref%ref_index_type_y = 0
-    dim_y = 1
-    
-    res%ref%range_z = r(0, 0)
-    res%ref%ref_index_type_z = 0
-    dim_z = 1
-    
-#:if data == 'tensor'
-    call assign_ptr(res%data, obj)
-#:else
-    call assign_ptr(tmp, obj) 
-    call node_add_operand(res, tmp)
-#:endif
-    res%m_shape = (/dim_x, dim_y, dim_z/)
-    res%node_type = type_ref
+    res => slice_${data}$_${ta[0]}$_int_int(obj, a, 1, 1)
   end function
 
 #:for tb in itype
@@ -551,54 +519,7 @@ contains
     integer :: xs, xe, ys, ye, zs, ze
     integer :: dim_x, dim_y, dim_z
 
-    allocate(res)
-    
-#:if ta[0] == 'int'
-    dim_x = 1
-    res%ref%range_x = r(a, a)
-    res%ref%ref_index_type_x = 0
-#:elif ta[0] == 'range'
-    dim_x = a%upper - a%lower + 1
-    res%ref%range_x = a
-    res%ref%ref_index_type_x = 0    
-#:else
-    allocate(res%ref%iarr_x(size(a)))
-    res%ref%iarr_x = a
-    dim_x = size(a)
-    res%ref%ref_index_type_x = 1    
-#:endif
-
-#:if tb[0] == 'int'
-    dim_y = 1
-    res%ref%range_y = r(b,b)
-    res%ref%ref_index_type_y = 0    
-#:elif tb[0] == 'range'
-    dim_y = b%upper - b%lower + 1
-    res%ref%range_y = b
-    res%ref%ref_index_type_y = 0
-#:else
-    allocate(res%ref%iarr_y(size(b)))
-    res%ref%iarr_y = b
-    dim_y = size(b)
-    res%ref%ref_index_type_y = 1    
-#:endif
-
-    res%ref%range_z = r(0,0) 
-    res%ref%ref_index_type_z = 0        
-    dim_z = 1
-    
-#:if data == 'tensor'
-    !call node_new(res, obj) !create a data node
-    call assign_ptr(res%data, obj)
-    !call node_add_operand(res, tmp)
-#:else
-    call assign_ptr(tmp, obj) 
-    call node_add_operand(res, tmp)
-#:endif
-
-    res%m_shape = (/dim_x, dim_y, dim_z/)
-    res%node_type = type_ref
-    
+    res => slice_${data}$_${ta[0]}$_${tb[0]}$_int(obj, a, b, 1)
   end function
        
 #:for tc in itype
@@ -613,50 +534,86 @@ contains
     integer :: dim
     integer :: xs, xe, ys, ye, zs, ze
     integer :: dim_x, dim_y, dim_z
-
+    integer :: src_shape(3)
     allocate(res)
+
+    src_shape = shape(obj)
     
 #:if ta[0] == 'int'
     dim_x = 1
-    res%ref%range_x = r(a, a)
+    res%ref%range_x = r(a-1, a-1)
     res%ref%ref_index_type_x = 0
+    call assert(a>=1 .and. a<=src_shape(1), &
+         __FILE__, __LINE__, &
+         "x index exceeds array dimensions")
 #:elif ta[0] == 'range'
-    dim_x = a%upper - a%lower + 1
-    res%ref%range_x = a
-    res%ref%ref_index_type_x = 0    
+    if(a == range_all) then
+       dim_x = src_shape(1)
+       res%ref%range_x = r(0, dim_x - 1)
+    else 
+       dim_x = a%upper - a%lower + 1
+       res%ref%range_x = a - 1
+    endif
+    res%ref%ref_index_type_x = 0
+    call assert(a%lower>=1 .and. a%upper<=src_shape(1), &
+         __FILE__, __LINE__, &
+         "x index exceeds array dimensions")    
 #:else
     allocate(res%ref%iarr_x(size(a)))
-    res%ref%iarr_x = a
+    res%ref%iarr_x = a - 1
     dim_x = size(a)
     res%ref%ref_index_type_x = 1    
 #:endif
 
 #:if tb[0] == 'int'
     dim_y = 1
-    res%ref%range_y = r(b,b)
-    res%ref%ref_index_type_y = 0    
-#:elif tb[0] == 'range'
-    dim_y = b%upper - b%lower + 1
-    res%ref%range_y = b
+    res%ref%range_y = r(b-1,b-1)
     res%ref%ref_index_type_y = 0
+    call assert(b>=1 .and. b<=src_shape(2), &
+         __FILE__, __LINE__, &
+         "y index exceeds array dimensions")    
+#:elif tb[0] == 'range'
+    if(b == range_all) then
+       dim_y = src_shape(2)
+       res%ref%range_y = r(0, dim_y-1)
+    else 
+       dim_y = b%upper - b%lower + 1
+       res%ref%range_y = b-1
+    endif
+    
+    res%ref%ref_index_type_y = 0
+    call assert(b%lower>=1 .and. b%upper<=src_shape(2), &
+         __FILE__, __LINE__, &
+         "y index exceeds array dimensions")        
 #:else
     allocate(res%ref%iarr_y(size(b)))
-    res%ref%iarr_y = b
+    res%ref%iarr_y = b-1
     dim_y = size(b)
     res%ref%ref_index_type_y = 1    
 #:endif
 
 #:if tc[0] == 'int'
     dim_z = 1
-    res%ref%range_z = r(c, c)
-    res%ref%ref_index_type_z = 0    
-#:elif tc[0] == 'range'
-    dim_z = c%upper - c%lower + 1
-    res%ref%range_z = c
+    res%ref%range_z = r(c-1, c-1)
     res%ref%ref_index_type_z = 0
+    call assert(c>=1 .and. c<=src_shape(3), &
+         __FILE__, __LINE__, &
+         "z index exceeds array dimensions")        
+#:elif tc[0] == 'range'
+    if(c == range_all) then
+       dim_z = src_shape(3)
+       res%ref%range_z = r(0, dim_z - 1)
+    else 
+       dim_z = c%upper - c%lower + 1
+       res%ref%range_z = c-1
+    endif
+    res%ref%ref_index_type_z = 0
+    call assert(c%lower>=1 .and. c%upper<=src_shape(3), &
+         __FILE__, __LINE__, &
+         "z index exceeds array dimensions")            
 #:else
     allocate(res%ref%iarr_z(size(c)))
-    res%ref%iarr_z = c
+    res%ref%iarr_z = c-1
     dim_z = size(c)
     res%ref%ref_index_type_z = 1    
 #:endif
@@ -684,21 +641,40 @@ contains
 #:for src_type in [['tensor', 'tensor', 'arr'], &
   ['node', 'node', 'arr'], ['int', 'integer', 'scalar'], &
        ['real', 'real', 'scalar'], ['real8', 'real(8)', 'scalar']]
-#:for dst_type in [['tensor', 'tensor'], ['ref', 'node']]
+#:for dst_type in [['tensor', 'tensor'], ['node', 'node']]
   
   subroutine set_${dst_type[0]}$_${src_type[0]}$(dst, src)
     type(${dst_type[1]}$), intent(in) :: dst
     type(${src_type[1]}$) :: src
     type(ref_info) :: set_ref
 
-#:if src_type[2] == 'scalar'
-#:if dst_type[0]=='tensor' 
+    print*, "Hello1"
+#:if src_type[2] == 'scalar' and dst_type[0]=='tensor' 
     call range_to_ref (set_ref, range_all, range_all, range_all)
     call data_set_scalar (dst%data, real(src, 8), set_ref)
-#:elif dst_type[0] == 'ref' 
+#:endif
+    
+#:if src_type[2] == 'scalar' and dst_type[0] == 'ref' 
     call data_set_scalar (dst%data%data, real(src, 8),  dst%ref)
 #:endif
+
+#:if src_type[2] == 'tensor' and dst_type[0] == 'tensor' 
+    
 #:endif
+
+#:if src_type[2] == 'tensor' and dst_type[0] == 'node'
+    call assert(is_ref(dst), __FILE__, __LINE__,&
+         "the target must be a reference.")
+    call set_node_node(dst, slice(src, range_all, range_all, range_all))
+#:endif
+    
+#:if src_type[1] == 'node' and dst_type[1] == 'node'
+    print*, "Hello2"    
+    call assert(associated(dst%data), __FILE__, __LINE__,&
+         "as lvalue, node%data must be associated.")
+    call data_set_ref_ref(dst%data%data, src%data%data, dst%ref, src%ref)
+#:endif
+    
   end subroutine
 #:endfor
 #:endfor

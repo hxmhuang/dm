@@ -626,6 +626,67 @@ end subroutine
     endif
   end subroutine
 
+  subroutine data_set_ref_ref(dst, src, dst_ref, src_ref)
+    implicit none
+    Vec, intent(inout) :: dst
+    Vec, intent(in) :: src
+    DM :: src_dm, dst_dm
+    type(ref_info), intent(in) :: dst_ref, src_ref
+    type(dist_info) :: dst_dist, src_dist, dst_new_dist, src_new_dist
+    integer :: ierr
+    integer :: xs, ys, zs, xe, ye, ze
+    integer :: xs1, ys1, zs1, xe1, ye1, ze1    
+    PetscScalar, pointer :: src_ptr(:,:,:), dst_ptr(:,:,:)
+    type(box_info) :: src_local_box, dst_local_box
+    type(box_info) :: src_ref_box, dst_ref_box
+    type(box_info) :: dst_local_ref_box, src_local_ref_box
+    
+    call petsc_get_dm(src_dm, src)
+    call petsc_get_dm(dst_dm, dst)
+    call petsc_get_dist(dst_dist, dst_dm)
+    call petsc_get_dist(src_dist, src_dm)
+
+    call petsc_new_dist(dst_new_dist, dst_dist, dst_ref)
+    call petsc_new_dist(src_new_dist, src_dist, src_ref)
+
+    !only local copy !!
+    if(dst_new_dist == src_new_dist) then
+       call petsc_get_corners(dst, dst_local_box)
+       call petsc_get_corners(src, src_local_box)
+
+       call range_to_box(src_ref_box, src_ref%range_x, &
+            src_ref%range_y, src_ref%range_z)
+       
+       call range_to_box(dst_ref_box, dst_ref%range_x, &
+            dst_ref%range_y, dst_ref%range_z)
+
+       dst_local_ref_box = (dst_local_box .and. dst_ref_box)
+       src_local_ref_box = (src_local_box .and. src_ref_box)
+       
+       xs = dst_local_ref_box%starts(1)
+       ys = dst_local_ref_box%starts(2)
+       zs = dst_local_ref_box%starts(3)
+       xe = dst_local_ref_box%ends(1)
+       ye = dst_local_ref_box%ends(2)
+       ze = dst_local_ref_box%ends(3)       
+
+       xs1 = src_local_ref_box%starts(1)
+       ys1 = src_local_ref_box%starts(2)
+       zs1 = src_local_ref_box%starts(3)
+       xe1 = src_local_ref_box%ends(1)
+       ye1 = src_local_ref_box%ends(2)
+       ze1 = src_local_ref_box%ends(3)       
+       
+       call get_local_arr(src, src_ptr)
+       call get_local_arr(dst, dst_ptr)
+       
+       dst_ptr(xs:xe, ys:ye, zs:ze) = &
+            src_ptr(xs1:xe1, ys1:ye1, zs1:ze1)
+
+       call restore_local_arr(src, src_ptr)
+       call restore_local_arr(dst, dst_ptr)
+    end if
+  end subroutine
 end module
 
 #undef D1

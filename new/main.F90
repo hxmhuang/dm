@@ -44,19 +44,20 @@ program main
   type(node) :: NA, NB, NC, ND
   integer :: v_shape(3)
   integer :: dim1, dim2, dim3, dim4
-  integer :: arr1(4)
+  integer :: arr1(5)
   integer :: arr(4,4)
   
   call ot_init(ierr)
 
-  arr1(1) = 1;  arr1(2) = 2;  arr1(3) = 3;  arr1(4) = 4;
+  arr1(1) = 1;  arr1(2) = 2;  arr1(3) = 3;  arr1(4) = 4; arr1(5) = 5;
 
-  arr(1,1) = 1;  arr(2,1) = 2;  arr(3,1) = 3;  arr(4,1) = 4;
-  arr(1,2) = 1;  arr(2,2) = 2;  arr(3,2) = 3;  arr(4,2) = 4;
-  arr(1,3) = 1;  arr(2,3) = 2;  arr(3,3) = 3;  arr(4,3) = 4;
-  arr(1,4) = 1;  arr(2,4) = 2;  arr(3,4) = 3;  arr(4,4) = 4;
-
-  print*, arr(:, (/1,2/))
+  ! arr(1,1) = 1;  arr(2,1) = 2;  arr(3,1) = 3;  arr(4,1) = 4;
+  ! arr(1,2) = 1;  arr(2,2) = 2;  arr(3,2) = 3;  arr(4,2) = 4;
+  ! arr(1,3) = 1;  arr(2,3) = 2;  arr(3,3) = 3;  arr(4,3) = 4;
+  ! arr(1,4) = 1;  arr(2,4) = 2;  arr(3,4) = 3;  arr(4,4) = 4;
+  
+  !arr1(3:5) = arr1(1:3)
+  print*, "arr1=", arr1
   
   ! dim1 = find_dim((/3,1,1/))
   ! dim2 = find_dim((/3,3,1/))
@@ -105,9 +106,9 @@ program main
   ! print*, find_range(r(2:15))  
 
   !call test_petsc_slice_dm()
-  call test_ones()
-  call test_seqs()
-  call test_slice()
+  ! call test_ones()
+  ! call test_seqs()
+  ! call test_slice()
   call test_set()
 
   EXIT

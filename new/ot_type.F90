@@ -22,6 +22,13 @@ module ot_type
      type(tensor), pointer :: ptr => null()
   end type tensor_ptr
 
+  !how the array distributed along x,y,z-directions
+  type dist_info
+     integer, allocatable, dimension(:) :: lx
+     integer, allocatable, dimension(:) :: ly
+     integer, allocatable, dimension(:) :: lz     
+  end type dist_info
+  
   type ref_info
      !0 for range, 1 for indices
      integer :: ref_index_type_x

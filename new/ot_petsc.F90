@@ -6,6 +6,7 @@
 module ot_petsc
   use ot_geom
   use ot_print
+  use ot_common
   
 #:for d in [1,2,3]
   interface get_local_arr
@@ -30,6 +31,11 @@ module ot_petsc
      module procedure petsc_get_shape3
      module procedure petsc_get_shape4     
   end interface
+
+  interface petsc_update_dist
+     module procedure petsc_update_dist1
+     module procedure petsc_update_dist2     
+  end interface petsc_update_dist
   
 contains
     subroutine vec_get_dim(A, num_dim)
@@ -94,6 +100,28 @@ contains
 
     b%starts = (/xs, ys, zs/)
     b%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+  end subroutine
+
+  subroutine petsc_get_dist(dist, data_dm)
+    implicit none
+#include "petsc.h"
+    DM, intent(in) :: data_dm
+    type(dist_info), intent(out) :: dist
+    integer :: ierr
+    integer :: nx, ny, nz !number of processor in each dimension
+    
+    call DMDAGetInfo(data_dm, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         nx, ny, nz, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
+
+    CHKERRQ(ierr)
+    
+    allocate(dist%lx(nx), dist%ly(ny), dist%lz(nz))
+    
+    call DMDAGetOwnershipRanges(data_dm, dist%lx, dist%ly, dist%lz, ierr)
+    CHKERRQ(ierr)
   end subroutine
 
   subroutine petsc_get_shape1(res, data)
@@ -283,8 +311,9 @@ contains
          PETSC_NULL_INTEGER, ierr)
   end subroutine
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> update distribution with a new range from a to b
-  subroutine petsc_update_dist(ll, a, b)
+  subroutine petsc_update_dist1(ll, a, b)
     implicit none
     integer, intent(inout) :: ll(:)
     integer :: a, b
@@ -299,6 +328,48 @@ contains
     enddo
   end subroutine
 
+  subroutine petsc_update_dist2(ll, r)
+    implicit none
+    integer, intent(inout) :: ll(:)
+    type(range) :: r
+    integer :: cum, i, p, a, b
+
+    a = r%lower
+    b = r%upper
+    call petsc_update_dist(ll, a, b)
+  end subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !> create a new distribution from src_dist
+  !> according to the reference info
+  subroutine petsc_new_dist(dst_dist, src_dist, ref)
+    implicit none
+    type(dist_info), intent(out) :: dst_dist
+    type(dist_info), intent(in)  :: src_dist
+    type(ref_info) :: ref
+    integer :: a, b
+    integer :: cum, i, p
+    integer :: nx, ny, nz
+
+    nx = size(src_dist%lx)
+    ny = size(src_dist%ly)
+    nz = size(src_dist%lz)    
+
+    allocate(dst_dist%lx(nx), &
+         dst_dist%ly(ny), dst_dist%lz(nz))
+
+    dst_dist = src_dist
+    
+    call assert(ref%ref_index_type_x == 0 .and. &
+         ref%ref_index_type_y == 0 .and. &
+         ref%ref_index_type_z == 0, __FILE__, __LINE__, &
+         "Only support for range index now.")
+
+    call petsc_update_dist(dst_dist%lx, ref%range_x)
+    call petsc_update_dist(dst_dist%ly, ref%range_y)
+    call petsc_update_dist(dst_dist%lz, ref%range_z)    
+  end subroutine
+  
   ! subroutine petsc_update_dist(ll, ix, local)
   !   implicit none
   !   integer, intent(inout) :: ll(:)
@@ -314,6 +385,7 @@ contains
   !      ll(i+1) = p
   !   enddo
   ! end subroutine
+
   
   subroutine petsc_slice_dm(dst, src, box)
     implicit none

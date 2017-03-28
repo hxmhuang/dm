@@ -5,7 +5,12 @@ module ot_geom
   interface operator (.eq.)
      module procedure box_eq
      module procedure range_eq
+     module procedure dist_eq
   end interface operator (.eq.)
+
+  interface operator (.ne.)
+     module procedure dist_ne
+  end interface operator (.ne.)
   
   interface operator (.and.)
      module procedure box_and
@@ -23,10 +28,19 @@ module ot_geom
      module procedure disp_box
   end interface disp
 
+  interface operator(-)
+     module procedure range_minus_int
+  end interface operator(-)
+
+  interface operator(+)
+     module procedure range_plus_int
+  end interface operator(+)
+  
   type(range) :: range_all
 contains
-  subroutine init_geom()
+  subroutine init_geom(ierr)
     implicit none
+    integer, intent(out) :: ierr
     range_all%lower = -huge(int(0))
     range_all%lower = huge(int(0))
   end subroutine
@@ -41,6 +55,59 @@ contains
          (a%upper == b%upper)
   end function
 
+  function dist_ne(a, b) result(res)
+    implicit none
+    type(dist_info), intent(in) :: a
+    type(dist_info), intent(in) :: b
+    logical :: res
+    
+    res = .not. (a .eq. b)
+  end function
+  
+  function dist_eq(a, b) result(res)
+    implicit none
+    type(dist_info), intent(in) :: a
+    type(dist_info), intent(in) :: b
+    logical :: res
+    integer :: nxa, nya, nza, nxb, nyb, nzb, i
+
+    nxa = size(a%lx)
+    nya = size(a%ly)
+    nza = size(a%lz)
+    nxb = size(b%lx)
+    nyb = size(b%ly)
+    nzb = size(b%lz)
+
+    !check the dimension first
+    if(nxa /= nxb .or. nya /= nyb .or. nza /= nzb) then
+       res = .false.
+       return
+    end if
+
+    do i = 1, nxa
+       if(a%lx(i) /= b%lx(i)) then
+          res = .false.
+          return
+       end if
+    enddo
+    
+    do i = 1, nya
+       if(a%ly(i) /= b%ly(i)) then
+          res = .false.
+          return
+       end if
+    enddo
+    
+    do i = 1, nza
+       if(a%lz(i) /= b%lz(i)) then
+          res = .false.
+          return
+       end if
+    enddo
+    
+    res = .true.
+  end function
+  
   subroutine range_to_box(b, rx, ry, rz)
     implicit none
     type(box_info), intent(out) :: b
@@ -67,6 +134,26 @@ contains
     b%ref_index_type_y = 0
     b%ref_index_type_z = 0
   end subroutine
+
+  function range_minus_int(rgn, num) result(res)
+    implicit none
+    type(range), intent(in) :: rgn
+    integer, intent(in) :: num
+    type(range) :: res
+
+    res%upper = rgn%upper - num
+    res%lower = rgn%lower - num    
+  end function
+
+  function range_plus_int(rgn, num) result(res)
+    implicit none
+    type(range), intent(in) :: rgn
+    integer, intent(in) :: num
+    type(range) :: res
+
+    res%upper = rgn%upper + num
+    res%lower = rgn%lower + num    
+  end function
   
   subroutine disp_box(o, prefix)
     implicit none
