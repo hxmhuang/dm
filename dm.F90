@@ -537,7 +537,7 @@ contains
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_add: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
@@ -555,7 +555,7 @@ contains
        call mat_axpy(C%x,alpha,B%x,ierr)
     else
        call dm_printf("Error in dm_add: wrong xtype value in this funtion.",ierr)
-       stop
+       stop 0
     endif
 
     call dm_set_implicit(C,ierr)
@@ -647,7 +647,7 @@ contains
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_minus: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     if(A%xtype==MAT_XTYPE_IMPLICIT .and. B%xtype==MAT_XTYPE_IMPLICIT) then
@@ -768,7 +768,7 @@ contains
     if((A%ny/=B%ny) .or. (A%ny/=B%ny) .or.  (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_xjoin: Matrix A and Matrix B &
             &should have the same distribution."
-       stop	
+       stop 0	
     endif
 
     call mat_xjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
@@ -798,7 +798,7 @@ contains
     if((A%nx/=B%nx) .or. (A%nz/=B%nz) .or.  (A%isGlobal .neqv. B%isGlobal)) then
        call dm_printf("Error in dm_yjoin: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_yjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
@@ -832,7 +832,7 @@ contains
        print *, "Error in dm_yjoin: Matrix A and Matrix B &
             &should have the same distribution."
        print*, A%nx,A%ny,A%nz,B%nx,B%ny,B%nz
-       stop	
+       stop 0	
     endif
 
     call mat_zjoin(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
@@ -862,7 +862,7 @@ contains
        print *, "Error in dm_mult: the column of A matrix &
             &should equal to the row of B matrix, and the &
             &number of z dimension should be same."
-       stop	
+       stop 0	
     endif
 
     call mat_mult(A%x,B%x,C%x,ierr)
@@ -964,7 +964,7 @@ contains
             &and B matrix should have the same distribution."
        call abort()
        !call backtrace()
-       stop	
+       stop 0	
     endif
 
     call mat_emult(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
@@ -996,7 +996,7 @@ contains
          (A%isGlobal .neqv. B%isGlobal)) then
        print *, "Error in dm_ediv: the A matrix and B &
             &matrix should have the same distribution." 
-       stop	
+       stop 0	
     endif
 
     call mat_ediv(A%x,A%nx,A%ny,A%nz,B%x,B%nx,B%ny,B%nz,C%x,ierr)
@@ -1064,7 +1064,7 @@ contains
        B%nz = A%nz
     else 
        print*, "Error: ndim can be only 1 or 2"
-       stop
+       stop 0
     endif
 
     if (A%xtype==MAT_XTYPE_IMPLICIT) then
@@ -1232,13 +1232,13 @@ contains
     if(A%nx .ne. B%ny .or. A%nz.ne.B%nz) then
        call dm_printf("Error: dimension of A and B &
             &do not match for multiplication.", ierr)
-       stop
+       stop 0
     endif
     
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_xyt: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
     
     call mat_xyt(A%x,B%x,C%x,ierr)
@@ -1268,7 +1268,7 @@ contains
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_xyt: Matrix A and B should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_xty(A%x,B%x,C%x,ierr)
@@ -1476,12 +1476,12 @@ contains
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_solve: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     if(A%nx.ne.B%nx .or. A%nz.ne.B%nz .or. B%ny.ne.1) then
        call dm_printf("Error in dm_solve: matrix size error for A, B and X",ierr)
-       stop
+       stop 0
     endif
 
     call mat_solve(A%x,B%x,X%x,A%nx,A%ny,A%nz,ierr)
@@ -1536,7 +1536,7 @@ contains
 
     if(.not. file_exists) then
        print*, "Error: File ",filename," does not exists."
-       stop
+       stop 0
     endif
     
     call mat_load3d(filename, varname, A%x,A%nx,A%ny,A%nz, isGlobal, ierr)
@@ -1926,13 +1926,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_lt: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_LT,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2003,13 +2003,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_le: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_LE,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2080,13 +2080,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_gt: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_GT,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2157,13 +2157,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_ge: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_GE,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2234,13 +2234,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_eq: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_EQ,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2311,13 +2311,13 @@ contains
 
     if(A%nx.ne.B%nx .or. A%ny.ne.B%ny .or. A%nz.ne.A%nz) then
        print *, "Error: Matrix A and matrix B should have the same size"
-       stop	
+       stop 0	
     endif
 
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_nq: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     call mat_compare(A%x,B%x,MAT_COMPARE_NQ,C%x,A%nx,A%ny,A%nz,ierr)
@@ -2394,7 +2394,7 @@ contains
          .or. (A%isGlobal .neqv. Ind_k%isGlobal)) then
        call dm_printf("Error in dm_sparse: Matrix Ind_m, Ind_n, Ind_k and A &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     if(Ind_m%nz.ne.1 .or. Ind_n%nz.ne.1 .or. Ind_k%nz.ne.1 &
@@ -2402,7 +2402,7 @@ contains
          .or. Ind_m%nx.ne.Ind_n%nx .or. Ind_m%nx.ne.Ind_k%nx ) then
        call dm_printf("Error (dm_sparse): Ind_m, Ind_n and Ind_k &
             &must be a Nx1x1 matrix", ierr)
-       stop
+       stop 0
     endif
 
     isGlobal = A%isGlobal
@@ -2504,13 +2504,13 @@ contains
     if(A%isGlobal .neqv. B%isGlobal) then
        call dm_printf("Error in dm_setcol: Matrix A and B &
             &should have the same distribution.",ierr)
-       stop
+       stop 0
     endif
 
     if(A%nrow/= B%nrow)then
        print *, "Error in dm_setcol: Matrix A and Matrix B &
             &should have the same row size."
-       stop	
+       stop 0	
     endif
 
     call mat_setcol(A%x,idxn,B%x,ierr)	
