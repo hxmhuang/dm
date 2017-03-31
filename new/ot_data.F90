@@ -227,13 +227,13 @@ contains
 
     call petsc_get_corners(A, box)
 
-    xs = box%starts(1)
-    ys = box%starts(2)
-    zs = box%starts(3)
+    xs = box%rx%lower
+    ys = box%ry%lower
+    zs = box%rz%lower
 
-    xe = box%ends(1)
-    ye = box%ends(2)
-    ze = box%ends(3)
+    xe = box%rx%upper
+    ye = box%ry%upper
+    ze = box%rz%upper
 
     call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
 
@@ -307,13 +307,13 @@ contains
     
     call petsc_get_corners(A, box)
 
-    xs = box%starts(1)
-    ys = box%starts(2)
-    zs = box%starts(3)
+    xs = box%rx%lower
+    ys = box%ry%lower
+    zs = box%rz%lower
 
-    xe = box%ends(1)
-    ye = box%ends(2)
-    ze = box%ends(3)
+    xe = box%rx%upper
+    ye = box%ry%upper
+    ze = box%rz%upper
 
     call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
     call DMDAVecGetArrayF90(B_dm, B(1), b1_3d, ierr)
@@ -384,13 +384,13 @@ contains
     !call dm_get_corners(A_dm, xs, ys, zs, xl, yl, zl)
     call petsc_get_corners(A, box)
 
-    xs = box%starts(1)
-    ys = box%starts(2)
-    zs = box%starts(3)
+    xs = box%rx%lower
+    ys = box%ry%lower
+    zs = box%rz%lower
 
-    xe = box%ends(1)
-    ye = box%ends(2)
-    ze = box%ends(3)
+    xe = box%rx%upper
+    ye = box%ry%upper
+    ze = box%rz%upper
     
     call DMDAVecGetArrayF90(A_dm, A, a_3d, ierr)
     call DMDAVecGetArrayF90(B_dm, B(1), b1_3d, ierr)
@@ -468,19 +468,19 @@ subroutine data_get_sub(dst, src, ref)
 
      call petsc_get_corners(dst, dst_local_dst)
 
-     xs1 = dst_local_dst%starts(1)
-     ys1 = dst_local_dst%starts(2)
-     zs1 = dst_local_dst%starts(3)
-     xe1 = dst_local_dst%ends(1)
-     ye1 = dst_local_dst%ends(2)
-     ze1 = dst_local_dst%ends(3)
+     xs1 = dst_local_dst%rx%lower
+     ys1 = dst_local_dst%ry%lower
+     zs1 = dst_local_dst%rz%lower
+     xe1 = dst_local_dst%rx%upper
+     ye1 = dst_local_dst%ry%upper
+     ze1 = dst_local_dst%rz%upper
 
-     xs = dst_local%starts(1)
-     ys = dst_local%starts(2)
-     zs = dst_local%starts(3)
-     xe = dst_local%ends(1)
-     ye = dst_local%ends(2)
-     ze = dst_local%ends(3)
+     xs = dst_local%rx%lower
+     ys = dst_local%ry%lower
+     zs = dst_local%rz%lower
+     xe = dst_local%rx%upper
+     ye = dst_local%ry%upper
+     ze = dst_local%rz%upper
 
      call get_local_arr(dst, dst_data)
      call get_local_arr(src, src_data)
@@ -540,19 +540,19 @@ end subroutine
 
     ! call petsc_get_corners(dst, dst_local_dst)
     
-    ! xs1 = dst_local_dst%starts(1)
-    ! ys1 = dst_local_dst%starts(2)
-    ! zs1 = dst_local_dst%starts(3)
-    ! xe1 = dst_local_dst%ends(1)
-    ! ye1 = dst_local_dst%ends(2)
-    ! ze1 = dst_local_dst%ends(3)
+    ! xs1 = dst_local_dst%rx%lower
+    ! ys1 = dst_local_dst%ry%lower
+    ! zs1 = dst_local_dst%rz%lower
+    ! xe1 = dst_local_dst%rx%upper
+    ! ye1 = dst_local_dst%ry%upper
+    ! ze1 = dst_local_dst%rz%upper
 
-    ! xs = dst_local%starts(1)
-    ! ys = dst_local%starts(2)
-    ! zs = dst_local%starts(3)
-    ! xe = dst_local%ends(1)
-    ! ye = dst_local%ends(2)
-    ! ze = dst_local%ends(3)
+    ! xs = dst_local%rx%lower
+    ! ys = dst_local%ry%lower
+    ! zs = dst_local%rz%lower
+    ! xe = dst_local%rx%upper
+    ! ye = dst_local%ry%upper
+    ! ze = dst_local%rz%upper
 
     ! call get_local_arr(dst, dst_data)
     ! call get_local_arr(src, src_data)
@@ -614,12 +614,12 @@ end subroutine
           set_local_box = (local_box .and. set_box)
 
           call get_local_arr(data, local_arr)
-          xs = set_local_box%starts(1)
-          ys = set_local_box%starts(2)
-          zs = set_local_box%starts(3)
-          xe = set_local_box%ends(1)
-          ye = set_local_box%ends(2)
-          ze = set_local_box%ends(3)
+          xs = set_local_box%rx%lower
+          ys = set_local_box%ry%lower
+          zs = set_local_box%rz%lower
+          xe = set_local_box%rx%upper
+          ye = set_local_box%ry%upper
+          ze = set_local_box%rz%upper
           local_arr(xs:xe,ys:ye,zs:ze) = val
           call restore_local_arr(data, local_arr)
        endif
@@ -628,6 +628,7 @@ end subroutine
 
   subroutine data_set_ref_ref(dst, src, dst_ref, src_ref)
     implicit none
+#include "petsc.h"
     Vec, intent(inout) :: dst
     Vec, intent(in) :: src
     DM :: src_dm, dst_dm
@@ -636,10 +637,20 @@ end subroutine
     integer :: ierr
     integer :: xs, ys, zs, xe, ye, ze
     integer :: xs1, ys1, zs1, xe1, ye1, ze1    
-    PetscScalar, pointer :: src_ptr(:,:,:), dst_ptr(:,:,:)
+    PetscScalar, pointer :: src_ptr(:,:,:)
+    PetscScalar, pointer :: src_ptr1d(:)
+    PetscScalar, pointer :: dst_ptr(:,:,:)
     type(box_info) :: src_local_box, dst_local_box
-    type(box_info) :: src_ref_box, dst_ref_box
+    type(box_info) :: src_ref_box,   dst_ref_box
     type(box_info) :: dst_local_ref_box, src_local_ref_box
+    integer :: rank
+    integer, allocatable :: idx(:)
+    integer :: src_shape(3), ref_local_shape(3)
+    Vec :: vec_out
+    IS :: is_out
+    DM :: vec_dm
+    
+    call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
     
     call petsc_get_dm(src_dm, src)
     call petsc_get_dm(dst_dm, dst)
@@ -649,43 +660,111 @@ end subroutine
     call petsc_new_dist(dst_new_dist, dst_dist, dst_ref)
     call petsc_new_dist(src_new_dist, src_dist, src_ref)
 
+    ! write(*, "(A, 30I7.0)") "dst_dist%lx=", dst_dist%lx
+    ! write(*, "(A, 30I7.0)") "dst_dist%ly=", dst_dist%ly
+    ! write(*, "(A, 30I7.0)") "dst_dist%lz=", dst_dist%lz    
+    ! write(*, "(A, 30I7.0)") "src_dist%lx=", src_dist%lx
+    ! write(*, "(A, 30I7.0)") "src_dist%ly=", src_dist%ly
+    ! write(*, "(A, 30I7.0)") "src_dist%lz=", src_dist%lz    
+
+    call petsc_get_corners(dst, dst_local_box)
+    call petsc_get_corners(src, src_local_box)
+
+    call range_to_box(src_ref_box, src_ref%range_x, &
+         src_ref%range_y, src_ref%range_z)
+
+    call range_to_box(dst_ref_box, dst_ref%range_x, &
+         dst_ref%range_y, dst_ref%range_z)
+
+    dst_local_ref_box = (dst_local_box .and. dst_ref_box)
+    ! src_local_ref_box = (src_local_box .and. src_ref_box)
+
+    call get_ref_box(src_local_ref_box, src_ref_box, &
+         dst_local_ref_box, dst_ref_box)
+
+    ! call disp(src_local_ref_box, 'src_local_ref_box = xxx')    
+    ! call disp(src_ref_box, 'src_ref_box = xxx')
+    ! call disp(dst_local_ref_box, 'dst_local_ref_box = xxx')
+    ! call disp(dst_ref_box, 'dst_ref_box = xxx')    
+    
+    xs = dst_local_ref_box%rx%lower
+    ys = dst_local_ref_box%ry%lower
+    zs = dst_local_ref_box%rz%lower
+    xe = dst_local_ref_box%rx%upper
+    ye = dst_local_ref_box%ry%upper
+    ze = dst_local_ref_box%rz%upper       
+    
     !only local copy !!
     if(dst_new_dist == src_new_dist) then
-       call petsc_get_corners(dst, dst_local_box)
-       call petsc_get_corners(src, src_local_box)
+       if(is_valid(dst_local_ref_box)) then
+          ! call mpi_order_start(MPI_COMM_WORLD,ierr)
+          ! write(*, "(A, I3.0)") "rank = ", get_rank(MPI_COMM_WORLD)
+          ! call disp(dst_local_box, 'dst_local_box = ')
+          ! call disp(src_local_box, 'src_local_box = ')       
+          ! call disp(dst_ref_box, 'dst_ref_box = ')
+          ! call disp(src_ref_box, 'src_ref_box = ')       
+          ! call disp(dst_local_ref_box, 'dst_local_ref_box = ')
+          ! call disp(src_local_ref_box, 'src_local_ref_box = ')
+          ! call mpi_order_end(MPI_COMM_WORLD, ierr)              
 
-       call range_to_box(src_ref_box, src_ref%range_x, &
-            src_ref%range_y, src_ref%range_z)
-       
-       call range_to_box(dst_ref_box, dst_ref%range_x, &
-            dst_ref%range_y, dst_ref%range_z)
+          xs1 = src_local_ref_box%rx%lower
+          ys1 = src_local_ref_box%ry%lower
+          zs1 = src_local_ref_box%rz%lower
+          xe1 = src_local_ref_box%rx%upper
+          ye1 = src_local_ref_box%ry%upper
+          ze1 = src_local_ref_box%rz%upper       
 
-       dst_local_ref_box = (dst_local_box .and. dst_ref_box)
-       src_local_ref_box = (src_local_box .and. src_ref_box)
-       
-       xs = dst_local_ref_box%starts(1)
-       ys = dst_local_ref_box%starts(2)
-       zs = dst_local_ref_box%starts(3)
-       xe = dst_local_ref_box%ends(1)
-       ye = dst_local_ref_box%ends(2)
-       ze = dst_local_ref_box%ends(3)       
+          call get_local_arr(src, src_ptr)
+          call get_local_arr(dst, dst_ptr)
 
-       xs1 = src_local_ref_box%starts(1)
-       ys1 = src_local_ref_box%starts(2)
-       zs1 = src_local_ref_box%starts(3)
-       xe1 = src_local_ref_box%ends(1)
-       ye1 = src_local_ref_box%ends(2)
-       ze1 = src_local_ref_box%ends(3)       
-       
-       call get_local_arr(src, src_ptr)
-       call get_local_arr(dst, dst_ptr)
-       
-       dst_ptr(xs:xe, ys:ye, zs:ze) = &
-            src_ptr(xs1:xe1, ys1:ye1, zs1:ze1)
+          dst_ptr(xs:xe, ys:ye, zs:ze) = &
+               src_ptr(xs1:xe1, ys1:ye1, zs1:ze1)
 
-       call restore_local_arr(src, src_ptr)
-       call restore_local_arr(dst, dst_ptr)
+          call restore_local_arr(dst, dst_ptr)
+          call restore_local_arr(src, src_ptr)
+       end if
+    else
+       call petsc_get_shape(src_shape, src)
+       
+       call box_to_indices(idx, src_local_ref_box, src_shape)
+
+       call ISCreateGeneral(MPI_COMM_WORLD, size(idx), &
+            idx, PETSC_COPY_VALUES, is_out, ierr)
+       
+       call VecGetSubVector(src, is_out, vec_out, ierr)
+
+       !NODE: the index of returned array pointer starts from 1
+       call VecGetArrayF90(vec_out, src_ptr1d, ierr)
+       
+       !call VecView(vec_out, PETSC_VIEWER_STDOUT_WORLD, ierr)
+       !call VecGetDM(vec_out, vec_dm, ierr)
+
+       if(is_valid(dst_local_ref_box)) then
+          call get_local_arr(dst, dst_ptr)
+
+          ! call disp(dst_local_ref_box, 'dst_local_ref_box=')
+          ref_local_shape = shape(dst_local_ref_box)
+
+          ! print*, "ref_local_shape = ", ref_local_shape
+          ! print*, "size(src_ptr1d) = ", size(src_ptr1d)
+          ! print*, "src_ptr1d = ", reshape(src_ptr1d, ref_local_shape)
+
+          dst_ptr(xs:xe, ys:ye, zs:ze) = &
+               reshape(src_ptr1d, ref_local_shape)
+
+          call VecRestoreArrayF90(vec_out, src_ptr1d, ierr)
+
+          call restore_local_arr(dst, dst_ptr)
+       end if
+       !call get_local_arr(vec_out, src_ptr1d)
+       !ref_local_shape = shape(dst_local_ref_box)
+       !call restore_local_arr(vec_out, src_ptr1d)
+       
+       !call VecView(vec_out, PETSC_VIEWER_STDOUT_WORLD, ierr)
+       call ISDestroy(is_out, ierr)
+       call VecDestroy(vec_out, ierr)
     end if
+
   end subroutine
 end module
 

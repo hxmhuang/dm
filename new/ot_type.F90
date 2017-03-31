@@ -10,8 +10,11 @@ module ot_type
   end type range
   
   type box_info
-     integer :: starts(3) = 0
-     integer :: ends(3)   = 0
+     ! integer :: starts(3) = 0
+     ! integer :: ends(3)   = 0
+     type(range) :: rx
+     type(range) :: ry
+     type(range) :: rz     
   end type box_info
   
   type node_ptr
@@ -84,7 +87,7 @@ module ot_type
      real(8) :: args(10) = 0
 
      !reference counter
-     integer :: ref_cnt = 0
+     integer :: ref_cnt = 1
   end type node
 
   type tensor
@@ -102,7 +105,7 @@ module ot_type
      type(box_info) :: local_block
 
      !reference counter
-     integer :: ref_cnt = 0
+     integer :: ref_cnt = 1
   end type tensor
 
   type grid

@@ -25,11 +25,11 @@ OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o \
 
 ABC = $(addprefix ./, ot_petsc.o ot_data.o \
 	ot_vector.o \
-	ot_ref.o  ot_tensor.o \
+	ot_tensor.o \
 	ot_node.o  \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ot_type.o ot_geom.o ${OBJS_UTIL} ot_print.o \
+OBJS  = ot_type.o ot_ref.o ot_geom.o ${OBJS_UTIL} ot_print.o \
 	ot_common.o   \
 	${OBJS_DATA} ${ABC} ${OBJS_FUNC}$ 
 
@@ -52,6 +52,9 @@ all:
 main: ${OBJ_MAIN} chkopts
 	-${FLINKER} -o main ${OBJ_MAIN} ${PETSC_KSP_LIB} -lstdc++
 
+small:
+	@make all
+	@mpirun -np 4 ./main -m 4 -n 3 -k 2 
 
 #clean:
 #	@cd build && make clean

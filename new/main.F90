@@ -46,18 +46,22 @@ program main
   integer :: dim1, dim2, dim3, dim4
   integer :: arr1(5)
   integer :: arr(4,4)
-  
-  call ot_init(ierr)
+  integer, allocatable :: aa(:)
+  type(range) :: rgn
 
+  call ot_init(ierr)
+  ! allocate(aa(0))
+  ! print*, size(aa)
+  ! EXIT
   arr1(1) = 1;  arr1(2) = 2;  arr1(3) = 3;  arr1(4) = 4; arr1(5) = 5;
 
+  !EXIT
   ! arr(1,1) = 1;  arr(2,1) = 2;  arr(3,1) = 3;  arr(4,1) = 4;
   ! arr(1,2) = 1;  arr(2,2) = 2;  arr(3,2) = 3;  arr(4,2) = 4;
   ! arr(1,3) = 1;  arr(2,3) = 2;  arr(3,3) = 3;  arr(4,3) = 4;
   ! arr(1,4) = 1;  arr(2,4) = 2;  arr(3,4) = 3;  arr(4,4) = 4;
-  
   !arr1(3:5) = arr1(1:3)
-  print*, "arr1=", arr1
+  !print*, "arr1=", arr1
   
   ! dim1 = find_dim((/3,1,1/))
   ! dim2 = find_dim((/3,3,1/))
@@ -93,8 +97,10 @@ program main
 
   !pos = find_range(r(-1:2000))
 
-  !find_range(r(-1:2000))
+  ! print*, find_range(r3(-1:2000))
 
+  ! EXIT
+  
   !I want this:
   !A(r(1:10), r(1:20)) = 10
   !A(r(1:10), r(1:20)) = B(r(100:110), r(100,120))
@@ -107,10 +113,12 @@ program main
 
   !call test_petsc_slice_dm()
   ! call test_ones()
-  ! call test_seqs()
+  !call test_seqs()
   ! call test_slice()
-  call test_set()
-
+  !call test_set()
+  call test_math()
+  !call test_expr()
+  
   EXIT
 
   !C = ones(2, 2, 2)

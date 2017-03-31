@@ -26,7 +26,7 @@ module ot_expr
 
 
   interface slice
-#:set slice_idx_type=['int', 'arr','range']
+#:set slice_idx_type=['int', 'arr','range', 'char']
 #:for data in ['node', 'tensor']
 #:for ta in slice_idx_type
      module procedure slice_${data}$_${ta}$     
@@ -90,13 +90,33 @@ module ot_expr
 
 #:endif
 #:endfor
-  
-contains
 
+  interface disp
+     module procedure disp_node
+  end interface disp
+
+contains
+  
   subroutine init_expr(ierr)
     use ot_tensor
     implicit none
     integer, intent(out) :: ierr
+  end subroutine
+
+  subroutine disp_node(A, msg)
+    implicit none
+    type(node) :: A
+    type(tensor) :: T
+    character(len=*),intent(in),optional :: msg
+    integer :: ierr
+    
+    T = A !this will evaluate the node
+    if(present(msg)) then
+       call disp(T, msg)
+    else
+       call disp(T)
+    end if
+    call destroy(T, ierr)
   end subroutine
 
   subroutine node_assign_node(A, B)
@@ -147,10 +167,8 @@ contains
     
     call write_graph(C, file='C.dot')
     
-    call eval(A, C, ierr)
+    call eval(A, C, ierr, .true.)
 
-    !call display(C%data)
-    
     ! call node_destroy(C, ierr)
     
     !call tensor_copy(A, B%data)
@@ -170,7 +188,7 @@ contains
   !*********************************
   !> evaluate expression nodes
   !*********************************
-  recursive subroutine eval(res, A, ierr, is_root_arg)
+  recursive subroutine eval(res, A, ierr, force_eval_arg)
     implicit none
     type(tensor), intent(inout) :: res
     type(node), intent(in) :: A
@@ -179,8 +197,8 @@ contains
     real(8), allocatable :: ops_alpha(:), ops_beta(:)
     real(8) :: alpha, beta
     type(tensor_ptr), allocatable :: ops_tensor(:)
-    logical, optional, intent(in) :: is_root_arg
-    logical :: is_root
+    logical, optional, intent(in) :: force_eval_arg
+    logical :: force_eval
     type(node), pointer :: node_ptr
     
     ! interface
@@ -197,10 +215,10 @@ contains
     !    end subroutine
     ! end interface
 
-    if(present(is_root_arg)) then
-       is_root = is_root_arg
+    if(present(force_eval_arg)) then
+       force_eval = force_eval_arg
     else
-       is_root = .true.
+       force_eval = .true.
     endif
 
     !call disp_info(A, 'A = ')
@@ -218,10 +236,10 @@ contains
        call slice_tensors(res, A%data, A%ref)
        return
     end if
-    
-    !if this node is the root node, force to evaluate
-    if(is_data(A) .and. .not. is_root) return
 
+    !if this node is the root node, force to evaluate
+    if(is_data(A) .and. .not. force_eval) return
+    
     !if(allocated(A%operands)) then
     if(.not. is_data(A)) then       
        num_oprands = size(A%operands)
@@ -243,9 +261,9 @@ contains
           
           call eval(node_ptr%data, node_ptr, ierr, .false.)
 
-          print*, "============================"
-          call disp_info(node_ptr, 'NODE')
-          call disp(node_ptr%data, 'TENSOR = ')
+          ! print*, "============================"
+          ! call disp_info(node_ptr, 'NODE')
+          ! call disp(node_ptr%data, 'TENSOR = ')
 
           call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
           ops_alpha(i) = node_ptr%alpha
@@ -264,7 +282,7 @@ contains
     !     loc(alpha), loc(beta), loc(A%args), num_oprands)
     !write(*, "(A, Z16.6)") "A2=", loc(A%data)
 
-    !if(need_eval(A) .or. is_root) then
+    !if(need_eval(A) .or. force_eval) then
        select case(A%node_type)
 #:for e in L
 #:if e[4]=='A' or e[4]=='B' or e[4]=='C'
@@ -277,6 +295,7 @@ contains
 #:endif
 #:endfor
        case default
+          print*, "calling function eval_tensors ..."          
           call eval_tensors(res, &
                ops_tensor, ops_alpha, ops_beta, A%args)
        end select
@@ -343,7 +362,7 @@ contains
   
   recursive subroutine write_graph(A, is_root, file)
     implicit none
-    type(node), intent(inout) :: A
+    type(node), intent(in) :: A
     integer :: i
     character(len=100) :: label1, label2
     character(len=*),optional :: file
@@ -352,13 +371,15 @@ contains
     logical :: am_i_root
     integer, parameter :: out_unit = 20
     character(len=10) :: op_name
-    
     character(len=*), parameter :: &
          format_label = "(I0.1,A,A,A,I0.1,A,F4.1,A,F4.1,A)"
     character(len=*), parameter :: &
          format_label1 = "(I0.1,A,A,A)"
     character(len=*), parameter :: &
          format_map = "(I0.1,A,I0.1,A)"
+
+    !only execute this function on first process
+    if(get_rank() > 0) return
     
     if(present(is_root)) then
        am_i_root = is_root
@@ -380,17 +401,17 @@ contains
 
     write(op_name, *) trim(op_names(A%node_type))
 
-    id = get_global_id()
-    A%id = id
+    ! id = get_global_id()
+    ! A%id = id
     
 #:set SHOW_ALPHA_BETA = 1
     
 #:if SHOW_ALPHA_BETA > 0
-    write(out_unit, format_label) id, &
+    write(out_unit, format_label) A%id, &
          '[label="[',trim(adjustl(op_name)),']\n id=', A%id, '\n(',&
          A%alpha, ',',A%beta, ')"];'
 #:else
-    write(out_unit, format_label1) id, &
+    write(out_unit, format_label1) A%id, &
          '[label="',trim((adjustl(op_name)), '"];'
 #:endif
     
@@ -490,7 +511,8 @@ contains
   !*****************************
 #:set itype=[['int', 'integer'], &
        ['range', 'type(range)'], &
-       ['arr', 'integer,dimension(:)']]
+       ['arr', 'integer,dimension(:)'], &
+       ['char', 'character(len=1)']]
        
 #:for data in ['node', 'tensor']  
 #:for ta in itype
@@ -535,10 +557,15 @@ contains
     integer :: xs, xe, ys, ye, zs, ze
     integer :: dim_x, dim_y, dim_z
     integer :: src_shape(3)
+
     allocate(res)
 
-    src_shape = shape(obj)
+    call assert(is_valid(obj), &
+         __FILE__, __LINE__, &
+         'the input tensor/node must has a valid shape')
     
+    src_shape = shape(obj)
+
 #:if ta[0] == 'int'
     dim_x = 1
     res%ref%range_x = r(a-1, a-1)
@@ -546,6 +573,10 @@ contains
     call assert(a>=1 .and. a<=src_shape(1), &
          __FILE__, __LINE__, &
          "x index exceeds array dimensions")
+#:elif ta[0] == 'char'
+    dim_x = src_shape(1)
+    res%ref%range_x = r(0, dim_x-1)
+    res%ref%ref_index_type_x = 0
 #:elif ta[0] == 'range'
     if(a == range_all) then
        dim_x = src_shape(1)
@@ -571,7 +602,11 @@ contains
     res%ref%ref_index_type_y = 0
     call assert(b>=1 .and. b<=src_shape(2), &
          __FILE__, __LINE__, &
-         "y index exceeds array dimensions")    
+         "y index exceeds array dimensions")
+#:elif tb[0] == 'char'
+    dim_y = src_shape(2)
+    res%ref%range_y = r(0, dim_y-1)
+    res%ref%ref_index_type_y = 0    
 #:elif tb[0] == 'range'
     if(b == range_all) then
        dim_y = src_shape(2)
@@ -598,7 +633,11 @@ contains
     res%ref%ref_index_type_z = 0
     call assert(c>=1 .and. c<=src_shape(3), &
          __FILE__, __LINE__, &
-         "z index exceeds array dimensions")        
+         "z index exceeds array dimensions")
+#:elif tc[0] == 'char'
+    dim_z = src_shape(3)
+    res%ref%range_z = r(0, dim_z-1)
+    res%ref%ref_index_type_z = 0
 #:elif tc[0] == 'range'
     if(c == range_all) then
        dim_z = src_shape(3)
@@ -619,7 +658,6 @@ contains
 #:endif
     
 #:if data == 'tensor'
-    !allocate(res)
     !call node_new(res, obj) !create a data node
     call assign_ptr(res%data, obj)
     !call node_add_operand(res, tmp)
@@ -648,7 +686,6 @@ contains
     type(${src_type[1]}$) :: src
     type(ref_info) :: set_ref
 
-    print*, "Hello1"
 #:if src_type[2] == 'scalar' and dst_type[0]=='tensor' 
     call range_to_ref (set_ref, range_all, range_all, range_all)
     call data_set_scalar (dst%data, real(src, 8), set_ref)
@@ -659,7 +696,6 @@ contains
 #:endif
 
 #:if src_type[2] == 'tensor' and dst_type[0] == 'tensor' 
-    
 #:endif
 
 #:if src_type[2] == 'tensor' and dst_type[0] == 'node'
@@ -667,12 +703,34 @@ contains
          "the target must be a reference.")
     call set_node_node(dst, slice(src, range_all, range_all, range_all))
 #:endif
-    
+
 #:if src_type[1] == 'node' and dst_type[1] == 'node'
-    print*, "Hello2"    
     call assert(associated(dst%data), __FILE__, __LINE__,&
          "as lvalue, node%data must be associated.")
-    call data_set_ref_ref(dst%data%data, src%data%data, dst%ref, src%ref)
+
+    call assert(is_ref(dst), __FILE__, __LINE__,&
+         "the target must be a reference.")
+    
+    if(allocated(src%operands) .and. &  !for expression node    
+         size(src%operands)>1) then
+
+       !if the source node is an expression node,
+       !evaluate it firt
+       call eval(src%data, src, ierr)
+       
+       call data_set_ref_ref(dst%data%data, &
+            src%data%data, dst%ref, src%ref)
+       
+    else if(src%node_type == type_data) then !for data node    
+       !if the source node is an data node,
+       !we have to create reference info using its shape
+       call data_set_ref_ref(dst%data%data, &
+            src%data%data, shape_to_ref(shape(src)), &
+            src%ref)
+    else
+       call data_set_ref_ref(dst%data%data, &
+            src%data%data, dst%ref, src%ref)
+    end if
 #:endif
     
   end subroutine

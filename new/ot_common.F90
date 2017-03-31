@@ -1,6 +1,7 @@
 module ot_common
   use mpi
   use ot_print
+
   
 #define DEBUG
   
@@ -28,6 +29,23 @@ module ot_common
 
 contains
 
+  ! -----------------------------------------------------------------------
+  ! Get the input paramenters 
+  ! -----------------------------------------------------------------------
+  subroutine ot_option_int(str,input,ierr)
+    implicit none
+#include "petsc.h"
+    character(len=*),intent(in) ::  str
+    integer,intent(out)			::  input 
+    integer,intent(out)			::  ierr 
+    input=0
+
+    call PetscOptionsGetInt(PETSC_NULL_OBJECT, &
+         PETSC_NULL_CHARACTER,str,input,&
+         PETSC_NULL_BOOL,ierr)
+    
+  end subroutine
+  
   function get_global_id() result (res)
     implicit none
     integer res 
@@ -59,6 +77,39 @@ contains
        call MPI_Comm_size(MPI_COMM_WORLD, res, ierr)
     end if
   end function
+
+  subroutine mpi_order_start(comm, ierr)
+    implicit none
+    integer :: comm
+    integer ,intent(out) :: ierr
+    integer :: rank
+    integer :: size
+    integer :: i
+
+    size = get_size(comm)
+    rank = get_rank(comm)
+
+    do i = 1, rank
+       call MPI_Barrier(comm, ierr)
+    end do
+  end subroutine
+
+  subroutine mpi_order_end(comm, ierr)
+    implicit none
+    integer :: comm
+    integer ,intent(out) :: ierr
+    integer :: rank
+    integer :: size
+    integer :: i
+
+    size = get_size(comm)
+    rank = get_rank(comm)
+
+    do i = rank + 1, size - 1
+       call MPI_Barrier(comm, ierr)
+    end do
+  end subroutine
+  
   
   subroutine reset_global_id()
     implicit none

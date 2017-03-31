@@ -98,8 +98,9 @@ contains
     call VecGetDM(A, DM_A, ierr)
     call DMDAGetCorners(DM_A, xs, ys, zs, xl, yl, zl,ierr)
 
-    b%starts = (/xs, ys, zs/)
-    b%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+    b%rx = r(xs, xs + xl - 1)
+    b%ry = r(ys, ys + yl - 1)
+    b%rz = r(zs, zs + zl - 1)    
   end subroutine
 
   subroutine petsc_get_dist(dist, data_dm)
@@ -124,6 +125,7 @@ contains
     CHKERRQ(ierr)
   end subroutine
 
+  
   subroutine petsc_get_shape1(res, data)
     implicit none
 #include "petsc.h"
@@ -168,8 +170,11 @@ contains
          PETSC_NULL_INTEGER, ierr)
     CHKERRQ(ierr)
     
-    res%starts = 0
-    res%ends = (/dx,dy,dz/) - 1
+    ! res%starts = 0
+    ! res%ends = (/dx,dy,dz/) - 1
+    res%rx = r(0, dx-1)
+    res%ry = r(0, dy-1)
+    res%rz = r(0, dz-1)    
   end subroutine
 
   !> get global shape of the data and the local corners
@@ -199,8 +204,10 @@ contains
     call DMDAGetCorners(data_dm, xs, ys, zs, xl, yl, zl,ierr)
     CHKERRQ(ierr)
     
-    local_box%starts = (/xs, ys, zs/)
-    local_box%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+    local_box%rx = r(xs, xs + xl - 1)
+    local_box%ry = r(ys, ys + yl - 1)
+    local_box%rz = r(zs, zs + zl - 1)    
+
   end subroutine
 
   !> get global shape of the data and the local corners
@@ -224,14 +231,16 @@ contains
 
     CHKERRQ(ierr)
     
-    global_box%starts = 0
-    global_box%ends = (/dx, dy, dz/)
-
+    global_box%rx = r(0, dx-1)
+    global_box%ry = r(0, dy-1)
+    global_box%rz = r(0, dz-1)    
+    
     call DMDAGetCorners(data_dm, xs, ys, zs, xl, yl, zl,ierr)
     CHKERRQ(ierr)
     
-    local_box%starts = (/xs, ys, zs/)
-    local_box%ends = (/xs+xl-1, ys+yl-1, zs+zl-1/)
+    local_box%rx = r(xs, xs + xl - 1)
+    local_box%ry = r(ys, ys + yl - 1)
+    local_box%rz = r(zs, zs + zl - 1)    
   end subroutine
 
 #:for d in [1,2,3]
@@ -410,13 +419,13 @@ contains
     !print*,"lx=", lx, "ly=",ly, "lz=", lz
     !call PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT, ierr)
     
-    xs = box%starts(1)
-    ys = box%starts(2)
-    zs = box%starts(3)
+    xs = box%rx%lower
+    ys = box%ry%lower
+    zs = box%rz%lower
 
-    xe = box%ends(1)
-    ye = box%ends(2)
-    ze = box%ends(3)
+    xe = box%rx%upper
+    ye = box%ry%upper
+    ze = box%rz%upper
     
     ! cum = 0
     ! do i = 0, nx - 1
@@ -479,13 +488,15 @@ contains
          PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
          PETSC_NULL_INTEGER, src_dm, ierr)
 
-    box%starts = (/0, 8, 3/)
-    box%ends   = (/11, 9, 4/)
+    box%rx = r(0, 11)
+    box%ry = r(8, 9)
+    box%rz = r(3, 4)
     
     call petsc_slice_dm(dst_dm, src_dm, box)
 
-    box%starts = (/0, 8, 3/)
-    box%ends   = (/5, 9, 4/)
+    box%rx = r(0, 5)
+    box%ry = r(8, 9)
+    box%rz = r(3, 4)
     
     call petsc_slice_dm(dst_dm, src_dm, box)
   end subroutine
@@ -502,6 +513,12 @@ contains
     integer :: size, rank
     integer :: x, y, z, m, n, k
     character(len=*), optional :: prefix
+    type(dist_info) :: dist
+    DM :: global_dm
+    PetscScalar,allocatable :: data3d(:,:,:)
+    PetscScalar, pointer :: local_block_ptr(:)
+    integer :: px, py, pz, accx, accy, accz, offset,block_size
+    integer :: xs, xe, ys, ye, zs, ze, mm, nn, kk
     
     call VecScatterCreateToZero(global_vec, ctx, local_vec, ierr)
     call VecScatterBegin(ctx, global_vec, local_vec, &
@@ -510,28 +527,79 @@ contains
          INSERT_VALUES, SCATTER_FORWARD, ierr);
 
     call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
-
+    
     if(rank == 0) then
        call petsc_get_shape(v_shape, global_vec)
        call VecGetArrayF90(local_vec, arr, ierr)
+       
        m = v_shape(1)
        n = v_shape(2)
        k = v_shape(3)
+       
+       allocate(data3d(m, n, k))
+              
+       call petsc_get_dm(global_dm, global_vec)
+       call petsc_get_dist(dist, global_dm)
+
+       offset = 0;
+       accz = 0;
+       do pz = 1, size(dist%lz)
+          accy = 0
+          do py = 1, size(dist%ly)
+             accx = 0
+             do px = 1, size(dist%lx)
+                mm = dist%lx(px)
+                nn = dist%ly(py)
+                kk = dist%lz(pz)
+                
+                xs = accx+1; xe = xs + mm - 1 
+                ys = accy+1; ye = ys + nn - 1
+                zs = accz+1; ze = zs + kk - 1
+                
+                block_size = mm * nn * kk
+                local_block_ptr &
+                     => arr(offset+1:offset+block_size)
+
+                ! print*, "m=", mm, "n=", nn, "k=",kk
+                ! print*, "xs = ", xs, "ys=", ys, "zs=", zs
+                ! print*, "xe = ", xe, "ye=", ye, "ze=", ze
+                ! print*, "size(local_block_ptr) =", size(local_block_ptr)
+
+                data3d(xs:xe,ys:ye,zs:ze) = &
+                     reshape(local_block_ptr,(/mm, nn, kk/))
+                
+                offset = offset + block_size
+                accx = accx + dist%lx(px)
+             end do
+             accy = accy + dist%ly(py)             
+          end do
+          accz = accz + dist%lz(pz)          
+       end do
        
        if(present(prefix)) then
           write(*, "(4X, A)") prefix
        else
           write(*, "(4X, A)") "data = "
        endif
-       
+
        do z = 1, k
           if(k > 1) &
                write(*,"(6X, A, I0.1)") "k = ", z
           do y = 1, n
              write(*,"(6X, 100g12.5)") &
-                  arr((z-1)*m*n+(y-1)*m+1:(z-1)*m*n+(y-1)*m+m)
+                  data3d(:, y, z)
           end do
        end do
+       
+       ! do z = 1, k
+       !    if(k > 1) &
+       !         write(*,"(6X, A, I0.1)") "k = ", z
+       !    do y = 1, n
+       !       write(*,"(6X, 100g12.5)") &
+       !            arr((z-1)*m*n+(y-1)*m+1:(z-1)*m*n+(y-1)*m+m)
+       !    end do
+       ! end do
+
        call VecRestoreArrayF90(local_vec, arr, ierr)
     end if
 

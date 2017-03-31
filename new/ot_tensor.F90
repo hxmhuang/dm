@@ -53,6 +53,11 @@ module ot_tensor
   interface destroy
      module procedure tensor_destroy
   end interface destroy
+
+  interface is_valid
+     module procedure is_valid_tensor
+  end interface is_valid
+     
 contains
 
   subroutine init_tensor(ierr)
@@ -88,14 +93,14 @@ contains
     o%m_shape = (/dx, dy, dz/)
   end subroutine
   
-  function find_range(range) result(res)
+  function find_range(ra) result(res)
     implicit none
-    integer, intent(inout) :: range(:)
+    integer, intent(inout) :: ra(:)
     integer :: res(2)
 
     !print*, size(range)
-    res(1) = (loc(range) - loc(r)) / 4
-    res(2) = ((loc(range) + size(range) * 4) - loc(r) - 4)/4
+    res(1) = (loc(ra) - loc(r)) / 4
+    res(2) = ((loc(ra) + size(ra) * 4) - loc(r) - 4)/4
 
   end function
   
@@ -110,9 +115,13 @@ contains
     implicit none
     type(tensor), intent(in) :: o
     type(box_info) :: res
+    integer :: s(3)
 
-    res%starts = 0
-    res%ends = shape(o) - 1
+    s = shape(o)
+    
+    res%rx = r(0, s(1))
+    res%ry = r(0, s(2))
+    res%rz = r(0, s(3))    
   end function
 
   function tensor_lbox(o) result(res)
@@ -172,6 +181,19 @@ contains
        end if
     end do
     dim = 0
+  end function
+
+  function is_valid_tensor(t) result(res)
+    implicit none
+    type(tensor) :: t
+    logical :: res
+    
+    if(any(shape(t) <= 0) &
+         .or. t%data /=0) then
+       res = .true.
+    else
+       res = .false.
+    end if
   end function
   
   subroutine disp_tensor(objA, prefix)
@@ -235,8 +257,13 @@ contains
     implicit none
     type(tensor), intent(inout) :: A
     integer, intent(out) :: ierr
-
-    call data_destroy(A%data, ierr)
+    integer :: cnt
+    
+    cnt = dec_ref_cnt(A)
+    
+    if(cnt == 0) then
+       call data_destroy(A%data, ierr)
+    end if
   end subroutine 
 
 #:for op in L

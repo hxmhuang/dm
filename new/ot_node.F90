@@ -38,19 +38,20 @@ module ot_node
   interface reallocate
      module procedure reallocate1,reallocate2
   end interface reallocate
-  
-  character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names
 
   interface disp_info
      module procedure disp_info_node     
   end interface disp_info
 
-  interface disp
-     module procedure disp_node
-  end interface disp
-  
+
+  interface is_valid
+     module procedure is_valid_node
+  end interface is_valid
+
+  character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names  
 contains
 
+  !> initialize the node module
   subroutine init_node(ierr)
     implicit none
     integer, intent(out) :: ierr
@@ -61,9 +62,8 @@ contains
 
   end subroutine
   
-  !***********************
+
   !> node constructers
-  !***********************
   subroutine node_new_from_tensor(B, A) 
     implicit none
     type(tensor), intent(in), target :: A
@@ -109,12 +109,11 @@ contains
 
     if((.not. is_scalar(left)) .and. &
          (.not. is_scalar(right))) then
-       
        call assert(.not. any(left%m_shape /= right%m_shape), &
             __FILE__, __LINE__, &
             "shape of the left and right leaf does not match.")
     endif
-    
+
     if(is_scalar(left)) then
        x = left % scalar
        select case(op_type)
@@ -133,8 +132,7 @@ contains
           C%m_shape = right%m_shape
           C%beta = x
           C%node_type = type_rcp
-          ! allocate(C%operands(1))
-          ! C%operands(1)%ptr => right
+          C%id = get_global_id()
           call push_back(C%operands, right)
        end select
     else if(is_scalar(right)) then
@@ -156,18 +154,21 @@ contains
        end select
     else
        allocate(C%operands(2))
-       ! C%operands(1)%ptr => left
-       ! C%operands(2)%ptr => right
        ! write(*, "(A, Z16.16)"), "left=", loc(left)
        ! write(*, "(A, Z16.16)"), "right=", loc(right)
        call assign_ptr(C%operands(1)%ptr, left)
        call assign_ptr(C%operands(2)%ptr, right)
+       
        if(is_scalar(left)) then
           C%m_shape = right%m_shape
        else
           C%m_shape = left%m_shape
        endif
+       
        C%node_type = op_type
+       
+       !assign new node id
+       C%id = get_global_id()
     end if
   end subroutine
 
@@ -179,6 +180,7 @@ contains
     type(node), intent(out) :: B
 
     B%id = get_global_id()
+    
     B%m_shape = (/1, 1, 1/)
     B%scalar = real(scalar, 8)
     B%node_type = type_scalar
@@ -197,9 +199,11 @@ contains
     TENSOR_ENSURE_VALID(src)
 
     call node_new(dst1, src)
+
+    dst1%id = get_global_id()
     
     call node_new(dst, op_type, dst1)
-
+    
     !print*, trim(op_names(op_type))
   end subroutine
 
@@ -213,14 +217,13 @@ contains
     
     dst%node_type = op_type
     dst%m_shape   = src%m_shape
-    !dst%local_block = src%local_block
 
     allocate(p)
     call node_new(p, src)
 
-    call push_back(dst%operands, p)    
-    ! allocate(dst%operands(1))
-    ! dst%operands(1)%ptr => p
+    call push_back(dst%operands, p)
+
+    dst%id = get_global_id()
   end subroutine
 
   subroutine disp_info_node(o, prefix)
@@ -266,17 +269,6 @@ contains
     write(*, "(A)") ""
   end subroutine
 
-  subroutine disp_node(A, msg)
-    implicit none
-    type(node) :: A
-    character(len=*),intent(in),optional :: msg
-    if(present(msg)) then
-       call disp(A%data, msg)
-    else
-       call disp(A%data)
-    end if
-  end subroutine
-
   
   function node_dim(o) result(res)
     implicit none
@@ -301,8 +293,9 @@ contains
        res = lbox(o%data)
     else
        !this is an invalid box, means unknow
-       res%starts = 0
-       res%ends   = -1
+       res%rx = r(0, -1)
+       res%ry = r(0, -1)
+       res%rz = r(0, -1)       
     endif
 
   end function
@@ -312,8 +305,9 @@ contains
     type(node), intent(in) :: o
     type(box_info) :: res
 
-    res%starts = 0
-    res%ends = res%starts + shape(o) - 1
+    res%rx = r(0, -1)
+    res%ry = r(0, -1)
+    res%rz = r(0, -1)       
 
   end function
 
@@ -348,6 +342,18 @@ contains
          (A%node_type == type_minus) .or. &
          (A%node_type == type_mult)  .or. &
          (A%node_type == type_divd)
+  end function
+
+  function is_valid_node(t) result(res)
+    implicit none
+    type(node) :: t
+    logical :: res
+    
+    if(any(shape(t) <= 0)) then
+       res = .true.
+    else
+       res = .false.
+    end if
   end function
 
   function need_eval(A) result(res)

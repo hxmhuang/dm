@@ -2,6 +2,7 @@
 module ot_vector
   use ot_type
   use ot_common
+  use ot_ref
   
 #:for op in ['push_back', 'pop', 'remove']  
   interface ${op}$
