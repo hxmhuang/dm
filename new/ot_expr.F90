@@ -95,7 +95,17 @@ module ot_expr
      module procedure disp_node
   end interface disp
 
+  ! integer, allocatable, target:: rr(:)
+  ! integer, pointer :: r3(:) => null()
 contains
+
+  function is_rvalue(o) result(res)
+    implicit none
+    type(node), intent(in) :: o
+    logical :: res
+    
+    res = (o%var_type == 'r')
+  end function
   
   subroutine init_expr(ierr)
     use ot_tensor
@@ -117,6 +127,10 @@ contains
        call disp(T)
     end if
     call destroy(T, ierr)
+
+    if(is_rvalue(A)) then
+       call destroy(A, ierr)
+    end if
   end subroutine
 
   subroutine node_assign_node(A, B)
@@ -452,14 +466,28 @@ contains
     implicit none       
     type(${type1}$),intent(in),target  :: A
     type(${type2}$),intent(in),target  :: B
-    type(node), target :: res
+    type(node), pointer :: res
     type(node), pointer :: C, D
 
-    allocate(C, D)
-
+#:if type1 == 'node'
+    C => A
+#:else
+    allocate(C)
     call node_new(C, A)
+#:endif
+
+#:if type2 == 'node'
+    D => B
+#:else
+    allocate(D)
     call node_new(D, B)
+#:endif
+    
+    ! call node_new(C, A)
+    ! call node_new(D, B)
+    allocate(res)
     call node_new(res, type_${op}$, C, D)
+    res%var_type = 'r'
   end function
   
 #:endif
@@ -473,11 +501,20 @@ contains
   !> function ${e[2]}$(${type}$), return a tree node 
   function ${e[2]}$_${type}$ (o) result(res)
     implicit none
-    type(${type}$), intent(in) :: o
-    type(node) :: res
-
-    call node_new(res, ${e[0]}$, o)
+    type(${type}$), intent(in), target :: o
+    type(node), pointer :: res
+    type(node), pointer :: tmp_o
     
+#:if type == 'node'
+    tmp_o => o
+#:else
+    allocate(tmp_o)
+    call node_new(tmp_o, o)
+#:endif
+    
+    allocate(res)
+    call node_new(res, ${e[0]}$, tmp_o)
+    res%var_type = 'r'    
   end function
 
 #:endfor
@@ -490,16 +527,26 @@ contains
   !> power function ${type1}$**${type2}$
   function ${type1}$_pow_${name2}$(o, n) result(res)
     implicit none
-    type(${type1}$), intent(in) :: o
-    type(${type2}$), intent(in) :: n
-    type(node) :: res
-    type(node), pointer :: new_o
+    type(${type1}$), intent(in), target :: o
+    type(${type2}$), intent(in), target :: n
+    type(node), pointer :: res
+    type(node), pointer :: tmp_o
 
-    allocate(new_o)
-    call node_new(new_o, o)
-    call node_new(res, type_pow, new_o)
-    res%args(1) = n
+    ! allocate(new_o)
+    ! call node_new(new_o, o)
+    ! call node_new(res, type_pow, new_o)
     
+#:if type1 == 'node'
+    tmp_o => o
+#:else
+    allocate(tmp_o)
+    call node_new(tmp_o, o)
+#:endif
+
+    allocate(res)
+    call node_new(res, type_pow, tmp_o)
+    res%args(1) = n
+    res%var_type = 'r'
   end function
   
 #:endfor
@@ -668,7 +715,7 @@ contains
 
     res%m_shape = (/dim_x, dim_y, dim_z/)
     res%node_type = type_ref
-    
+    res%var_type = 'r'
   end function
   
 #:endfor

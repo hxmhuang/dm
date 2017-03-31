@@ -88,6 +88,9 @@ module ot_type
 
      !reference counter
      integer :: ref_cnt = 1
+
+     !default is lvalue
+     character(len=1) :: var_type = 'l'
   end type node
 
   type tensor
@@ -106,6 +109,9 @@ module ot_type
 
      !reference counter
      integer :: ref_cnt = 1
+
+     !default is lvalue
+     character(len=1) :: var_type = 'l'
   end type tensor
 
   type grid

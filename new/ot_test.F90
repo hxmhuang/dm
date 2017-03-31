@@ -28,7 +28,7 @@ contains
 
     NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
     call write_graph(NB, file="NB.dot")
-
+    
     return
     
     ! C = ones(2, 2, 2)
@@ -138,10 +138,10 @@ contains
     
     !call disp(3 * A, "3 * A = ")    
 
-    call write_graph(A * 3, file="A3.dot")
+    ! call write_graph(A * 3, file="A3.dot")
 
     ! E = exp(abs(2.0 * ones(m, n, k) - 3.5))**2 + &
-    !      1.0 / log(ones(m,n,k) * 3.0)
+    !      1.0 / log(ones(m,n,k) * 3.0) + seqs(m, n, k)
     ! call disp(E, 'E = ')
     
     ! C = seqs(m, n)
@@ -151,7 +151,7 @@ contains
     
     ! C = C - D * 2
     ! call disp(C, "C = ")
-    
+    call destroy(A, ierr)
   end subroutine
   
   subroutine test_slice()

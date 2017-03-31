@@ -11,7 +11,7 @@ module ot_node
      module procedure node_new_from_tensor
      module procedure node_new_from_node
      module procedure node_new_op_binary
-     module procedure node_new_op_tensor
+     !module procedure node_new_op_tensor
      module procedure node_new_op_node     
 #:for t in ['integer', 'real', 'real8']
      module procedure node_new_from_${t}$
@@ -43,7 +43,10 @@ module ot_node
      module procedure disp_info_node     
   end interface disp_info
 
-
+  interface destroy
+     module procedure node_destroy
+  end interface destroy
+  
   interface is_valid
      module procedure is_valid_node
   end interface is_valid
@@ -187,39 +190,40 @@ contains
   end subroutine
 #:endfor
 
-  !> operation on a tensor
-  subroutine node_new_op_tensor(dst, op_type, src)
-    implicit none
-    type(node), intent(out) :: dst
-    integer :: op_type
-    type(tensor), intent(in) :: src
-    type(node) :: dst1
+  ! !> operation on a tensor
+  ! subroutine node_new_op_tensor(dst, op_type, src)
+  !   implicit none
+  !   type(node), intent(out) :: dst
+  !   integer :: op_type
+  !   type(tensor), intent(in) :: src
+  !   type(node) :: dst1
 
-    !call tensor_ensure_valid(src)
-    TENSOR_ENSURE_VALID(src)
+  !   !call tensor_ensure_valid(src)
+  !   TENSOR_ENSURE_VALID(src)
 
-    call node_new(dst1, src)
+  !   call node_new(dst1, src)
 
-    dst1%id = get_global_id()
+  !   dst1%id = get_global_id()
     
-    call node_new(dst, op_type, dst1)
+  !   call node_new(dst, op_type, dst1)
     
-    !print*, trim(op_names(op_type))
-  end subroutine
+  !   !print*, trim(op_names(op_type))
+  ! end subroutine
 
   !> operation on a node
   subroutine node_new_op_node(dst, op_type, src)
     implicit none
     type(node), intent(out) :: dst
     integer :: op_type
-    type(node), intent(in) :: src
+    type(node), intent(in), target :: src
     type(node), pointer :: p
     
     dst%node_type = op_type
     dst%m_shape   = src%m_shape
 
-    allocate(p)
-    call node_new(p, src)
+    p => src
+    ! allocate(p)
+    ! call node_new(p, src)
 
     call push_back(dst%operands, p)
 
@@ -450,21 +454,26 @@ contains
     implicit none
     type(node), intent(inout), target :: A
     integer :: ierr
-    integer i
+    integer i, cnt
 
     ! A%ref_cnt = A%ref_cnt - 1
     ! if(A%ref_cnt < 0) A%ref_cnt = 0
     ! if(A%ref_cnt <= 0) return
-    
-    if(A%node_type == type_data .or. &
-         A%node_type == type_scalar) return
-    
-    if(allocated(A%operands)) then
-       do i = 1, size(A%operands)
-          call node_destroy(A%operands(i)%ptr, ierr)
-       enddo
-    endif
-    
+    if(dec_ref_cnt(A) == 0) then
+       if(associated(A%data)) then
+          call destroy(A%data, ierr)
+       end if
+       
+       ! if(A%node_type == type_data .or. &
+       !      A%node_type == type_scalar) return
+
+       if(allocated(A%operands)) then
+          do i = 1, size(A%operands)
+             call node_destroy(A%operands(i)%ptr, ierr)
+          enddo
+          deallocate(A%operands(i)%ptr)
+       endif
+    end if
   end subroutine
 
   recursive subroutine disp_tree(o)

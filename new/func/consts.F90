@@ -4,38 +4,32 @@ module mod_consts
   use ot_data
   
   interface consts
-     module procedure consts_1d
-     module procedure consts_2d
-     module procedure consts_3d
+     module procedure consts_3d_int
+     module procedure consts_3d_real
+     module procedure consts_3d_real8
   end interface consts
   
 contains
-  function consts_1d(val,m) result(res)
-    integer :: m
-    real(kind=8) :: val
-    type(tensor) :: res
-    integer :: ierr
 
-    call tensor_set_shape(res, (/m/))        
-    call data_consts(res%data, val, res%m_shape, ierr)
-  end function
-
-  function consts_2d(val,m, n) result(res)
-    integer :: m, n
-    real(kind=8) :: val    
+#:for type in [['int', 'integer'], ['real', 'real'],['real8','real(8)']]
+  function consts_3d_${type[0]}$(val, m, opt_n, opt_k) result(res)
+    implicit none
+    ${type[1]}$ :: val
+    integer, intent(in) :: m
+    integer, intent(in), optional :: opt_n, opt_k
     type(tensor) :: res
+    integer :: n, k, ierr
+
+    n = 1; k = 1;
     
-    call tensor_set_shape(res, (/m, n/))        
-    call data_consts(res%data, val, res%m_shape, ierr)
-  end function
+    if(present(opt_n)) n = opt_n
+    if(present(opt_k)) k = opt_k
 
-  function consts_3d(val,m, n, k) result(res)
-    integer :: m, n, k
-    real(kind=8) :: val    
-    type(tensor) :: res
-
-    call tensor_set_shape(res, (/m,n,k/))        
-    call data_consts(res%data, val, res%m_shape, ierr)
+    call tensor_set_shape(res, (/m,n,k/))
+    call data_consts(res%data, real(val,8), res%m_shape, ierr)    
+    res%var_type = 'r'    
   end function
+  
+#:endfor
 end module
 
