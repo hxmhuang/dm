@@ -23,20 +23,20 @@
     n = t_shape(2)
     k = t_shape(3)
     
-    call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,               &
+    call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,         &
          DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
          DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
          PETSC_DECIDE, 1, 0,                                     &
          PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
          PETSC_NULL_INTEGER,ada,ierr)
 
-    call DMGetGlobalVector(ada, A,ierr)
+    call DMCreateGlobalVector(ada, A,ierr)
     call DMDAGetCorners(ada,xs,ys,zs, xl,yl,zl,ierr)
     call DMDAVecGetArrayF90(ada, A, x3,ierr)
 
     x3(xs:xs+xl-1, ys:ys+yl-1, zs:zs+zl-1) = alpha;
 
     call DMDAVecRestoreArrayF90(ada, A, x3, ierr)
-       
+    call DMDestroy(ada, ierr)
     call PetscLogEventEnd(ievent,ierr)
   end subroutine data_consts

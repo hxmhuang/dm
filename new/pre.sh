@@ -48,7 +48,7 @@ do
 	#echo ./${build_dir}/$f
     	#echo $f | cut -d '\.\/' -f 2
 	
-	./fypp -n  -p -m re --create-parents $src_filename > \
+	./fypp -n -p -m re --create-parents $src_filename > \
 	       $dst_filename
 	
 	echo " >>>processing file $src_filename" 

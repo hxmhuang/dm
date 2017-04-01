@@ -3,7 +3,7 @@ module ot_vector
   use ot_type
   use ot_common
   use ot_ref
-  
+
 #:for op in ['push_back', 'pop', 'remove']  
   interface ${op}$
 #:for t in ['tensor', 'node']
@@ -15,16 +15,6 @@ module ot_vector
   end interface ${op}$
 #:endfor
 
-  interface assign_ptr
-     module procedure assign_node_ptr
-     module procedure assign_tensor_ptr
-  end interface assign_ptr
-
-  interface delete_ptr
-     module procedure delete_node_ptr
-     module procedure delete_tensor_ptr
-  end interface delete_ptr
-  
 contains
 
 #:for t in ['tensor', 'node']
@@ -56,9 +46,7 @@ contains
     enddo
     
   end subroutine
-#:endfor
-  
-#:for t in ['tensor', 'node']
+
   !> append a pointer of ${t}$ to the end of v
   subroutine push_back_${t}$(v, a)
     implicit none
@@ -82,28 +70,6 @@ contains
     v(pos)%ptr => a
   end subroutine
 
-  subroutine assign_${t}$_ptr(p, o)
-    implicit none
-    type(${t}$), pointer,intent(out) :: p
-    type(${t}$), target, intent(in)  :: o
-    p => o
-    ! add reference counter
-    p%ref_cnt = p%ref_cnt + 1
-  end subroutine
-
-  subroutine delete_${t}$_ptr(p, o)
-    implicit none
-    type(${t}$), pointer,intent(out) :: p
-    type(${t}$), target, intent(in)  :: o
-    p => null()
-    ! add reference counter
-    p%ref_cnt = p%ref_cnt - 1
-    
-    if(p%ref_cnt <= 0) then
-       !do somthing there to destroy the object
-    endif
-  end subroutine
-  
   !> pop out the first element of ${t}$_ptr array
   subroutine pop_${t}$(v, a)
     implicit none

@@ -18,20 +18,18 @@ CLEANFILES       =
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-OBJS_FUNC = $(addprefix ./func/, consts.o seqs.o ones.o rand.o ot_all_func.o)
 OBJS_DATA = $(addprefix ./data/, data_consts.o data_rand.o )
 OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o \
 	    ot_display.o )
 
 ABC = $(addprefix ./, ot_petsc.o ot_data.o \
-	ot_vector.o \
 	ot_tensor.o \
 	ot_node.o  \
 	ot_expr.o  ot_init.o)
 
 OBJS  = ot_type.o ot_ref.o ot_geom.o ${OBJS_UTIL} ot_print.o \
 	ot_common.o   \
-	${OBJS_DATA} ${ABC} ${OBJS_FUNC}$ 
+	${OBJS_DATA} ${ABC} ot_func.o
 
 OBJ_MAIN= ${OBJS} ot_mod.o ot_test.o main.o
 
@@ -54,7 +52,11 @@ main: ${OBJ_MAIN} chkopts
 
 small:
 	@make all
-	@mpirun -np 4 ./main -m 4 -n 3 -k 2 
+	@mpirun -np 4 ./main -m 4 -n 3 -k 2
+
+logview:
+	@make all
+	@mpirun -np 4 ./main -m 4 -n 3 -k 2 -log_view
 
 #clean:
 #	@cd build && make clean

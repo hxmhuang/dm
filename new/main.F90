@@ -118,6 +118,7 @@ program main
   !call test_set()
   call test_math()
   !call test_expr()
+  !call test_ptr()
   
   EXIT
 

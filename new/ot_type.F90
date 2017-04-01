@@ -87,7 +87,7 @@ module ot_type
      real(8) :: args(10) = 0
 
      !reference counter
-     integer :: ref_cnt = 1
+     integer :: ref_cnt = 0
 
      !default is lvalue
      character(len=1) :: var_type = 'l'
@@ -108,7 +108,7 @@ module ot_type
      type(box_info) :: local_block
 
      !reference counter
-     integer :: ref_cnt = 1
+     integer :: ref_cnt = 0
 
      !default is lvalue
      character(len=1) :: var_type = 'l'

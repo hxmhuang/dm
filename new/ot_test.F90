@@ -130,8 +130,16 @@ contains
     call ot_option_int('-k', k, ierr)
 
     
-    A = seqs(m * n)
-    call disp(A * 3, "A * 3 = ")
+    A = seqs(m, n, k)
+    B = ones(m, n, k)
+    call disp(A, 'A = ')
+
+    ! B = A * 3
+    
+    ! call disp(A * 3, "A * 3 = ")
+    
+    ! call disp_info(A, 'A1 = ')
+    ! call disp_info(B, 'B1 = ')
     
     ! B = A * 2
     ! call disp(B, "B = ")
@@ -142,7 +150,11 @@ contains
 
     ! E = exp(abs(2.0 * ones(m, n, k) - 3.5))**2 + &
     !      1.0 / log(ones(m,n,k) * 3.0) + seqs(m, n, k)
-    ! call disp(E, 'E = ')
+
+    E = cos(sin(abs(A)))**2 + 1.0 / (B * 2 + 3.0)
+    !call disp_info(rcp(A))
+    !E = abs(A)
+    call disp(E, 'E = ')
     
     ! C = seqs(m, n)
     ! D = C
@@ -151,7 +163,12 @@ contains
     
     ! C = C - D * 2
     ! call disp(C, "C = ")
+    
+    ! call destroy(B, ierr)
+
     call destroy(A, ierr)
+    call destroy(B, ierr)    
+    call destroy(E, ierr)
   end subroutine
   
   subroutine test_slice()
@@ -254,4 +271,31 @@ contains
     call destroy(B, ierr)
     call destroy(C, ierr)
   end subroutine
+
+  subroutine fun(o)
+    implicit none
+    integer, pointer, intent(in) :: o(:)
+    integer, pointer :: o1(:)
+
+    o1 => o
+    o1(1) = o1(1) + 1
+
+    !if you comment out this line
+    !it will cause memory leak
+    deallocate(o1)
+  end subroutine fun
+  
+  subroutine test_ptr()
+    implicit none
+    integer, pointer :: a(:);
+    integer i
+
+    do i = 1, 1e8
+       allocate(a(1000))
+       a(1) = a(1) + 1
+       call fun(a)
+    enddo
+    
+    print*, "a = ", a(1)
+  end subroutine test_ptr
 end module

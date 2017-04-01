@@ -89,9 +89,10 @@ contains
     integer, intent(out) :: ierr
 
     if(data /= 0) then
-       call VecGetDM(data, data_dm, ierr)       
-       call DMRestoreGlobalVector(data_dm, data, ierr)
+       !call VecGetDM(data, data_dm, ierr)       
+       !call DMRestoreGlobalVector(data_dm, data, ierr)
        !call DMDestroy(data_dm, ierr)
+       call VecDestroy(data, ierr)
        data = 0
     endif
   end subroutine 

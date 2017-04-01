@@ -5,7 +5,6 @@ module ot_node
   use ot_ref
   use ot_type  
   use ot_tensor
-  use ot_vector
   
   interface node_new
      module procedure node_new_from_tensor
@@ -51,9 +50,25 @@ module ot_node
      module procedure is_valid_node
   end interface is_valid
 
+  interface assign_ptr
+     module procedure assign_node_ptr
+  end interface assign_ptr
+
+  interface release_ptr
+     module procedure release_node_ptr
+  end interface release_ptr
+
+#:set t = 'node'
+#:include "ot_vector.if"
+#:del t
+  
   character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names  
 contains
 
+#:set t = 'node'
+#:include "ot_vector.inc"
+#:del t
+  
   !> initialize the node module
   subroutine init_node(ierr)
     implicit none
@@ -64,8 +79,54 @@ contains
 #:endfor
 
   end subroutine
-  
 
+  subroutine assign_node_ptr(p, o)
+    implicit none
+    type(node), pointer,intent(out) :: p
+    type(node), target, intent(in)  :: o
+    integer :: cnt
+    p => o
+    ! add reference counter
+    cnt = inc_ref_cnt(p)
+  end subroutine
+
+  !> delete node pointer
+  recursive subroutine release_node_ptr(p)
+    implicit none
+    type(node), pointer,intent(inout) :: p
+    integer :: ierr
+    
+    if(dec_ref_cnt(p) <= 0) then
+       if(is_rvalue(p)) then
+          ! call disp_info(p, 'deleting node = ')
+          ! if(associated(p%data)) then
+          !    print*, 'var_type = ', p%data%var_type
+          ! end if
+          call destroy(p, ierr)
+          deallocate(p)
+       end if
+    endif
+  end subroutine
+
+  !>destroy node A
+  recursive subroutine node_destroy(A, ierr)
+    implicit none
+    type(node), intent(inout) :: A
+    integer :: ierr
+    integer i, cnt
+
+    if(associated(A%data)) then
+       call release_ptr(A%data)
+    end if
+
+    if(allocated(A%operands)) then
+       do i = 1, size(A%operands)
+          call release_ptr(A%operands(i)%ptr)
+       enddo
+       deallocate(A%operands)
+    endif
+  end subroutine
+  
   !> node constructers
   subroutine node_new_from_tensor(B, A) 
     implicit none
@@ -77,6 +138,7 @@ contains
     
     B%id = get_global_id()
     B%m_shape = A%m_shape
+    !B%data => A
     call assign_ptr(B%data, A)
     B%node_type = type_data
   end subroutine
@@ -106,8 +168,8 @@ contains
   subroutine node_new_op_binary(C, op_type, left, right)
     implicit none
     integer, intent(in) :: op_type
-    type(node), intent(in), target :: left, right
-    type(node), intent(out) :: C
+    type(node), intent(in), pointer :: left, right
+    type(node), intent(out), pointer :: C
     real(8) :: x
 
     if((.not. is_scalar(left)) .and. &
@@ -121,26 +183,31 @@ contains
        x = left % scalar
        select case(op_type)
        case (type_plus) ! x + A
-          call node_new(C, right)
+          !call node_new(C, right)
+          call assign_ptr(C, right)
           C%alpha = x + C%alpha
        case (type_minus) ! x - A
-          call node_new(C, right)
+          !call node_new(C, right)
+          call assign_ptr(C, right)          
           C%alpha = x - C%alpha
           C%beta  = -C%beta
        case (type_mult) ! x .* A
-          call node_new(C, right)
+          !call node_new(C, right)
+          call assign_ptr(C, right)          
           C%alpha = x * C%alpha
           C%beta  = x * C%beta
        case (type_divd) ! x ./ A
+          allocate(C)
+          C%id = get_global_id()
           C%m_shape = right%m_shape
           C%beta = x
           C%node_type = type_rcp
-          C%id = get_global_id()
           call push_back(C%operands, right)
        end select
     else if(is_scalar(right)) then
        x = right % scalar
-       call node_new(C, left)      
+       !call node_new(C, left)
+       call assign_ptr(C, left)
        select case(op_type)
        case (type_plus) ! A + x
           C%alpha = C%alpha + x
@@ -156,9 +223,9 @@ contains
           C%alpha = C%beta  / x
        end select
     else
+       allocate(C)
        allocate(C%operands(2))
-       ! write(*, "(A, Z16.16)"), "left=", loc(left)
-       ! write(*, "(A, Z16.16)"), "right=", loc(right)
+       
        call assign_ptr(C%operands(1)%ptr, left)
        call assign_ptr(C%operands(2)%ptr, right)
        
@@ -190,26 +257,6 @@ contains
   end subroutine
 #:endfor
 
-  ! !> operation on a tensor
-  ! subroutine node_new_op_tensor(dst, op_type, src)
-  !   implicit none
-  !   type(node), intent(out) :: dst
-  !   integer :: op_type
-  !   type(tensor), intent(in) :: src
-  !   type(node) :: dst1
-
-  !   !call tensor_ensure_valid(src)
-  !   TENSOR_ENSURE_VALID(src)
-
-  !   call node_new(dst1, src)
-
-  !   dst1%id = get_global_id()
-    
-  !   call node_new(dst, op_type, dst1)
-    
-  !   !print*, trim(op_names(op_type))
-  ! end subroutine
-
   !> operation on a node
   subroutine node_new_op_node(dst, op_type, src)
     implicit none
@@ -226,7 +273,7 @@ contains
     ! call node_new(p, src)
 
     call push_back(dst%operands, p)
-
+    
     dst%id = get_global_id()
   end subroutine
 
@@ -246,15 +293,25 @@ contains
     write(*, "(4X, A, I0.1)") "node id : ", o%id
 #ifdef DEBUG
     write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
+    write(*, "(4X, A, I3.1)") "ref count :", o%ref_cnt
+    if(associated(o%data)) then
+       write(*, "(4X, A, Z16.16, A, I3.1)") "data addr :", loc(o%data), &
+            ", ref_cnt = ", o%data%ref_cnt
+    end if
 #endif
-    write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)    
-    write(*, "(4X, A)", advance="no") "shape : ["
-    dim = find_dim(o%m_shape)
-    do i = 1, dim
-       write(*, "(I0.1)", advance="no") o%m_shape(i)
-       if(i < dim) write(*, "(A)", advance="no") "x"
-    enddo
-    write(*, "(A)") "]"
+    write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)
+    call disp_shape(o%m_shape, '4X')
+    !write(*, "(4X, A)", advance="no") "shape : ["
+    ! dim = find_dim(o%m_shape)
+    ! if(dim == 0) then
+    !    write(*, "(I0.1)", advance="no") 0
+    ! else
+    !    do i = 1, dim
+    !       write(*, "(I0.1)", advance="no") o%m_shape(i)
+    !       if(i < dim) write(*, "(A)", advance="no") "x"
+    !    enddo
+    ! endif
+    ! write(*, "(A)") "]"
 
     write(*, "(4X, A, F8.4)") "alpha : ", o%alpha
     write(*, "(4X, A, F8.4)") "beta  : ", o%beta
@@ -450,43 +507,19 @@ contains
     endif
   end subroutine
 
-  recursive subroutine node_destroy(A, ierr)
-    implicit none
-    type(node), intent(inout), target :: A
-    integer :: ierr
-    integer i, cnt
-
-    ! A%ref_cnt = A%ref_cnt - 1
-    ! if(A%ref_cnt < 0) A%ref_cnt = 0
-    ! if(A%ref_cnt <= 0) return
-    if(dec_ref_cnt(A) == 0) then
-       if(associated(A%data)) then
-          call destroy(A%data, ierr)
-       end if
-       
-       ! if(A%node_type == type_data .or. &
-       !      A%node_type == type_scalar) return
-
-       if(allocated(A%operands)) then
-          do i = 1, size(A%operands)
-             call node_destroy(A%operands(i)%ptr, ierr)
-          enddo
-          deallocate(A%operands(i)%ptr)
-       endif
-    end if
-  end subroutine
-
   recursive subroutine disp_tree(o)
     implicit none
     type(node), intent(in) :: o
     integer :: i
-    
-    if(is_data(o)) return
-    call disp_info(o)
-    
-    do i = 1, size(o%operands)
-       call disp_tree(o%operands(i)%ptr)
-    end do
-    
+
+    if(get_rank() == 0) then
+       call disp_info(o)
+
+       if(is_data(o)) return
+       
+       do i = 1, size(o%operands)
+          call disp_tree(o%operands(i)%ptr)
+       end do
+    endif
   end subroutine
 end module

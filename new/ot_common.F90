@@ -184,4 +184,47 @@ contains
     write(*,*) ""
   end subroutine
 
+  !> if tensor shape is [2x3x1], the function returns 2
+  function find_dim(m_shape) result(dim)
+    implicit none
+    integer, intent(in) :: m_shape(3)
+    integer :: dim
+    integer :: i
+
+    do i = size(m_shape), 1, -1
+       if(m_shape(i) /= 1) then
+          dim = i
+          return
+       end if
+    end do
+    dim = 0
+  end function
+  
+  subroutine disp_shape(s, indent)
+    implicit none
+    integer :: s(3)
+    character(len=*), optional :: indent
+    character(len=10) :: header
+    integer :: dim, i
+    
+    if(present(indent)) then
+       write(header, *) "(",indent,", A)"
+    else
+       write(header, *) "(",indent,", A)"
+    endif
+    
+    dim = find_dim(s)
+    write(*, header, advance="no") "shape : ["
+    if(dim == 0) then
+       write(*, "(I0.1)", advance="no") 0
+    else
+       do i = 1, dim
+          write(*, "(I0.1)", advance="no") s(i)
+          if(i < dim) &
+               write(*, "(A)", advance="no") "x"
+       enddo
+    endif
+    write(*, "(A)") "]"
+  end subroutine
+  
 end module ot_common

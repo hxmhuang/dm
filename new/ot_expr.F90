@@ -5,7 +5,6 @@ module ot_expr
   use ot_tensor
   use dispmodule
   use ot_ref
-  use ot_vector
   use ot_geom
   use ot_node
 
@@ -24,6 +23,9 @@ module ot_expr
      module procedure node_assign_node
   end interface assignment (=)
 
+  interface disp
+     module procedure disp_node
+  end interface disp
 
   interface slice
 #:set slice_idx_type=['int', 'arr','range', 'char']
@@ -48,14 +50,6 @@ module ot_expr
 #:endfor
   end interface set
  
-  interface operator (**)
-#:for type1 in ['node', 'tensor']     
-#:for type2 in ['integer', 'real', 'real8']
-     module procedure ${type1}$_pow_${type2}$
-#:endfor
-#:endfor
-  end interface operator (**)
-  
   !the following code using preprossor to create interfaces
 #:for op in [['plus','+'], ['minus','-'], ['mult','*'], ['divd','/'], &
   ['gt','>'], ['ge', '>='], ['lt', '<'],['le', '<='],['eq','=='],['ne','/=']]
@@ -67,7 +61,7 @@ module ot_expr
 #:else
 #:set name1 = re.sub('\(8\)', '8', type1)
 #:set name2 = re.sub('\(8\)', '8', type2)
-     module procedure ${name1}$_${op[0]}$_${name2}$
+     module procedure expr_${name1}$_${op[0]}$_${name2}$
 #:endif
 #:endfor
 #:endfor
@@ -84,29 +78,26 @@ module ot_expr
   interface ${e[3]}$
 #:endif
 #:for type1 in ['tensor', 'node']
-     module procedure ${e[2]}$_${type1}$
+     module procedure expr_${e[2]}$_${type1}$
 #:endfor
   end interface
 
 #:endif
 #:endfor
 
-  interface disp
-     module procedure disp_node
-  end interface disp
-
+  interface operator (**)
+#:for type1 in ['node', 'tensor']     
+#:for type2 in ['integer', 'real', 'real8']
+     module procedure expr_${type1}$_pow_${type2}$
+#:endfor
+#:endfor
+  end interface operator (**)
+  
+  
   ! integer, allocatable, target:: rr(:)
   ! integer, pointer :: r3(:) => null()
 contains
 
-  function is_rvalue(o) result(res)
-    implicit none
-    type(node), intent(in) :: o
-    logical :: res
-    
-    res = (o%var_type == 'r')
-  end function
-  
   subroutine init_expr(ierr)
     use ot_tensor
     implicit none
@@ -115,77 +106,98 @@ contains
 
   subroutine disp_node(A, msg)
     implicit none
-    type(node) :: A
-    type(tensor) :: T
+    type(node), intent(in), pointer :: A
     character(len=*),intent(in),optional :: msg
+    type(tensor), pointer :: T    
     integer :: ierr
-    
+
+    allocate(T)
     T = A !this will evaluate the node
     if(present(msg)) then
        call disp(T, msg)
     else
        call disp(T)
     end if
-    call destroy(T, ierr)
+    call release_ptr(T)
 
     if(is_rvalue(A)) then
        call destroy(A, ierr)
-    end if
+    end if 
   end subroutine
-
+  
   subroutine node_assign_node(A, B)
     implicit none
     type(node), intent(inout), target :: A
     type(node), intent(in),    target :: B
 
-#:if DEBUG > 0
-    print*, "call node_assign_node"
-#:endif
+! #:if DEBUG > 0
+!     print*, "call node_assign_node"
+! #:endif
     
-    if(associated(B%data)) &
-         call assign_ptr(A%data, B%data)
+!     if(associated(B%data)) &
+!          call assign_ptr(A%data, B%data)
     
-    A%node_type = B%node_type
-    A%m_shape = B%m_shape
-    A%alpha = B%alpha
-    A%beta = B%beta
-    A%scalar = B%scalar
-    call copy_node_ptr(A%operands, B%operands)
+!     A%node_type = B%node_type
+!     A%m_shape = B%m_shape
+!     A%alpha = B%alpha
+!     A%beta = B%beta
+!     A%scalar = B%scalar
+!     call copy_node_ptr(A%operands, B%operands)
     
   end subroutine
   
   subroutine node_assign_tensor(A, B)
     implicit none
-
-    type(tensor), intent(out) :: A
-    
+    type(tensor), intent(inout) :: A
     !the type of B must be "intent(in)"
-    type(node), intent(in)   :: B 
-    type(node) :: C
-    type(node_ptr), allocatable :: res(:)
+    type(node), intent(in) :: B
+    type(node), pointer :: src
+    type(tensor), pointer :: dst
+    type(tensor) :: res
     integer ierr
+
+    print*, "node assigning to tensor ..."
+
+    call assign_ptr(dst, A)
+    call assign_ptr(src, B)
     
-    call node_new(C, B)
+    ! allocate(root)
+    ! root = B
+    !root => B
+    
+    ! call disp_info(B, 'B = ')
+    ! call destroy(p, ierr)
+    ! return
+    
+    !call node_new(C, B)
 
     ! call disp(B%ref%ref_box, 'B%ref_box = ')
     ! call disp(C%ref%ref_box, 'C%ref_box = ')       
 
     !call node_optimize(C)
 
-    !call disp_tree(C)
+
     
     !call disp_info(C, 'C=')
     
     ! write(*, "(A, Z16.16)"), "op1=", loc(C%operands(1)%ptr)
     ! write(*, "(A, Z16.16)"), "op2=", loc(C%operands(2)%ptr)
     
-    call write_graph(C, file='C.dot')
+    !call write_graph(C, file='C.dot')
+    ! print*, '-------------------------'
+    ! call disp_tree(src)
     
-    call eval(A, C, ierr, .true.)
+    call eval(dst, src, ierr, .true.)
+    dst%var_type = 'l'
 
-    ! call node_destroy(C, ierr)
+    ! print*, '-------------------------'    
+    ! call disp_tree(src)
     
-    !call tensor_copy(A, B%data)
+    call release_ptr(src)
+    call release_ptr(dst)
+    
+    ! call node_destroy(C, ierr)
+    ! call tensor_copy(A, B%data)
     
     !if(B%node_type /= type_data) call eval(A)
     ! if(B%node_type == type_data) then
@@ -196,7 +208,7 @@ contains
     !    call tensor_copy(A, C)
     ! endif
     
-    if(allocated(res)) deallocate(res)    
+    !if(allocated(res)) deallocate(res)    
   end subroutine
 
   !*********************************
@@ -204,8 +216,8 @@ contains
   !*********************************
   recursive subroutine eval(res, A, ierr, force_eval_arg)
     implicit none
-    type(tensor), intent(inout) :: res
-    type(node), intent(in) :: A
+    type(tensor), intent(inout), pointer :: res
+    type(node), intent(inout) :: A
     integer :: i, num_oprands
     integer, intent(out) :: ierr
     real(8), allocatable :: ops_alpha(:), ops_beta(:)
@@ -214,6 +226,7 @@ contains
     logical, optional, intent(in) :: force_eval_arg
     logical :: force_eval
     type(node), pointer :: node_ptr
+    type(tensor), pointer :: tmp_res
     
     ! interface
     !    subroutine invoke(p, res, operands, alpha, beta, args, n) &
@@ -269,28 +282,45 @@ contains
           
           node_ptr => A%operands(i)%ptr
 
-          if(.not. associated(node_ptr%data)) then
-             allocate(node_ptr%data)
-          endif
-          
           call eval(node_ptr%data, node_ptr, ierr, .false.)
 
           ! print*, "============================"
           ! call disp_info(node_ptr, 'NODE')
           ! call disp(node_ptr%data, 'TENSOR = ')
 
-          call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
+          !call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
+          ops_tensor(i)%ptr => node_ptr%data
           ops_alpha(i) = node_ptr%alpha
           ops_beta(i)  = node_ptr%beta
        end do
     else
        allocate(ops_tensor(1), ops_alpha(1), ops_beta(1))
-       call assign_ptr(ops_tensor(1)%ptr, A%data)
+       !call assign_ptr(ops_tensor(1)%ptr, A%data)
+       ops_tensor(i)%ptr => node_ptr%data
        ops_alpha(1) = A%alpha
        ops_beta(1)  = A%beta
     endif
 
-    call tensor_duplicate(res, ops_tensor(1)%ptr)
+    ! if(A%node_type == type_abs) &
+    !      print*, "YYYYYYYYY = ", associated(res)
+    
+    if(.not. associated(res)) then
+       allocate(tmp_res)
+       !allocate space for result tensor object
+       call tensor_duplicate(tmp_res, ops_tensor(1)%ptr)
+       call assign_ptr(res, tmp_res)
+
+       !the evaluation result should be a rvalue
+       res%var_type = 'r'
+    endif
+
+    if(associated(res) &
+         .and. res%data == 0) then
+       call tensor_duplicate(res, ops_tensor(1)%ptr)
+    endif
+
+    ! if(A%node_type == type_abs) &
+    !      print*, "XXXXXXXXX = ", res%ref_cnt
     
     !call invoke(A%node_type, loc(A%data), loc(ops_tensor), &
     !     loc(alpha), loc(beta), loc(A%args), num_oprands)
@@ -314,6 +344,10 @@ contains
                ops_tensor, ops_alpha, ops_beta, A%args)
        end select
 
+       do i = 1, size(ops_tensor)
+        !  call release_ptr(ops_tensor(i)%ptr)
+       enddo
+       
        ! if(.not. associated(A%data)) then
        !    print*, "execute function ", op_names(A%node_type), " failed."
        !    call abort()
@@ -331,10 +365,14 @@ contains
     implicit none
     type(tensor), intent(out) :: A
     type(tensor), intent(in)  :: B
-
+    integer :: ierr
     print*, "--> called tensor_assign_tensor"
-    
-    call tensor_deep_copy(A, B)
+
+    if(is_rvalue(B)) then
+       call tensor_copy(A, B)
+    else
+       call tensor_deep_copy(A, B)
+    endif
   end subroutine
   
 
@@ -462,32 +500,38 @@ contains
 #:else  
 #:set name1 = re.sub('\(8\)', '8', type1)
 #:set name2 = re.sub('\(8\)', '8', type2)
-  function ${name1}$_${op}$_${name2}$ (A, B) result(res)
+  function expr_${name1}$_${op}$_${name2}$ (A, B) result(res)
     implicit none       
-    type(${type1}$),intent(in),target  :: A
-    type(${type2}$),intent(in),target  :: B
+    type(${type1}$),intent(in)  :: A
+    type(${type2}$),intent(in)  :: B
     type(node), pointer :: res
     type(node), pointer :: C, D
 
+    
 #:if type1 == 'node'
-    C => A
+    call assign_ptr(C, A)
 #:else
     allocate(C)
     call node_new(C, A)
 #:endif
 
 #:if type2 == 'node'
-    D => B
+    call assign_ptr(D, B)
 #:else
     allocate(D)
     call node_new(D, B)
 #:endif
     
-    ! call node_new(C, A)
-    ! call node_new(D, B)
     allocate(res)
     call node_new(res, type_${op}$, C, D)
     res%var_type = 'r'
+
+#:if type1 == 'node'
+    call release_ptr(C)
+#:endif
+#:if type2 == 'node'
+    call release_ptr(D)
+#:endif
   end function
   
 #:endif
@@ -499,21 +543,29 @@ contains
 #:if e[1] >= 111
   #:for type in ['tensor', 'node']
   !> function ${e[2]}$(${type}$), return a tree node 
-  function ${e[2]}$_${type}$ (o) result(res)
+  function expr_${e[2]}$_${type}$ (o) result(res)
     implicit none
-    type(${type}$), intent(in), target :: o
+    type(${type}$), intent(in) :: o
     type(node), pointer :: res
     type(node), pointer :: tmp_o
-    
+
 #:if type == 'node'
-    tmp_o => o
+    call assign_ptr(tmp_o, o)
 #:else
     allocate(tmp_o)
     call node_new(tmp_o, o)
 #:endif
-    
     allocate(res)
     call node_new(res, ${e[0]}$, tmp_o)
+#:if type == 'node'
+    call release_ptr(tmp_o)
+#:endif
+
+    print*, "calling expr_${e[2]}$_${type}$ ..."
+    print*, op_names(res%node_type),"==>", op_names(tmp_o%node_type)
+    if(tmp_o%node_type == type_data) &
+         print*, "xxxxxxxxxxxxxx = ", tmp_o%ref_cnt
+    
     res%var_type = 'r'    
   end function
 
@@ -525,19 +577,16 @@ contains
 #:for type2 in ['integer', 'real', 'real(8)']
 #:set name2 = re.sub('\(8\)', '8', type2)
   !> power function ${type1}$**${type2}$
-  function ${type1}$_pow_${name2}$(o, n) result(res)
+  function expr_${type1}$_pow_${name2}$(o, n) result(res)
     implicit none
-    type(${type1}$), intent(in), target :: o
-    type(${type2}$), intent(in), target :: n
+    type(${type1}$), intent(in) :: o
+    type(${type2}$), intent(in) :: n
     type(node), pointer :: res
     type(node), pointer :: tmp_o
 
-    ! allocate(new_o)
-    ! call node_new(new_o, o)
-    ! call node_new(res, type_pow, new_o)
     
 #:if type1 == 'node'
-    tmp_o => o
+    call assign_ptr(tmp_o, o)
 #:else
     allocate(tmp_o)
     call node_new(tmp_o, o)
@@ -547,6 +596,10 @@ contains
     call node_new(res, type_pow, tmp_o)
     res%args(1) = n
     res%var_type = 'r'
+
+#:if type1 == 'node'
+    call release_ptr(tmp_o)
+#:endif
   end function
   
 #:endfor

@@ -57,9 +57,25 @@ module ot_tensor
   interface is_valid
      module procedure is_valid_tensor
   end interface is_valid
-     
+
+  interface assign_ptr
+     module procedure assign_tensor_ptr
+  end interface assign_ptr
+
+  interface release_ptr
+     module procedure release_tensor_ptr
+  end interface release_ptr
+
+#:set t = 'tensor'
+#:include "ot_vector.if"
+#:del t
+  
 contains
 
+#:set t = 'tensor'
+#:include "ot_vector.inc"
+#:del t
+  
   subroutine init_tensor(ierr)
     implicit none
     integer, intent(out) :: ierr
@@ -68,6 +84,43 @@ contains
     call init_data(ierr)
 
   end subroutine
+
+  
+  subroutine assign_tensor_ptr(p, o)
+    implicit none
+    type(tensor), pointer,intent(out) :: p
+    type(tensor), target, intent(in)  :: o
+    integer :: cnt
+    p => o
+    ! add reference counter
+    cnt = inc_ref_cnt(p)
+  end subroutine
+  
+  !>delete tensor pointer
+  subroutine release_tensor_ptr(p)
+    implicit none
+    type(tensor), pointer,intent(inout) :: p
+    integer :: ierr
+    
+    if(dec_ref_cnt(p) <= 0) then
+       if(is_rvalue(p)) then
+          call destroy(p, ierr)
+          deallocate(p)
+          p => null()
+       endif
+    endif
+
+  end subroutine
+
+  !>destroy the tensor
+  subroutine tensor_destroy(A, ierr)
+    implicit none
+    type(tensor), intent(inout) :: A
+    integer, intent(out) :: ierr
+    integer :: cnt
+
+    call data_destroy(A%data, ierr)
+  end subroutine 
 
   subroutine tensor_new_from_data(t, data)
     implicit none
@@ -147,16 +200,22 @@ contains
        else
           write(*, "(A)") "ans = "
        endif
-
+#ifdef DEBUG
        write(*, "(4X, A, Z16.16)") "obj addr : 0x", loc(o)
-
-       dim = find_dim(o%m_shape)
-       write(*, "(4X, A)", advance="no") "shape : ["
-       do i = 1, dim
-          write(*, "(I0.1)", advance="no") o%m_shape(i)
-          if(i < dim) &
-               write(*, "(A)", advance="no") "x"
-       enddo
+       write(*, "(4X, A, I3.1)") "ref count :", o%ref_cnt
+#endif
+       call disp_shape(o%m_shape, '4X')
+       ! dim = find_dim(o%m_shape)
+       ! write(*, "(4X, A)", advance="no") "shape : ["
+       ! if(dim == 0) then
+       !    write(*, "(I0.1)", advance="no") 0
+       ! else
+       !    do i = 1, dim
+       !       write(*, "(I0.1)", advance="no") o%m_shape(i)
+       !       if(i < dim) &
+       !            write(*, "(A)", advance="no") "x"
+       !    enddo
+       ! endif
        write(*, "(A)") "]"
        
        write(*, "(4X, A, L1)") "is_field    : ", o%is_field
@@ -167,21 +226,6 @@ contains
     end if
   end subroutine
 
-  !> if tensor shape is [2x3x1], the function returns 2
-  function find_dim(m_shape) result(dim)
-    implicit none
-    integer, intent(in) :: m_shape(3)
-    integer :: dim
-    integer :: i
-
-    do i = size(m_shape), 1, -1
-       if(m_shape(i) /= 1) then
-          dim = i
-          return
-       end if
-    end do
-    dim = 0
-  end function
 
   function is_valid_tensor(t) result(res)
     implicit none
@@ -217,13 +261,14 @@ contains
           write(*, "(A)") "ans = "
        endif
 
-       dim = find_dim(A%m_shape)
-       write(*, "(4X, A)", advance="no") "shape : ["
-       do i = 1, dim
-          write(*, "(I0.1)", advance="no") A%m_shape(i)
-          if(i < dim) write(*, "(A)", advance="no") "x"
-       enddo
-       write(*, "(A)") "]"
+       call disp_shape(A%m_shape, '4X')
+       ! dim = find_dim(A%m_shape)
+       ! write(*, "(4X, A)", advance="no") "shape : ["
+       ! do i = 1, dim
+       !    write(*, "(I0.1)", advance="no") A%m_shape(i)
+       !    if(i < dim) write(*, "(A)", advance="no") "x"
+       ! enddo
+       ! write(*, "(A)") "]"
     endif
     
     if(A%data /= 0) then
@@ -253,18 +298,6 @@ contains
     
   end subroutine
 
-  subroutine tensor_destroy(A, ierr)
-    implicit none
-    type(tensor), intent(inout) :: A
-    integer, intent(out) :: ierr
-    integer :: cnt
-    
-    cnt = dec_ref_cnt(A)
-    
-    if(cnt == 0) then
-       call data_destroy(A%data, ierr)
-    end if
-  end subroutine 
 
 #:for op in L
   #:if op[1] >= 50
@@ -319,7 +352,7 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
     type(tensor), intent(inout) :: dst
     type(tensor), intent(in) :: src
 
-    dst%m_shape = src%m_shape
+    dst%m_shape  = src%m_shape
     dst%is_field = src%is_field
     dst%grid_pos = src%grid_pos
   end subroutine

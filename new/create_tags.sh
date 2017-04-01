@@ -1,1 +1,1 @@
-etags dm*.F90 *.h main.F*
+etags *.F90 *.h 

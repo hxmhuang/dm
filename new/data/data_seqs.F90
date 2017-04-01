@@ -16,13 +16,15 @@
     integer :: dof = 1, s = 1
     PetscScalar, pointer :: x1(:), x2(:,:), x3(:,:,:)
 
-    call PetscLogEventRegister("data_consts",0, ievent, ierr)
+    call PetscLogEventRegister("data_seqs",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
     m = t_shape(1)
     n = t_shape(2)
     k = t_shape(3)
 
+    print*, "hello!!"
+    
     call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,         &
          DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
          DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
@@ -30,7 +32,7 @@
          PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
          PETSC_NULL_INTEGER,data_dm,ierr)
 
-    call DMGetGlobalVector(data_dm, data,ierr)
+    call DMCreateGlobalVector(data_dm, data,ierr)
     call DMDAGetCorners(data_dm, xs,ys,zs, xl,yl,zl,ierr)
     call DMDAVecGetArrayF90(data_dm, data, x3,ierr)
 
@@ -53,6 +55,6 @@
     end do
 
     call DMDAVecRestoreArrayF90(data_dm, data, x3, ierr)
-
+    call DMDestroy(data_dm, ierr)
     call PetscLogEventEnd(ievent,ierr)
   end subroutine

@@ -287,7 +287,7 @@ contains
     CHKERRQ(ierr)
     
     call DMDAGetCorners(arr_dm,xs,ys,zs, xl,yl,zl,ierr)
-    call DMGetGlobalVector(arr_dm, arr, ierr)
+    call DMCreateGlobalVector(arr_dm, arr, ierr)
   end subroutine
 
   subroutine petsc_new3d_by_dm(arr, arr_dm)
@@ -298,7 +298,7 @@ contains
     DM, intent(in) :: arr_dm
     integer :: ierr
     
-    call DMGetGlobalVector(arr_dm, arr, ierr)
+    call DMCreateGlobalVector(arr_dm, arr, ierr)
 
     CHKERRQ(ierr)    
   end subroutine
