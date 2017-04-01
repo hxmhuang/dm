@@ -1,0 +1,10 @@
+!!!file-type:f90
+
+#:for op in ['push_back', 'pop', 'remove']  
+  interface ${op}$
+     module procedure ${op}$_${t}$
+#:if op == 'push_back'
+     module procedure ${op}$_${t}$_arr
+#:endif
+  end interface ${op}$
+#:endfor
