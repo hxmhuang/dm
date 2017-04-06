@@ -62,7 +62,16 @@ module ot_node
 #:include "ot_vector.if"
 #:del t
   
-  character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names  
+  character(len=8), dimension(${L[len(L)-1][1]}$) :: op_names
+
+  type op_desc
+     character(len=8) :: op_name
+     character(len=1) :: ntype ! unary/binary
+     character(len=1) :: etype ! element-wise type
+     character(len=20) :: expr_form !expression form
+  end type op_desc
+
+  type(op_desc), dimension(${L[len(L)-1][1]}$) :: op_desc_list
 contains
 
 #:set t = 'node'
@@ -73,13 +82,30 @@ contains
   subroutine init_node(ierr)
     implicit none
     integer, intent(out) :: ierr
+    integer :: i
     
 #:for e in L
     op_names(${e[1]}$) = "${e[3]}$"
+    
+    op_desc_list(${e[1]}$)%op_name   = "${e[3]}$"
+    op_desc_list(${e[1]}$)%ntype     = "${e[4]}$"
+    op_desc_list(${e[1]}$)%etype     = "${e[5]}$"
+    op_desc_list(${e[1]}$)%expr_form = "${e[6]}$"        
 #:endfor
 
+    ! do i = 1, size(op_desc_list)
+    !    print*, 'i=', i, 'etype=', op_desc_list(i)%etype
+    ! enddo
   end subroutine
 
+  !> is element-wise
+  function is_ew(o) result(res)
+    type(node), intent(in) :: o
+    logical :: res
+
+    res = (op_desc_list(o%node_type)%etype == 'T')
+  end function
+  
   subroutine assign_node_ptr(p, o)
     implicit none
     type(node), pointer,intent(out) :: p
@@ -138,12 +164,11 @@ contains
     
     B%id = get_global_id()
     B%m_shape = A%m_shape
-    !B%data => A
     call assign_ptr(B%data, A)
     B%node_type = type_data
   end subroutine
 
-  !copy node A to node B
+  !>copy node A to node B
   subroutine node_new_from_node(B, A) 
     implicit none
     type(node), intent(in)   :: A
@@ -165,6 +190,7 @@ contains
     call copy_node_ptr(B%operands, A%operands)
   end subroutine
 
+  !> create a node from binary operation
   subroutine node_new_op_binary(C, op_type, left, right)
     implicit none
     integer, intent(in) :: op_type
@@ -183,16 +209,13 @@ contains
        x = left % scalar
        select case(op_type)
        case (type_plus) ! x + A
-          !call node_new(C, right)
           call assign_ptr(C, right)
           C%alpha = x + C%alpha
        case (type_minus) ! x - A
-          !call node_new(C, right)
           call assign_ptr(C, right)          
           C%alpha = x - C%alpha
           C%beta  = -C%beta
        case (type_mult) ! x .* A
-          !call node_new(C, right)
           call assign_ptr(C, right)          
           C%alpha = x * C%alpha
           C%beta  = x * C%beta
@@ -206,7 +229,6 @@ contains
        end select
     else if(is_scalar(right)) then
        x = right % scalar
-       !call node_new(C, left)
        call assign_ptr(C, left)
        select case(op_type)
        case (type_plus) ! A + x

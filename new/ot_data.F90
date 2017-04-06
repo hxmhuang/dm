@@ -33,6 +33,7 @@ contains
 #include "petsc.h"
     integer, intent(out) :: ierr
     call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
+
   end subroutine 
 
   subroutine finalize_data(ierr)
@@ -418,6 +419,13 @@ contains
 #:endif
 #:endfor
 
+  subroutine data_matmul(C, A, B)
+    implicit none
+    Vec, intent(in) :: A, B
+    Vec, intent(out) :: C
+    
+  end subroutine
+  
 subroutine data_get_sub(dst, src, ref)
   implicit none
 #include "petsc.h"

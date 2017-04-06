@@ -23,8 +23,6 @@
     n = t_shape(2)
     k = t_shape(3)
 
-    print*, "hello!!"
-    
     call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,         &
          DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,                      &
          DMDA_STENCIL_STAR, m,n,k,PETSC_DECIDE,PETSC_DECIDE,     &
@@ -32,9 +30,9 @@
          PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                  &
          PETSC_NULL_INTEGER,data_dm,ierr)
 
-    call DMCreateGlobalVector(data_dm, data,ierr)
-    call DMDAGetCorners(data_dm, xs,ys,zs, xl,yl,zl,ierr)
-    call DMDAVecGetArrayF90(data_dm, data, x3,ierr)
+    call DMCreateGlobalVector(data_dm, data, ierr)
+    call DMDAGetCorners(data_dm,xs,ys,zs,xl,yl,zl,ierr)
+    call DMDAVecGetArrayF90(data_dm, data, x3, ierr)
 
     xe = xs + xl - 1
     ye = ys + yl - 1

@@ -45,6 +45,18 @@ contains
          PETSC_NULL_BOOL,ierr)
     
   end subroutine
+
+  function ot_has_option(str) result(res)
+    implicit none
+    character(len=*), intent(in) :: str
+#include "petsc.h"
+    logical :: res
+    integer :: ierr
+    
+    call PetscOptionsHasName(PETSC_NULL_OBJECT, &
+         PETSC_NULL_CHARACTER, str, res, ierr)
+    
+  end function
   
   function get_global_id() result (res)
     implicit none
@@ -226,5 +238,19 @@ contains
     endif
     write(*, "(A)") "]"
   end subroutine
+
+  function djb_hash(str) result(hash)
+    implicit none
+    character(len=*),intent(in) :: str
+    integer(kind=8) :: hash
+    integer :: i
+
+    hash = 5381
+
+    do i=1,len(str)
+        hash = (ishft(hash,5) + hash) + ichar(str(i:i))
+    end do
+
+  end function
   
 end module ot_common

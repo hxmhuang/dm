@@ -1,8 +1,7 @@
-
-
 module ot_test
   use ot_mod
   use ot_petsc
+  use ot_dict
 contains
   subroutine test_expr()
     implicit none
@@ -132,7 +131,10 @@ contains
     
     A = seqs(m, n, k)
     B = ones(m, n, k)
-    call disp(A, 'A = ')
+    C = ones(m, n, k)
+    
+    D = A + B + C
+    call disp(D, 'D = ')
 
     ! B = A * 3
     
@@ -298,4 +300,22 @@ contains
     
     print*, "a = ", a(1)
   end subroutine test_ptr
+
+  subroutine test_dict()
+    implicit none
+    type(dict_item), pointer :: A
+    integer(kind=8) :: i
+    
+    A => null()
+
+    do i = 0_8, 10_8
+       call dict_add(A, i, int(100+i,8))
+    end do
+
+    call disp(A)
+    
+    ! do i = 0_8, 20_8
+    !    print*, "get(i)=", dict_get(A, i)
+    ! end do
+  end subroutine
 end module

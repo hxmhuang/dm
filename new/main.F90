@@ -23,6 +23,15 @@ contains
   subroutine sin()
     print*, "hello4!"
   end subroutine
+
+  ! subroutine invoke(f)
+  !   interface 
+  !      subroutine f()
+  !      end subroutine
+  !   end interface
+
+  !   call f()
+  ! end subroutine
 end module test
 
 program main
@@ -48,7 +57,19 @@ program main
   integer :: arr(4,4)
   integer, allocatable :: aa(:)
   type(range) :: rgn
+  integer(kind=4) :: ii
+  character(len=100) :: aaa
 
+
+  ! call invoke(transfer(loc(fun4), UNKNOWN))
+  ! return
+  
+  ! aaa = "hello"
+  ! print*, "len(a) = ", len(aaa)
+  ! print*, "len(trim(a)) = ", len(trim(aaa))
+
+  !return
+  
   call ot_init(ierr)
   ! allocate(aa(0))
   ! print*, size(aa)
@@ -119,6 +140,7 @@ program main
   call test_math()
   !call test_expr()
   !call test_ptr()
+  !call test_dict()
   
   EXIT
 

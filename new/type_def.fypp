@@ -1,36 +1,36 @@
-#![type_name, type_id, name_appdx, symbol ]
+#![type_name,   type_id, name_appdx, symbol,  ntype, etype, expr_form]
 #:set L = &
-  [["type_data",    1,	 "data",    "data",      ""],&    
-   ["type_scalar",  2,	 "scalar",  "scalar",    ""],&       
-   ["type_ref",	    3,	 "ref",	    "ref",       ""],&       
-   ["type_plus",    50,	 "plus",    "+",   "A"],&    
-   ["type_minus",   51,	 "minus",   "-",   "A"],&    
-   ["type_mult",    52,	 "mult",    "*",   "A"],&    
-   ["type_divd",    53,	 "divd",    "/",   "A"],&    
-   ["type_gt", 	    54,	 "gt", 	    ">",   "B"],&    
-   ["type_ge", 	    55,	 "ge", 	    ">=",  "B"],&    
-   ["type_lt", 	    56,	 "lt", 	    "<",   "B"],&    
-   ["type_le", 	    57,	 "le", 	    "<=",  "B"],&    
-   ["type_eq",      58,	 "eq", 	    "==",  "B"],&    
-   ["type_ne", 	    59,	 "ne", 	    "/=",  "B"],&    
-   ["type_pow",     110, "pow",     "pow", "C"],&  
-   ["type_exp",     111, "exp",     "exp", "C"],&  
-   ["type_sin",     112, "sin",     "sin", "C"],&  
-   ["type_tan",     113, "tan",     "tan", "C"],&  
-   ["type_cos",     114, "cos",     "cos", "C"],&  
-   ["type_rcp",     115, "rcp",     "rcp", "C"],&  
-   ["type_sqrt",    116, "sqrt",    "sqrt","C"],& 
-   ["type_asin",    117, "asin",    "asin","C"],& 
-   ["type_acos",    118, "acos",    "acos","C"],& 
-   ["type_atan",    119, "atan",    "atan","C"],& 
-   ["type_abs",	    120, "abs",	    "abs", "C"],&       
-   ["type_log",     121, "log",	    "log", "C"],&  
-   ["type_uplus",   122, "uplus",   "+",   "C"],&
-   ["type_uminus",  123, "uminus",  "-",   "C"],&
-   ["type_log10",   124, "log10",   "log10",  "C"],&
-   ["type_tanh",    125, "tanh",    "tanh",   "C"],&
-   ["type_sinh",    126, "sinh",    "sinh",   "C"],&
-   ["type_cosh",    127, "cosh",    "cosh",   "C"]]
+  [["type_data",    1,	 "data",    "data",      "",  "",   ""],&    
+   ["type_scalar",  2,	 "scalar",  "scalar",    "",  "",   ""],&       
+   ["type_ref",	    3,	 "ref",	    "ref",       "",  "",   ""],&       
+   ["type_plus",    50,	 "plus",    "+",    	 "A", "T",  "A+B"],&    
+   ["type_minus",   51,	 "minus",   "-",   	 "A", "T",  "A-B"],&    
+   ["type_mult",    52,	 "mult",    "*",   	 "A", "T",  "A*B"],&    
+   ["type_divd",    53,	 "divd",    "/",   	 "A", "T",  "A/B"],&    
+   ["type_gt", 	    54,	 "gt", 	    ">",   	 "B", "T",  "A>B"],&       
+   ["type_ge", 	    55,	 "ge", 	    ">=",  	 "B", "T",  "A>=B"],&      
+   ["type_lt", 	    56,	 "lt", 	    "<",   	 "B", "T",  "A<B"],&       
+   ["type_le", 	    57,	 "le", 	    "<=",  	 "B", "T",  "A<=B"],&      
+   ["type_eq",      58,	 "eq", 	    "==",  	 "B", "T",  "A==B"],&      
+   ["type_ne", 	    59,	 "ne", 	    "/=",  	 "B", "T",  "A/=B"],&      
+   ["type_pow",     110, "pow",     "pow", 	 "C", "T",  "A**B"],&      
+   ["type_exp",     111, "exp",     "exp", 	 "C", "T",  "exp(A)"],&    
+   ["type_sin",     112, "sin",     "sin", 	 "C", "F",  "sin(A)"],&    
+   ["type_tan",     113, "tan",     "tan", 	 "C", "T",  "tan(A)"],&    
+   ["type_cos",     114, "cos",     "cos", 	 "C", "T",  "cos(A)"],&    
+   ["type_rcp",     115, "rcp",     "rcp", 	 "C", "T",  "1.0/A"],&     
+   ["type_sqrt",    116, "sqrt",    "sqrt",	 "C", "T",  "sqrt(A)"],&   
+   ["type_asin",    117, "asin",    "asin",	 "C", "T",  "asin(A)"],&   
+   ["type_acos",    118, "acos",    "acos",	 "C", "T",  "acos(A)"],&   
+   ["type_atan",    119, "atan",    "atan",	 "C", "T",  "atan(A)"],&   
+   ["type_abs",	    120, "abs",	    "abs", 	 "C", "T",  "abs(A)"],&    
+   ["type_log",     121, "log",	    "log", 	 "C", "T",  "log(A)"],&    
+   ["type_uplus",   122, "uplus",   "+",   	 "C", "T",  "+(A)"],&	     
+   ["type_uminus",  123, "uminus",  "-",   	 "C", "T",  "-(A)"],&	     
+   ["type_log10",   124, "log10",   "log10",  	 "C", "T",  "log10(A)"],&  
+   ["type_tanh",    125, "tanh",    "tanh",   	 "C", "T",  "tanh(A)"],&   
+   ["type_sinh",    126, "sinh",    "sinh",   	 "C", "T",  "sinh(A)"],&   
+   ["type_cosh",    127, "cosh",    "cosh",   	 "C", "T",  "cosh(A)"]]    
 
 
 

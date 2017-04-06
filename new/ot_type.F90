@@ -91,6 +91,9 @@ module ot_type
 
      !default is lvalue
      character(len=1) :: var_type = 'l'
+
+     !store its hash
+     integer(kind=8) :: hash
   end type node
 
   type tensor

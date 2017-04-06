@@ -1,5 +1,8 @@
 #include "type.h"
 
+#define MAX_TREESTR_LENGTH 100000
+#define SKIP_EW_NODE 1
+
 module ot_expr
   use ot_common
   use ot_tensor
@@ -7,7 +10,8 @@ module ot_expr
   use ot_ref
   use ot_geom
   use ot_node
-
+  use ot_kernels
+  
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
 #:set DEBUG = 1
 #define DEBUG
@@ -92,16 +96,35 @@ module ot_expr
 #:endfor
 #:endfor
   end interface operator (**)
-  
-  
-  ! integer, allocatable, target:: rr(:)
-  ! integer, pointer :: r3(:) => null()
+
+  logical :: is_opt_mode = .false. ! if mode=1, the expression just generate kernels with evaluation
+  character(len=*), parameter :: kernel_file = "kernels.fypp"
 contains
 
   subroutine init_expr(ierr)
     use ot_tensor
     implicit none
     integer, intent(out) :: ierr
+    integer :: out_unit = 10
+    
+    if(ot_has_option('--opt_mode')) then
+       is_opt_mode = .true.
+       !call ot_option_int('--opt_mode', opt_mode, ierr)
+       if(get_rank(MPI_COMM_WORLD) == 0) then
+          print*, "===================================================="
+          print*, "WARNING : In optimization mode, &
+               & only optimization info generated. &
+               & Evaluation would be performed!!"
+          print*, "===================================================="
+
+          !clean up the kernel file
+          open(unit=out_unit,file=kernel_file, &
+               action='write', status='replace')
+          close(out_unit)
+          
+       end if
+    endif
+
   end subroutine
 
   subroutine disp_node(A, msg)
@@ -149,13 +172,14 @@ contains
   subroutine node_assign_tensor(A, B)
     implicit none
     type(tensor), intent(inout) :: A
-    !the type of B must be "intent(in)"
     type(node), intent(in) :: B
     type(node), pointer :: src
     type(tensor), pointer :: dst
     type(tensor) :: res
-    integer ierr
-
+    integer ierr, cnt
+    character(len=MAX_TREESTR_LENGTH) :: str
+    integer, parameter :: out_unit = 10
+    
     print*, "node assigning to tensor ..."
 
     call assign_ptr(dst, A)
@@ -175,9 +199,6 @@ contains
     ! call disp(C%ref%ref_box, 'C%ref_box = ')       
 
     !call node_optimize(C)
-
-
-    
     !call disp_info(C, 'C=')
     
     ! write(*, "(A, Z16.16)"), "op1=", loc(C%operands(1)%ptr)
@@ -187,8 +208,19 @@ contains
     ! print*, '-------------------------'
     ! call disp_tree(src)
     
-    call eval(dst, src, ierr, .true.)
-    dst%var_type = 'l'
+    if(is_opt_mode) then
+       call gen_kernels(src)
+    else
+       ! print*, "cnt2 = ", expr_sub_cnt(src, 1)    
+       ! print*, "cnt1 = ", expr_sub_cnt(src)
+
+       call write_graph(src, file='src.dot')
+
+       call gen_hash(src, SKIP_EW_NODE)
+       
+       call eval(dst, src, ierr, .true.)
+       dst%var_type = 'l'
+    endif
 
     ! print*, '-------------------------'    
     ! call disp_tree(src)
@@ -374,7 +406,100 @@ contains
        call tensor_deep_copy(A, B)
     endif
   end subroutine
+
+  !> get number of sub nodes
+  recursive function expr_sub_cnt(o, arg_mode, arg_is_root) result(res)
+    implicit none
+    type(node), intent(in) :: o
+    integer, save :: cnt = 0
+    integer :: i, res
+    integer, optional :: arg_mode
+    integer :: mode
+    logical, optional :: arg_is_root
+    logical :: is_root
+
+    is_root = .true.
+    if(present(arg_is_root)) is_root = arg_is_root
+    
+    res = 0    
+    mode = 0
+    if(present(arg_mode)) mode = arg_mode
+
+    if(is_data(o)) then
+       return
+    endif
+
+    if(mode == 1) then
+       if(.not. is_ew(o)) then
+          return
+       endif
+    endif
+
+    do i = 1, size(o%operands)
+       res = res + expr_sub_cnt(o%operands(i)%ptr, mode, .false.)
+    end do
+    res = res + size(o%operands)
+
+    if(is_root) res = res + 1
+
+  end function
   
+  recursive subroutine gen_kernels(o, arg_is_root)
+    implicit none
+    type(node), intent(in) :: o
+    character(len=MAX_TREESTR_LENGTH) :: str
+    logical, optional :: arg_is_root
+    logical :: is_root
+!    character(len=*), parameter :: file = "kernels.fypp"
+    integer ::out_unit = 10
+    integer :: i
+    
+    if(present(arg_is_root)) then
+       is_root = arg_is_root
+    else
+       is_root = .true.
+    endif
+
+    if(expr_sub_cnt(o, 1) < 2) return
+    
+    if(get_rank(MPI_COMM_WORLD) == 0) then
+       if(is_data(o)) return
+       if(is_root .or. (.not. is_ew(o))) then
+          !if(is_root) then
+          print*, "node_type = ", op_names(o%node_type)
+          call tree_to_string(str, o, 1)
+          print*, "str = ", trim(str)
+          print*, "hash = ", djb_hash(trim(str))
+          
+          ! if(is_root) then
+          !    open(unit=out_unit,file=file, &
+          !         action='write', status='replace')
+          ! else
+          ! endif
+
+          open(unit=out_unit,file=kernel_file, &
+               action='write', status='unknown', position='append')
+
+          write(out_unit, "(I0.1,A)") &
+               abs(djb_hash(trim(str))), ":"//trim(str)
+
+          close(out_unit)
+          !else
+          ! do i = 1, size(o%operands)
+          !    call tree_to_string(str, o%operands(i)%ptr, 1)
+          !    open(unit=out_unit,file=file, &
+          !         action='write', status='unknown')
+          !    write(out_unit, "(I10.1,A)") &
+          !         djb_hash(trim(str)), ":"//trim(str)
+          !    close(out_unit)
+          ! enddo
+          !endif
+       endif
+       do i = 1, size(o%operands)
+          call gen_kernels(o%operands(i)%ptr, .false.)
+       enddo
+    endif
+  end subroutine
 
   recursive subroutine node_optimize(A) 
     implicit none
@@ -475,7 +600,7 @@ contains
        end if
        return
     end if
-    
+
     if(allocated(A%operands)) then
        do i = 1, size(A%operands)
           call write_graph(A%operands(i)%ptr,  .false.)
@@ -836,6 +961,115 @@ contains
   end subroutine
 #:endfor
 #:endfor
+  
+  ! function replace_text (s,text,rep)  result(outs)
+  !   character(*)        :: s,text,rep
+  !   character(len(s)+100) :: outs     ! provide outs with extra 100 char len
+  !   integer             :: i, nt, nr
 
+  !   outs = s ; nt = len_trim(text) ; nr = len_trim(rep)
+  !   do
+  !      i = index(outs,text(:nt)) ; if (i == 0) exit
+  !      outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
+  !   end do
+  ! end function
+
+  recursive subroutine gen_hash(o, arg_mode, arg_is_root)
+    implicit none
+    type(node), intent(inout) :: o
+    integer, optional :: arg_mode
+    integer :: mode
+    character(len=MAX_TREESTR_LENGTH) :: str
+    logical, optional :: arg_is_root
+    logical :: is_root
+    integer :: i
+    
+    if(present(arg_mode)) then
+       mode = arg_mode
+    else
+       mode = 0
+    endif
+
+    if(present(arg_is_root)) then
+       is_root = arg_is_root
+    else
+       is_root = .true.
+    end if
+
+    if(.not. is_root) then
+       if(is_data(o) .or. &
+            (is_ew(o) .and. mode == 1)) &
+            return
+    endif
+
+    call tree_to_string(str, o, mode)
+    
+    o%hash = abs(djb_hash(trim(str)))
+    ! print*, 'o%hash = ', o%hash
+    ! print*, 'str = ', trim(str)
+
+    do i = 1, size(o%operands)
+       call gen_hash(o%operands(i)%ptr, mode, .false.)
+    enddo
+  end subroutine
+  
+  recursive subroutine tree_to_string(str, o, arg_mode)
+    implicit none
+    character(len=MAX_TREESTR_LENGTH), intent(out) :: str
+    type(node), intent(in) :: o
+    character(len=10) :: expr_form
+    integer :: i, num_operands, i1,i2
+    character(len=MAX_TREESTR_LENGTH), allocatable :: ops_strs(:)
+    integer, optional :: arg_mode
+    integer :: mode
+
+    if(present(arg_mode)) then
+       mode = arg_mode
+    else
+       mode = 0
+    endif
+
+    if(is_data(o)) then
+       str = '(X*A+Y)'
+       return
+    endif
+
+    if(mode == 1) then
+       if(.not. is_ew(o)) then
+          str = '(X*A+Y)'
+          return
+       endif
+    endif
+
+    num_operands = size(o%operands)
+    
+    allocate(ops_strs(num_operands))
+    
+    do i = 1, size(o%operands)
+       call tree_to_string(ops_strs(i), &
+            o%operands(i)%ptr, mode)
+    enddo
+    
+    expr_form = op_desc_list(o%node_type)%expr_form
+
+    select case (num_operands)
+    case (1)
+       i1 = index(expr_form, 'A')
+       ! print*, "expr_form = ", expr_form, "i = ", i1
+       ! print*, "expr_form(:i1-1) = ", expr_form(:i1-1)
+       ! print*, "expr_form(i1+1:) = ", expr_form(i1+1:)
+       write(str, "(A, A, A)") &
+            "X*(", expr_form(:i1-1)//trim(ops_strs(1))&
+            //trim(expr_form(i1+1:)), ")+Y"
+
+    case (2)
+       i1 = index(expr_form, 'A')
+       i2 = index(expr_form, 'B')
+       write(str, "(A,A,A)") "X*(", &
+            expr_form(:i1-1)//trim(ops_strs(1))&
+            //expr_form(i1+1:i2-1) &
+            //trim(adjustl(ops_strs(2)))//trim(expr_form(i2+1:)), ")+Y"
+    end select
+  end subroutine
 end module
 

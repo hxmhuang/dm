@@ -6,6 +6,10 @@ typedef void (*func_ptr)(void** result, void* ptr,
 			 void* alpha,  void* beta,
 			 void* args,   int* n);
 
+typedef void (*kernel_ptr)(void* A, void *B,
+			   void* alpha,  void* beta,
+			   void* args, void *ierr);
+
 std::vector<func_ptr> ptrs;
 
 extern "C"{
@@ -30,7 +34,15 @@ extern "C"{
     
     *result = new int(1);
     //*(int*)(*result) = 1;
-    
-      //ptrs.at(*id)(result, *ptr, *alpha, *beta, *args, n);
+    //ptrs.at(*id)(result, *ptr, *alpha, *beta, *args, n);
+  }
+  
+  void invoke_kernel(kernel_ptr* func,
+		     void*A, void **B,
+		     void** alpha,
+		     void** beta,
+		     void** args,
+		     void* ierr){
+    (*func)(A, *B, *alpha, *beta, *args, ierr);
   }
 }

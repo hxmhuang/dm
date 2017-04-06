@@ -342,8 +342,8 @@ subroutine ${op[2]}$_tensors(res, tensor_operands, &
          ops_alpha, ops_beta, args, ierr)
 
     ! call VecView(res%data, PETSC_VIEWER_STDOUT_WORLD,ierr)
-    
   end subroutine
+  
   #:endif
 #:endfor
 
