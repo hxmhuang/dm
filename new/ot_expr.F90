@@ -2,6 +2,7 @@
 
 #define MAX_TREESTR_LENGTH 100000
 #define SKIP_EW_NODE 1
+#define ALL_NODE 1
 
 module ot_expr
   use ot_common
@@ -11,6 +12,7 @@ module ot_expr
   use ot_geom
   use ot_node
   use ot_kernels
+  use ot_buffer
   
 !#define ASSERT(x,msg) call assert(x, __FILE__, __LINE__, msg)
 #:set DEBUG = 1
@@ -112,9 +114,9 @@ contains
        !call ot_option_int('--opt_mode', opt_mode, ierr)
        if(get_rank(MPI_COMM_WORLD) == 0) then
           print*, "===================================================="
-          print*, "WARNING : In optimization mode, &
+          print*, "INFOMATION : Program is runing in optimization mode, &
                & only optimization info generated. &
-               & Evaluation would be performed!!"
+               & Evaluation will NOT be performed!"
           print*, "===================================================="
 
           !clean up the kernel file
@@ -216,7 +218,7 @@ contains
 
        call write_graph(src, file='src.dot')
 
-       call gen_hash(src, SKIP_EW_NODE)
+       call gen_hash(src, .true.)
        
        call eval(dst, src, ierr, .true.)
        dst%var_type = 'l'
@@ -243,6 +245,29 @@ contains
     !if(allocated(res)) deallocate(res)    
   end subroutine
 
+  recursive subroutine eval_non_ew(o, ops, alphas, betas, args)
+    implicit none
+    type(node), intent(inout) :: o
+    integer :: i
+    integer :: ierr
+    
+    type(BUFFER_CPTR), intent(inout) :: ops(:)
+    type(buffer_r8), intent(inout) :: alphas
+    type(buffer_r8), intent(inout) :: betas
+    type(buffer_r8), intent(inout) :: args
+    
+    if(.not. is_ew(o)) then
+       call eval(o%data, o, ierr, .true.)
+       call push_back(alphas, o%alpha)
+       call push_back(betas,  o%beta)
+       call push_back(args,   o%args)
+    end if
+    
+    do i = 1, size(o%operands)
+       call eval_non_ew(o%operands(i)%ptr, ops, alphas, betas, args)
+    enddo
+  end subroutine
+  
   !*********************************
   !> evaluate expression nodes
   !*********************************
@@ -282,6 +307,11 @@ contains
 
     !call disp_info(A, 'A = ')
 
+    !> this node correspond to a kernel
+    if(A%hash /= 0) then
+       !call eval_non_ew(A)
+    end if
+    
     !process the reference node
     if(is_ref(A)) then
        if(allocated (A%operands)) then
@@ -443,61 +473,75 @@ contains
     if(is_root) res = res + 1
 
   end function
-  
+
+  !> get the tree depth, skiping the non-ew node
+  recursive function get_depth(o) result(res)
+    implicit none
+    type(node), intent(in) :: o
+    integer :: res
+    integer, allocatable :: sub_depth(:)
+    integer :: i
+    
+    if(is_data(o) .or. (.not. is_ew(o))) then
+       res = 1
+       return
+    endif
+
+    allocate(sub_depth(size(o%operands)))
+    do i = 1, size(o%operands)
+       sub_depth(i) = get_depth(o%operands(i)%ptr)
+    end do
+    res = maxval(sub_depth) + 1
+  end function
+
+  !> general kernel infomation
   recursive subroutine gen_kernels(o, arg_is_root)
     implicit none
     type(node), intent(in) :: o
     character(len=MAX_TREESTR_LENGTH) :: str
     logical, optional :: arg_is_root
     logical :: is_root
-!    character(len=*), parameter :: file = "kernels.fypp"
     integer ::out_unit = 10
     integer :: i
-    
+
     if(present(arg_is_root)) then
        is_root = arg_is_root
     else
        is_root = .true.
     endif
 
-    if(expr_sub_cnt(o, 1) < 2) return
-    
     if(get_rank(MPI_COMM_WORLD) == 0) then
        if(is_data(o)) return
-       if(is_root .or. (.not. is_ew(o))) then
-          !if(is_root) then
-          print*, "node_type = ", op_names(o%node_type)
-          call tree_to_string(str, o, 1)
-          print*, "str = ", trim(str)
-          print*, "hash = ", djb_hash(trim(str))
-          
-          ! if(is_root) then
-          !    open(unit=out_unit,file=file, &
-          !         action='write', status='replace')
-          ! else
-          ! endif
 
-          open(unit=out_unit,file=kernel_file, &
-               action='write', status='unknown', position='append')
-
-          write(out_unit, "(I0.1,A)") &
-               abs(djb_hash(trim(str))), ":"//trim(str)
-
-          close(out_unit)
-          !else
-          ! do i = 1, size(o%operands)
-          !    call tree_to_string(str, o%operands(i)%ptr, 1)
-          !    open(unit=out_unit,file=file, &
-          !         action='write', status='unknown')
-          !    write(out_unit, "(I10.1,A)") &
-          !         djb_hash(trim(str)), ":"//trim(str)
-          !    close(out_unit)
-          ! enddo
-          !endif
+       if(.not. is_ew(o)) then
+          do i = 1, size(o%operands)
+             call gen_kernels(o%operands(i)%ptr, .true.)
+          enddo
+          return
        endif
-       do i = 1, size(o%operands)
-          call gen_kernels(o%operands(i)%ptr, .false.)
-       enddo
+
+       if(is_root) then
+          if(get_depth(o) >= 3) then
+             call tree_to_string(str, o, SKIP_EW_NODE)
+             print*, "node_type = ", op_names(o%node_type)
+             print*, "depth = ", get_depth(o)
+             print*, "str = ", trim(str)
+             print*, "hash = ", djb_hash(trim(str))
+
+             open(unit=out_unit,file=kernel_file, &
+                  action='write', status='unknown', &
+                  position='append')
+
+             write(out_unit, "(I0.1,A)") &
+                  abs(djb_hash(trim(str))), ":"//trim(str)
+
+             close(out_unit)
+          endif
+
+          do i = 1, size(o%operands)
+             call gen_kernels(o%operands(i)%ptr, .false.)
+          enddo
+       endif
     endif
   end subroutine
 
@@ -974,43 +1018,42 @@ contains
   !   end do
   ! end function
 
-  recursive subroutine gen_hash(o, arg_mode, arg_is_root)
+  recursive subroutine gen_hash(o, arg_is_root)
     implicit none
     type(node), intent(inout) :: o
-    integer, optional :: arg_mode
     integer :: mode
     character(len=MAX_TREESTR_LENGTH) :: str
     logical, optional :: arg_is_root
     logical :: is_root
     integer :: i
     
-    if(present(arg_mode)) then
-       mode = arg_mode
-    else
-       mode = 0
-    endif
-
     if(present(arg_is_root)) then
        is_root = arg_is_root
     else
        is_root = .true.
     end if
 
-    if(.not. is_root) then
-       if(is_data(o) .or. &
-            (is_ew(o) .and. mode == 1)) &
-            return
+    if(is_data(o)) return
+
+    if((.not. is_ew(o))) then
+       do i = 1, size(o%operands)
+          call gen_hash(o%operands(i)%ptr, .true.)
+       end do
+       return
     endif
-
-    call tree_to_string(str, o, mode)
     
-    o%hash = abs(djb_hash(trim(str)))
-    ! print*, 'o%hash = ', o%hash
-    ! print*, 'str = ', trim(str)
-
-    do i = 1, size(o%operands)
-       call gen_hash(o%operands(i)%ptr, mode, .false.)
-    enddo
+    if(is_root) then
+       if(get_depth(o) >= 3) then
+          call tree_to_string(str, o, SKIP_EW_NODE)
+          o%hash = abs(djb_hash(trim(str)))
+          print*, 'o%hash = ', o%hash
+          print*, 'str = ', trim(str)
+       endif
+       
+       do i = 1, size(o%operands)
+          call gen_hash(o%operands(i)%ptr, .false.)
+       enddo
+    endif
   end subroutine
   
   recursive subroutine tree_to_string(str, o, arg_mode)
@@ -1026,7 +1069,7 @@ contains
     if(present(arg_mode)) then
        mode = arg_mode
     else
-       mode = 0
+       mode = ALL_NODE
     endif
 
     if(is_data(o)) then
@@ -1034,11 +1077,10 @@ contains
        return
     endif
 
-    if(mode == 1) then
-       if(.not. is_ew(o)) then
-          str = '(X*A+Y)'
-          return
-       endif
+    if(mode == SKIP_EW_NODE .and. &
+         (.not. is_ew(o))) then
+       str = '(X*A+Y)'
+       return
     endif
 
     num_operands = size(o%operands)

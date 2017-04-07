@@ -133,7 +133,9 @@ contains
     B = ones(m, n, k)
     C = ones(m, n, k)
     
-    D = A + B + C
+    D = A + B + C + sin(A + B + C)
+    return
+    
     call disp(D, 'D = ')
 
     ! B = A * 3
@@ -317,5 +319,39 @@ contains
     ! do i = 0_8, 20_8
     !    print*, "get(i)=", dict_get(A, i)
     ! end do
+  end subroutine
+
+  subroutine test_buffer()
+    use ot_buffer
+    implicit none
+    type(buffer_r4), pointer :: buf, buf1, buf2, buf_ptr(:), buf_ptr2
+    type(buffer_list_r4) :: buf_list
+
+    allocate(buf, buf1, buf2)
+    
+    ! print*, "size(buf) = ", size(buf)
+    ! print*, "data = ", buf_data(buf)
+    
+    call push_back(buf, 1.0)
+    print*, "size(buf) = ", size(buf)
+
+    call push_back(buf, 1.1)
+    call push_back(buf, 1.2)
+    call push_back(buf, 1.3)
+    print*, "size(buf) = ", size(buf)
+    print*, "data = ", buf_data(buf)
+
+    call push_back(buf1, 2.1)
+    call push_back(buf1, 2.2)
+
+    call push_back(buf2, 3.1)
+    call push_back(buf2, 3.2)
+    
+    call push_back(buf_list, buf)
+    call push_back(buf_list, buf1)
+    call push_back(buf_list, buf2)
+
+    buf_ptr2 => buf_data(buf_list, 3)
+    print*, "data = ", buf_data(buf_ptr2)
   end subroutine
 end module

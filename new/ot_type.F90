@@ -93,7 +93,7 @@ module ot_type
      character(len=1) :: var_type = 'l'
 
      !store its hash
-     integer(kind=8) :: hash
+     integer(kind=8) :: hash = 0
   end type node
 
   type tensor

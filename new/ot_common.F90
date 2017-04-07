@@ -250,7 +250,7 @@ contains
     do i=1,len(str)
         hash = (ishft(hash,5) + hash) + ichar(str(i:i))
     end do
-
+    hash = abs(hash)
   end function
-  
+
 end module ot_common

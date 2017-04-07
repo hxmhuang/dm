@@ -6,8 +6,10 @@
 
 #if defined(__LP64__) || defined(_LP64)
 #define C_POINTER integer(8)
+#define BUFFER_CPTR buffer_i8
 #else
-#define C_POINTER integer(4)  
+#define C_POINTER integer(4)
+#define BUFFER_CPTR buffer_i4  
 #endif
 
 #define DEBUG

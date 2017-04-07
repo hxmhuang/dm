@@ -137,10 +137,11 @@ program main
   !call test_seqs()
   ! call test_slice()
   !call test_set()
-  call test_math()
+  !call test_math()
   !call test_expr()
   !call test_ptr()
   !call test_dict()
+  call test_buffer()
   
   EXIT
 

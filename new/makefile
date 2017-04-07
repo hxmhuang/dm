@@ -1,6 +1,6 @@
 
 CFLAGS           =
-FFLAGS		 = -Wno-unused-parameter -fcheck=all \
+FFLAGS		 = -Wno-unused-parameter -fcheck=all\
 		   -fbacktrace -J /Users/sxzhang/Projects/dm/new/build/ \
 		   -Wno-unused-variable
 CPPFLAGS         =
@@ -23,12 +23,11 @@ OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o \
 	    ot_display.o )
 
 ABC = $(addprefix ./, ot_petsc.o ot_kernels.o ot_data.o \
-	ot_tensor.o \
-	ot_node.o  \
+	ot_tensor.o ot_node.o  \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ot_dict.o ot_type.o ot_ref.o ot_geom.o ${OBJS_UTIL} ot_print.o \
-	ot_common.o   \
+OBJS  = ot_buffer.o ot_print.o ot_common.o ot_dict.o ot_type.o ot_ref.o \
+	ot_geom.o ${OBJS_UTIL}  \
 	${OBJS_DATA} ${ABC} ot_func.o
 
 OBJ_MAIN= ${OBJS} ot_mod.o ot_test.o main.o

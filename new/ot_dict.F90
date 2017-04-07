@@ -1,6 +1,8 @@
 #include "type.h"
 
 module ot_dict
+  use ot_common
+  
   type dict_item
      integer(kind=8) :: key = 0
      C_POINTER :: func = 0
@@ -31,7 +33,10 @@ contains
     
     if(.not. associated(dict)) allocate(dict)
 
-    if(key <= dict%key) then
+    call assert(key /= dict%key, __FILE__, __LINE__,&
+         'Error: key already exists.')
+    
+    if(key < dict%key) then
        if(associated(dict%left)) then
           call dict_add(dict%left, key, func)
        else
