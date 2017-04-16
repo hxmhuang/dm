@@ -60,43 +60,22 @@ program main
   integer(kind=4) :: ii
   character(len=100) :: aaa
 
-
   ! call invoke(transfer(loc(fun4), UNKNOWN))
-  ! return
-  
-  ! aaa = "hello"
-  ! print*, "len(a) = ", len(aaa)
-  ! print*, "len(trim(a)) = ", len(trim(aaa))
-
-  !return
   
   call ot_init(ierr)
-  ! allocate(aa(0))
-  ! print*, size(aa)
-  ! EXIT
-  arr1(1) = 1;  arr1(2) = 2;  arr1(3) = 3;  arr1(4) = 4; arr1(5) = 5;
 
-  !EXIT
-  ! arr(1,1) = 1;  arr(2,1) = 2;  arr(3,1) = 3;  arr(4,1) = 4;
-  ! arr(1,2) = 1;  arr(2,2) = 2;  arr(3,2) = 3;  arr(4,2) = 4;
-  ! arr(1,3) = 1;  arr(2,3) = 2;  arr(3,3) = 3;  arr(4,3) = 4;
-  ! arr(1,4) = 1;  arr(2,4) = 2;  arr(3,4) = 3;  arr(4,4) = 4;
-  !arr1(3:5) = arr1(1:3)
-  !print*, "arr1=", arr1
+  call test_ones()
+  call test_seqs()
+  call test_rand()
   
-  ! dim1 = find_dim((/3,1,1/))
-  ! dim2 = find_dim((/3,3,1/))
-  ! dim3 = find_dim((/3,3,3/))
-  ! dim4 = find_dim((/1,1,1/))
-  ! print*, "find_dim1 = ", dim1
-  ! print*, "find_dim2 = ", dim2
-  ! print*, "find_dim3 = ", dim3
-  ! print*, "find_dim4 = ", dim4  
-  
-  ! print*, "find_dim = ", find_dim((/10,1,1/))
-  ! print*, "find_dim = ", find_dim((/10,10,1/))
-  ! print*, "find_dim = ", find_dim((/10,10,10/))
+  ! call test_expr()  
+  ! call test_math()  
+  ! call test_slice()
+  !call test_set()
+  !call test_find_pos()
 
+  call ot_finalize(ierr)
+  
   ! call test_size()
   ! call insert_pointer(loc(fun1), 0)
   ! call insert_pointer(loc(fun2), 1)
@@ -117,7 +96,6 @@ program main
   ! print*, ((loc(r) + size(r) * 4) - loc(base_r) - 4)/4
 
   !pos = find_range(r(-1:2000))
-
   ! print*, find_range(r3(-1:2000))
 
   ! EXIT
@@ -133,69 +111,20 @@ program main
   ! print*, find_range(r(2:15))  
 
   !call test_petsc_slice_dm()
-  ! call test_ones()
-  !call test_seqs()
-  ! call test_slice()
-  !call test_set()
-  !call test_math()
-  !call test_expr()
-  !call test_ptr()
   !call test_dict()
-  call test_buffer()
+  !call test_buffer()
+  !call test_ptr()
   
-  EXIT
-
-  !C = ones(2, 2, 2)
 
   !call petsc_get_shape(v_shape, A%data)
   !print*, "v_shape = ", v_shape
-
   ! call test_slice()
   ! EXIT
+
+  ! call disp_info(slice(A, r(0,5), r(0,5), 0))
   
-  !A = seqs(10, 10)
-  !call petsc_print(A%data)
-
-  ! B = ones(2, 2, 2)  
-  ! D = A + B + C
-
-  ! call disp(A, "A = ")
-  ! call disp(C, "C = ")
-
-  call disp_info(slice(A, r(0,5), r(0,5), 0))
-  
-  B = slice(A, r(0, 5), r(0, 5), 0)
-  call disp(B, "B = ")
-
-
-  ! C = A + B
-  ! call display(C)
-
-  ! D = log(C)
-  ! call display(D, "D=")
-  
-  ! !show the result of A-B
-  ! call display(A-B, "A-B=")
-  
-  ! !one-dimensional array
-  ! D = ones(10)
-  ! call display(C, "C=")
-
-  ! !E = A + D !error, shape does not match
-  ! E = ones(10)
-  ! call display(D + E)
-
-  ! !generate constants matrix 5x4
-  ! F = consts(real(2.0, 8), 5, 4)
-  ! call display(F, "F=")
-
-  ! !generate constants matrix 5x4  
-  ! G = consts(real(3.0, 8), 5, 4)
-  ! call display(F * G, "F*G=")
-  ! call display(F-F/G, "F-F/G=")
-  
-  ! !performance test
-  ! U = ones(NN, NN)
+  ! B = slice(A, r(0, 5), r(0, 5), 0)
+  ! call disp(B, "B = ")
 
   ! !tic(timer_id)
   ! call tic(1) 
@@ -205,15 +134,5 @@ program main
   ! !call toc(1)
   ! call toc(1, 8*int8(NN)*NN*4, 2*int8(NN)*NN)
 
-  ! call tensor_destroy(A, ierr)
-  ! call tensor_destroy(B, ierr)
-  ! call tensor_destroy(C, ierr)
-  ! call tensor_destroy(D, ierr)
-  ! call tensor_destroy(E, ierr)
-  ! call tensor_destroy(F, ierr)
-  ! call tensor_destroy(G, ierr)
-  ! call tensor_destroy(U, ierr)
-  ! call tensor_destroy(V, ierr)
 
-  call ot_finalize(ierr)
 end program main

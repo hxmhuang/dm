@@ -39,14 +39,14 @@ module ot_buffer
 #:endfor     
   end interface mem_size
 
-  interface buf_data
+  interface get_data
 #:for type in T
      module procedure buf_data_${type[0]}$
      module procedure buf_data_at_${type[0]}$
      module procedure buf_list_data_${type[0]}$
      module procedure buf_list_data_at_${type[0]}$
 #:endfor
-  end interface buf_data
+  end interface get_data
   
 contains
 
@@ -97,7 +97,7 @@ contains
   subroutine push_back_list_${type[0]}$ (buf_list, src)
     implicit none
     type(buffer_list_${type[0]}$), intent(inout) :: buf_list
-    type(buffer_${type[0]}$), pointer, intent(in) :: src
+    type(buffer_${type[0]}$), intent(inout), target :: src
     type(buffer_${type[0]}$), allocatable :: tmp_data(:)    
     integer :: new_size, old_size
     

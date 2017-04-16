@@ -26,18 +26,20 @@ contains
 
     call tensor_set_shape(res, (/m,n,k/))
     call data_consts(res%data, real(val,8), res%m_shape, ierr)    
-    res%var_type = 'r'    
+    call set_rvalue(res)
   end function
   
 #:endfor
 
   function ones(m, opt_n, opt_k) result(res)
     implicit none
+#include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
     type(tensor), pointer :: res
     integer :: n, k, ierr
-
+    Vec :: data
+    
     allocate(res)
     
     n = 1; k = 1;
@@ -45,43 +47,54 @@ contains
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    call tensor_set_shape(res, (/m,n,k/))
-    call data_consts(res%data, real(1,8), res%m_shape, ierr)
-    res%var_type = 'r'    
+    !call tensor_set_shape(res, (/m,n,k/))
+    call data_consts(data, real(1,8), (/m, n, k/), ierr)
+    call tensor_bind_data(res, data)
+    call set_rvalue(res)
   end function
 
   function seqs(m, opt_n, opt_k) result(res)
     implicit none
+#include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor) :: res
+    type(tensor), pointer :: res
     integer :: n, k, ierr
-
+    Vec :: data
+    allocate(res)
+    
     n = 1; k = 1;
     
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    call tensor_set_shape(res, (/m,n,k/))
-    call data_seqs(res%data, res%m_shape, ierr)
-    res%var_type = 'r'    
+    !call tensor_set_shape(res, (/m,n,k/))
+    !call data_seqs(res%data, res%m_shape, ierr)
+    call data_seqs(data, (/m,n,k/), ierr)
+    call tensor_bind_data(res, data)
+    call set_rvalue(res)
   end function
 
   function rand(m, opt_n, opt_k) result(res)
     implicit none
+#include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor) :: res
+    type(tensor), pointer :: res
     integer :: n, k, ierr
-
+    Vec :: data
+    allocate(res)
+    
     n = 1; k = 1;
     
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    call tensor_set_shape(res, (/m,n,k/))
-    call data_rand(res%data, res%m_shape, ierr)
-    res%var_type = 'r'    
+    !call tensor_set_shape(res, (/m,n,k/))
+    ! call data_rand(res%data, res%m_shape, ierr)
+    call data_rand(data, (/m,n,k/), ierr)
+    call tensor_bind_data(res, data)
+    call set_rvalue(res)
   end function
   
 end module

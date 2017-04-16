@@ -1,6 +1,8 @@
 
 module ot_geom
   use ot_type
+  use ot_common
+  use ot_buffer
   
   interface operator (.eq.)
      module procedure box_eq
@@ -25,8 +27,14 @@ module ot_geom
      module procedure box_shape
   end interface shape
 
+  interface num_data
+     module procedure box_num_data
+  end interface num_data
+  
   interface disp
      module procedure disp_box
+     module procedure disp_ref
+     module procedure disp_dist
   end interface disp
 
   interface operator(-)
@@ -56,12 +64,13 @@ contains
          (a%upper == b%upper)
   end function
 
-  subroutine box_to_indices(idx, box, gshape)
+  subroutine box_to_indices1(idx, box, gshape)
     implicit none
     integer, allocatable, intent(out) :: idx(:)
     type(box_info) :: box, box1
     integer :: gshape(3) !global shape
     integer :: gm, gn, bs(3), i, k, j, cnt
+    integer :: ierr
 
     if(.not. is_valid(box)) then
        allocate(idx(0))
@@ -86,21 +95,36 @@ contains
     end do
   end subroutine
   
-  subroutine box_display(box, prefix)
+  subroutine disp_ref(ref, prefix, indent)
     implicit none
-    type(box_info) :: box
+    type(ref_info), intent(in) :: ref
     character(len=*), optional :: prefix
+    character(len=*), optional :: indent
 
     if(present(prefix)) then
-       write(*, "(2X,A)") prefix
+       write(*, "(4X, A)") prefix
     else
-       write(*, "(2X,A)") "ans = "
-    end if
+       write(*, "(4X, A)") "ref box : "
+    endif
 
-    write(*, "(4X, 3g10.5)") box%rx%lower, &
-         box%ry%lower,box%rz%lower
-    write(*, "(4X, 3g10.5)") box%rx%upper, &
-         box%ry%upper,box%rz%upper
+    if(ref%ref_index_type_x == 0) then
+       write(*, "(10X, A, I0.1, A, I0.1, A)") &
+            'm : [', ref%range_x%lower+1, ' : ', &
+            ref%range_x%upper+1, ']'
+    end if
+    
+    if(ref%ref_index_type_y == 0) then
+       write(*, "(10X, A, I0.1, A, I0.1, A)") &
+            'n : [', ref%range_y%lower+1, ' : ', &
+            ref%range_y%upper+1, ']'
+    end if
+    
+    if(ref%ref_index_type_y == 0) then
+       write(*, "(10X, A, I0.1, A, I0.1, A)") &
+            'k : [', ref%range_y%lower+1, ' : ', &
+            ref%range_y%upper+1, ']'
+    end if
+    
   end subroutine
   
   function dist_ne(a, b) result(res)
@@ -217,20 +241,34 @@ contains
     res%lower = rgn%lower + num    
   end function
   
-  subroutine disp_box(o, prefix)
+  subroutine disp_box(o, prefix, ind1, ind2)
     implicit none
     type(box_info) :: o
-    character(len=*),optional :: prefix
-    
-    if(present(prefix)) then
-       write(*, "(2X, A)") prefix
+    character(len=*), optional :: prefix
+    character(len=2), optional :: ind1
+    character(len=2), optional :: ind2
+    character(len=2) :: ind11, ind22
+
+    if(present(ind1)) then
+       ind11 = ind1
     else
-       write(*, "(2X, A)") "ans =  "
+       ind11 = '2X'
+    endif
+    if(present(ind2)) then
+       ind22 = ind2
+    else
+       ind22 = '6X'
     endif
     
-    write(*, "(6X, 3I4.1)") o%rx%lower, &
+    if(present(prefix)) then
+       write(*, "("//ind11//", A)") prefix
+    else
+       write(*, "("//ind11//", A)") "ans =  "
+    endif
+    
+    write(*, "("//ind22//", 3I4.1)") o%rx%lower, &
          o%ry%lower,o%rz%lower
-    write(*, "(6X, 3I4.1)") o%rx%upper, &
+    write(*, "("//ind22//", 3I4.1)") o%rx%upper, &
          o%ry%upper,o%rz%upper        
   end subroutine
   
@@ -248,7 +286,8 @@ contains
     implicit none
     type(range), intent(in) :: a, b
     logical res
-    res = (a%upper <= b%upper) .and. (a%lower >= b%lower)
+    res = (a%upper <= b%upper) &
+         .and. (a%lower >= b%lower)
   end function
   
   !> if box a is inside box b
@@ -258,7 +297,8 @@ contains
     logical :: res
 
     res = (a%rx .in. b%rx) .and. &
-         (a%ry .in. b%ry) .and. (a%rz .in. b%rz)
+         (a%ry .in. b%ry) .and. &
+         (a%rz .in. b%rz)
     
   end function
   
@@ -291,6 +331,21 @@ contains
     res(3) = a%rz%upper - a%rz%lower + 1    
   end function
 
+  function box_num_data(a) result(res)
+    implicit none
+    type(box_info), intent(in) :: a
+    integer :: res
+
+    if(.not. is_valid(a)) then
+       res = 0
+       return
+    endif
+
+    res = (a%rx%upper - a%rx%lower + 1) * &
+         (a%ry%upper - a%ry%lower + 1) * &
+         (a%rz%upper - a%rz%lower + 1)
+  end function
+  
   !> calculate the cross section of two boxes
   function box_and(a, b) result(res)
     implicit none
@@ -331,5 +386,206 @@ contains
          (a%ry%upper == b%ry%upper) .and. &
          (a%rz%upper == b%rz%upper)
   end function
+
+  subroutine disp_dist(dist, prefix)
+    implicit none
+    type(dist_info), intent(in) :: dist
+    character(len=*), optional :: prefix
+
+    if(present(prefix)) then
+       write(*, "(A)") prefix
+    else
+       write(*, "(A)") "dist = "
+    endif
+    
+    write(*, "(A, 10g2.2, A)") " lm : [", dist%lx, "]"
+    write(*, "(A, 10g2.2, A)") " ln : [", dist%ly, "]"
+    write(*, "(A, 10g2.2, A)") " lk : [", dist%lz, "]"
+    write(*, "(A, 10g2.2, A)") "clm : [", dist%clx, "]"
+    write(*, "(A, 10g2.2, A)") "cln : [", dist%cly, "]"
+    write(*, "(A, 10g2.2, A)") "clk : [", dist%clz, "]"
+    
+  end subroutine
+
+  function find_pos(val, idx, s1, e1) &
+       result(res)
+    implicit none
+    integer, intent(in) :: val, s1, e1
+    integer :: idx(:)
+    integer :: pos
+    integer :: res
+    integer :: s, e
+
+    s = s1
+    e = e1
+    
+    pos = (s + e) / 2
+
+    do while(.true.)
+       print*, "pos1 = ", pos
+       if(val >= idx(pos) .and. val < idx(pos+1)) then
+          res = pos
+          return
+       endif
+
+       if(pos == s .or. pos == e) then
+          res = -1
+          return
+       endif
+       
+       if(val < idx(pos)) then
+          e = pos
+          pos = (s + e) / 2
+       else
+          s = pos + 1
+          pos = (s + e + 1) / 2
+       endif
+    end do
+    
+  end function
+  
+  subroutine box_to_indices2(idx, dist, box, orange)
+    implicit none
+    integer, intent(out), allocatable :: idx(:,:,:)
+    type(dist_info), intent(in):: dist
+    type(box_info) :: box
+    integer :: bx_lower, bx_upper
+    integer :: by_lower, by_upper
+    integer :: bz_lower, bz_upper    
+    integer :: cnt, nx, ny, nz
+    type(buffer_i4) :: bid_x,  bid_y,  bid_z
+    type(buffer_i4) :: bid_nx, bid_ny, bid_nz
+    integer :: ierr, ix, iy, iz, dim_x, dim_y, dim_z
+    logical :: start
+    integer :: iiz1, iiz2, iiy1, iiy2, iix1, iix2
+    integer :: iix, iiy, iiz, smx, smy, smz, offset
+    integer, intent(in) :: orange(:)
+    integer :: i, j, k, box_shape(3)
+    
+    nx = size(dist%lx)
+    ny = size(dist%ly)
+    nz = size(dist%lz)
+
+    if(.not. is_valid(box)) then
+       allocate(idx(0,0,0))
+       return
+    end if
+    
+#:for d in ['x', 'y', 'z']
+    start = .false.
+    !> ${d}$-direction    
+    do i = 1, size(dist%cl${d}$) - 1
+
+       if(box%r${d}$%lower < dist%cl${d}$(i) .and. &
+            box%r${d}$%upper < dist%cl${d}$(i)) then
+          exit
+       end if
+       
+       if(box%r${d}$%lower >= dist%cl${d}$(i) .and. &
+            box%r${d}$%lower < dist%cl${d}$(i+1)) then
+          start = .true.
+          b${d}$_lower = i
+       endif
+
+       if(box%r${d}$%upper >= dist%cl${d}$(i) .and. &
+            box%r${d}$%upper < dist%cl${d}$(i+1)) then
+          b${d}$_upper = i
+       endif
+       
+       if(start) then
+          call push_back(bid_${d}$, &
+               max(box%r${d}$%lower, dist%cl${d}$(i)))
+          call push_back(bid_${d}$, &
+               min(box%r${d}$%upper, dist%cl${d}$(i+1)-1))
+       endif
+    enddo
+#:endfor
+
+    print*, "bx1", bx_lower, "bx2", bx_upper, &
+         "by1", by_lower, "by2", by_upper, &
+         "bz1", bz_lower, "bz2", bz_upper
+    
+    dim_x = dist%clx(size(dist%clx))
+    dim_y = dist%cly(size(dist%cly))
+    dim_z = dist%clz(size(dist%clz))
+
+    box_shape = shape(box)
+    
+    allocate(idx(box%rx%lower:box%rx%upper, &
+         box%ry%lower:box%ry%upper, &
+         box%rz%lower:box%rz%upper))
+
+    cnt = 1
+    i = box%rx%lower
+    j = box%ry%lower
+    k = box%rz%lower
+    
+    do iz = bz_lower, bz_upper
+       do iy = by_lower, by_upper
+          do ix = bx_lower, bx_upper
+
+             iiz1 = bid_z%data((iz - bz_lower + 1) * 2 - 1)
+             iiz2 = bid_z%data((iz - bz_lower + 1) * 2)
+             
+             iiy1 = bid_y%data((iy - by_lower + 1) * 2 - 1)
+             iiy2 = bid_y%data((iy - by_lower + 1) * 2)             
+             
+             iix1 = bid_x%data((ix - bx_lower + 1) * 2 - 1)
+             iix2 = bid_x%data((ix - bx_lower + 1) * 2)
+
+             ! offset = iix1 + iiy1 * dim_x &
+             !      + iiz1 * dim_x * dim_y
+
+             offset = orange(ix + (iy-1) * size(dist%lx) &
+                  + (iz-1)* size(dist%lx) * size(dist%ly))
+             
+             ! if(get_rank() == 2) then
+             !    print*, "[", iix1, ",", iiy1, ",", iiz1, "]"
+             !    print*, "[", iix2, ",", iiy2, ",", iiz2, "]"
+             !    print*, "offset = ", offset
+             ! endif
+             
+             ! smz = iiz2 - iiz1 + 1
+             ! smy = iiy2 - iiy1 + 1
+             ! smx = iix2 - iix1 + 1
+             smz = dist%lz(iz)
+             smy = dist%ly(iy)
+             smx = dist%lx(ix)
+             
+             do iiz = iiz1,iiz2
+                do iiy = iiy1,iiy2
+                   do iix = iix1,iix2
+                      
+                      idx(i, j, k) = (iix - dist%clx(ix)) + &
+                           (iiy - dist%cly(iy)) * smx &
+                           + (iiz - dist%clz(iz)) * smx * smy &
+                           + offset
+                      
+                      ! print*, "[", iix, ",", iiy, ",", iiz, "]"
+                      ! idx(cnt) = iix + iiy * dim_x + iiz * dim_x * dim_y
+                      !cnt = cnt + 1
+                      i = i + 1
+                   enddo
+                   j = j + 1
+                enddo
+                k = k + 1
+             enddo
+          enddo
+       enddo
+    enddo
+    
+    ! !call mpi_order_start(MPI_COMM_WORLD, ierr)
+    ! if(get_rank() == 2) then
+    !    print*, "----------------------------------"
+    !    call disp(dist, 'dist = ')
+    !    call disp(box, 'box = ')
+    !    print*, "bid_x = ", get_data(bid_x)
+    !    print*, "bid_y = ", get_data(bid_y)
+    !    print*, "bid_z = ", get_data(bid_z)
+    !    print*, "idx = ", idx
+    ! endif
+    ! !call mpi_order_end(MPI_COMM_WORLD, ierr)
+ 
+  end subroutine
   
 end module

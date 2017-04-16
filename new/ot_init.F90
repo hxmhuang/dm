@@ -6,7 +6,7 @@ contains
     implicit none
     integer, intent(out) :: ierr
 
-    call init_data(ierr)
+    call init_petsc(ierr)
     call init_kernels(ierr)    
     call init_tensor(ierr)
     call init_node(ierr)

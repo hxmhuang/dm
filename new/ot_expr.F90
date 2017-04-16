@@ -27,6 +27,9 @@ module ot_expr
      module procedure tensor_assign_tensor
      module procedure node_assign_tensor
      module procedure node_assign_node
+#:for type in ['i4', 'r4', 'r8']
+     module procedure tensor_assign_${type}$
+#:endfor
   end interface assignment (=)
 
   interface disp
@@ -50,8 +53,8 @@ module ot_expr
 
   interface set
 #:for src_type in ['tensor', 'node', 'int', 'real', 'real8']
-#:for dst_type in ['tensor', 'node']
-     module procedure set_${dst_type}$_${src_type}$
+#:for dst_type in ['tensor', 'ref']
+     module procedure set_${dst_type}$_from_${src_type}$
 #:endfor
 #:endfor
   end interface set
@@ -131,19 +134,20 @@ contains
 
   subroutine disp_node(A, msg)
     implicit none
-    type(node), intent(in), pointer :: A
+    type(node), intent(inout), pointer :: A
     character(len=*),intent(in),optional :: msg
-    type(tensor), pointer :: T    
+    type(tensor) :: T    
     integer :: ierr
 
-    allocate(T)
     T = A !this will evaluate the node
+    
     if(present(msg)) then
        call disp(T, msg)
     else
        call disp(T)
     end if
-    call release_ptr(T)
+
+    call destroy(T, ierr)
 
     if(is_rvalue(A)) then
        call destroy(A, ierr)
@@ -152,22 +156,22 @@ contains
   
   subroutine node_assign_node(A, B)
     implicit none
-    type(node), intent(inout), target :: A
-    type(node), intent(in),    target :: B
+    type(node), intent(inout) :: A
+    type(node), intent(in) :: B
 
 ! #:if DEBUG > 0
 !     print*, "call node_assign_node"
 ! #:endif
     
-!     if(associated(B%data)) &
-!          call assign_ptr(A%data, B%data)
+    if(associated(B%data)) &
+         call assign_ptr(A%data, B%data)
     
-!     A%node_type = B%node_type
-!     A%m_shape = B%m_shape
-!     A%alpha = B%alpha
-!     A%beta = B%beta
-!     A%scalar = B%scalar
-!     call copy_node_ptr(A%operands, B%operands)
+    A%node_type = B%node_type
+    A%m_shape = B%m_shape
+    A%alpha = B%alpha
+    A%beta = B%beta
+    A%scalar = B%scalar
+    call copy_node_ptr(A%operands, B%operands)
     
   end subroutine
   
@@ -182,14 +186,10 @@ contains
     character(len=MAX_TREESTR_LENGTH) :: str
     integer, parameter :: out_unit = 10
     
-    print*, "node assigning to tensor ..."
+    ! print*, "node assigning to tensor ..."
 
     call assign_ptr(dst, A)
     call assign_ptr(src, B)
-    
-    ! allocate(root)
-    ! root = B
-    !root => B
     
     ! call disp_info(B, 'B = ')
     ! call destroy(p, ierr)
@@ -216,19 +216,33 @@ contains
        ! print*, "cnt2 = ", expr_sub_cnt(src, 1)    
        ! print*, "cnt1 = ", expr_sub_cnt(src)
 
-       call write_graph(src, file='src.dot')
+       !print*, "src%node_type = ", src%node_type
+       !call write_graph(src, file='src.dot')
 
+       ! print*, '-------------------------'           
+       ! call disp_tree(src)           
+       !call disp_info(src, 'src = ')
+       
        call gen_hash(src, .true.)
+
+       ! call disp_info(src)
+       ! call disp(src, 'src = ')
        
        call eval(dst, src, ierr, .true.)
-       dst%var_type = 'l'
-    endif
+       
+       ! call disp(dst, 'dst = ') 
 
-    ! print*, '-------------------------'    
-    ! call disp_tree(src)
+       ! dst%m_shape = (/1,2,3/)
+       !A%m_shape = (/1,2,3/)       
+       ! call disp(A, 'D1 = ')
+       
+       call set_lvalue(dst)
+    endif
     
     call release_ptr(src)
     call release_ptr(dst)
+    
+    !call disp_tree(B)
     
     ! call node_destroy(C, ierr)
     ! call tensor_copy(A, B%data)
@@ -273,31 +287,21 @@ contains
   !*********************************
   recursive subroutine eval(res, A, ierr, force_eval_arg)
     implicit none
+#include "petsc.h"
     type(tensor), intent(inout), pointer :: res
     type(node), intent(inout) :: A
     integer :: i, num_oprands
     integer, intent(out) :: ierr
     real(8), allocatable :: ops_alpha(:), ops_beta(:)
-    real(8) :: alpha, beta
     type(tensor_ptr), allocatable :: ops_tensor(:)
     logical, optional, intent(in) :: force_eval_arg
     logical :: force_eval
     type(node), pointer :: node_ptr
     type(tensor), pointer :: tmp_res
-    
-    ! interface
-    !    subroutine invoke(p, res, operands, alpha, beta, args, n) &
-    !         bind(C, name="invoke")
-    !      implicit none
-    !      integer :: p
-    !      C_POINTER :: res
-    !      C_POINTER :: operands
-    !      C_POINTER :: alpha
-    !      C_POINTER :: beta
-    !      C_POINTER :: args
-    !      integer :: n
-    !    end subroutine
-    ! end interface
+    type(buffer_list_r8) :: buf_list
+    type(buffer_r8) :: buf
+    C_POINTER :: kernel_addr
+    type(buffer_r8), pointer :: buf_ptr(:)
 
     if(present(force_eval_arg)) then
        force_eval = force_eval_arg
@@ -306,7 +310,6 @@ contains
     endif
 
     !call disp_info(A, 'A = ')
-
     !> this node correspond to a kernel
     if(A%hash /= 0) then
        !call eval_non_ew(A)
@@ -322,12 +325,14 @@ contains
           call eval(A%data, A%operands(1)%ptr, ierr, .false.)
        end if
 
-       call slice_tensors(res, A%data, A%ref)
+       call slice_tensor(res, A%data, A%ref)
        return
     end if
 
     !if this node is the root node, force to evaluate
     if(is_data(A) .and. .not. force_eval) return
+
+    !call disp_info(A, 'A1 = ')
     
     !if(allocated(A%operands)) then
     if(.not. is_data(A)) then       
@@ -358,65 +363,67 @@ contains
     else
        allocate(ops_tensor(1), ops_alpha(1), ops_beta(1))
        !call assign_ptr(ops_tensor(1)%ptr, A%data)
-       ops_tensor(i)%ptr => node_ptr%data
+       ops_tensor(1)%ptr => A%data
        ops_alpha(1) = A%alpha
        ops_beta(1)  = A%beta
     endif
 
-    ! if(A%node_type == type_abs) &
-    !      print*, "YYYYYYYYY = ", associated(res)
+    !call disp_info(A, 'A2 = ')
     
     if(.not. associated(res)) then
+       do i = 1, size(ops_tensor) 
+          if(is_rvalue(ops_tensor(i)%ptr)) then
+             call assign_ptr(res, ops_tensor(i)%ptr)
+             exit
+          endif
+       end do
+    endif
+    
+    if(.not. associated(res)) then       
        allocate(tmp_res)
        !allocate space for result tensor object
        call tensor_duplicate(tmp_res, ops_tensor(1)%ptr)
        call assign_ptr(res, tmp_res)
-
        !the evaluation result should be a rvalue
-       res%var_type = 'r'
+       call set_rvalue(res)
     endif
 
+    !call disp_info(A, 'A3 = ')    
+    
     if(associated(res) &
          .and. res%data == 0) then
        call tensor_duplicate(res, ops_tensor(1)%ptr)
     endif
 
-    ! if(A%node_type == type_abs) &
-    !      print*, "XXXXXXXXX = ", res%ref_cnt
+    ! call push_back(buf, A%args(1))
+    ! call push_back(buf_list, buf)
+    ! buf_ptr => buf_data(buf_list)
+
+    ! print*, "A%node_type = ", A%node_type
+    kernel_addr = op_desc_list(A%node_type)%func
+    ! write(*, "(A, Z16.16)"), "kernel_addr = ", kernel_addr
     
-    !call invoke(A%node_type, loc(A%data), loc(ops_tensor), &
-    !     loc(alpha), loc(beta), loc(A%args), num_oprands)
-    !write(*, "(A, Z16.6)") "A2=", loc(A%data)
+    num_oprands = size(ops_tensor)
 
-    !if(need_eval(A) .or. force_eval) then
-       select case(A%node_type)
-#:for e in L
-#:if e[4]=='A' or e[4]=='B' or e[4]=='C'
-       case (${e[1]}$)
-#ifdef DEBUG
-          print*, "calling function ${e[2]}$ ..."
-#endif
-          call ${e[2]}$_tensors(res, &
-               ops_tensor, ops_alpha, ops_beta, A%args)
-#:endif
-#:endfor
-       case default
-          print*, "calling function eval_tensors ..."          
-          call eval_tensors(res, &
-               ops_tensor, ops_alpha, ops_beta, A%args)
-       end select
+    ! call disp_info(ops_tensor(1)%ptr, 'ops_tensor(1)%ptr = ')
+    ! call disp_info(ops_tensor(2)%ptr, 'ops_tensor(2)%ptr = ')
 
-       do i = 1, size(ops_tensor)
-        !  call release_ptr(ops_tensor(i)%ptr)
-       enddo
-       
-       ! if(.not. associated(A%data)) then
-       !    print*, "execute function ", op_names(A%node_type), " failed."
-       !    call abort()
-       ! end if
-    !endif
-      
+    write(*, '(A, A, A, Z16.16)') "invoke kernel of ", &
+         trim(op_desc_list(A%node_type)%kernel), &
+         "  Addr : ", kernel_addr
+    
+    call invoke_kernel(kernel_addr, loc(res), &
+         loc(ops_tensor), loc(ops_alpha), &
+         loc(ops_beta), loc(A%args), &
+         loc(num_oprands), loc(A%num_args), loc(ierr))
+
+    ! call disp(res, 'res = ')
     print*, "evalation of ", trim(op_names(A%node_type)), " is complete."
+    
+    ! do i = 1, size(ops_tensor)
+    !     call release_ptr(ops_tensor(i)%ptr)
+    ! enddo
+       
   end subroutine
   
   !> this function will be called in the following two situations:
@@ -425,10 +432,13 @@ contains
   !> in both case, we do not need a deep copy
   subroutine tensor_assign_tensor(A, B)
     implicit none
-    type(tensor), intent(out) :: A
+    type(tensor), intent(inout) :: A
     type(tensor), intent(in)  :: B
     integer :: ierr
-    print*, "--> called tensor_assign_tensor"
+    
+    ! write(*,'(A, I0.1, A)'), '[', &
+    !      get_rank(MPI_COMM_WORLD), '] &
+    !      & called tensor_assign_tensor'
 
     if(is_rvalue(B)) then
        call tensor_copy(A, B)
@@ -437,6 +447,16 @@ contains
     endif
   end subroutine
 
+#:for type in [['i4', 'integer'],['r4', 'real'],['r8', 'real(8)']]
+  subroutine tensor_assign_${type[0]}$(A, B)
+    implicit none
+    type(tensor), intent(inout) :: A
+    type(${type[1]}$), intent(in) :: B
+    integer :: ierr
+    call set(A, B)
+  end subroutine
+#:endfor
+  
   !> get number of sub nodes
   recursive function expr_sub_cnt(o, arg_mode, arg_is_root) result(res)
     implicit none
@@ -523,10 +543,10 @@ contains
        if(is_root) then
           if(get_depth(o) >= 3) then
              call tree_to_string(str, o, SKIP_EW_NODE)
-             print*, "node_type = ", op_names(o%node_type)
-             print*, "depth = ", get_depth(o)
-             print*, "str = ", trim(str)
-             print*, "hash = ", djb_hash(trim(str))
+             ! print*, "node_type = ", op_names(o%node_type)
+             ! print*, "depth = ", get_depth(o)
+             ! print*, "str = ", trim(str)
+             ! print*, "hash = ", djb_hash(trim(str))
 
              open(unit=out_unit,file=kernel_file, &
                   action='write', status='unknown', &
@@ -601,7 +621,7 @@ contains
 
     !only execute this function on first process
     if(get_rank() > 0) return
-    
+
     if(present(is_root)) then
        am_i_root = is_root
     else
@@ -609,7 +629,8 @@ contains
     endif
 
     if(am_i_root) then
-       call reset_global_id()
+
+       ! call reset_global_id()
        if(present(file)) then
           open(unit=out_unit,file=file, &
                action="write", status="replace")
@@ -678,29 +699,38 @@ contains
 
     
 #:if type1 == 'node'
-    call assign_ptr(C, A)
+    call bind_ptr(C, A)
 #:else
     allocate(C)
     call node_new(C, A)
 #:endif
 
 #:if type2 == 'node'
-    call assign_ptr(D, B)
+    call bind_ptr(D, B)
 #:else
     allocate(D)
     call node_new(D, B)
 #:endif
+
+#:if type1 == 'node' and type2 == 'node'
+    if(A%node_type == type_pow .and. B%node_type == type_scalar) then
+       call disp_info(C, 'C = ')
+       call disp_info(D, 'D = ')       
+    endif
+#:endif
     
     allocate(res)
     call node_new(res, type_${op}$, C, D)
-    res%var_type = 'r'
 
-#:if type1 == 'node'
-    call release_ptr(C)
+#:if type1 == 'node' and type2 == 'node'    
+    if(A%node_type == type_pow .and. B%node_type == type_scalar) then
+       call disp_info(C, 'C = ')
+       call disp_info(D, 'D = ')
+       call disp_info(res, 'res = ')
+    endif
 #:endif
-#:if type2 == 'node'
-    call release_ptr(D)
-#:endif
+    
+    call set_rvalue(res)
   end function
   
 #:endif
@@ -719,23 +749,21 @@ contains
     type(node), pointer :: tmp_o
 
 #:if type == 'node'
-    call assign_ptr(tmp_o, o)
+    call bind_ptr(tmp_o, o)
 #:else
     allocate(tmp_o)
     call node_new(tmp_o, o)
 #:endif
+
     allocate(res)
     call node_new(res, ${e[0]}$, tmp_o)
-#:if type == 'node'
-    call release_ptr(tmp_o)
-#:endif
 
-    print*, "calling expr_${e[2]}$_${type}$ ..."
-    print*, op_names(res%node_type),"==>", op_names(tmp_o%node_type)
-    if(tmp_o%node_type == type_data) &
-         print*, "xxxxxxxxxxxxxx = ", tmp_o%ref_cnt
+    ! print*, "calling expr_${e[2]}$_${type}$ ..."
+    ! print*, op_names(res%node_type),"==>", op_names(tmp_o%node_type)
+    ! if(tmp_o%node_type == type_data) &
+    !      print*, "xxxxxxxxxxxxxx = ", tmp_o%ref_cnt
     
-    res%var_type = 'r'    
+    call set_rvalue(res)
   end function
 
 #:endfor
@@ -753,9 +781,8 @@ contains
     type(node), pointer :: res
     type(node), pointer :: tmp_o
 
-    
 #:if type1 == 'node'
-    call assign_ptr(tmp_o, o)
+    call bind_ptr(tmp_o, o)
 #:else
     allocate(tmp_o)
     call node_new(tmp_o, o)
@@ -763,12 +790,9 @@ contains
 
     allocate(res)
     call node_new(res, type_pow, tmp_o)
+    res%num_args = 1
     res%args(1) = n
-    res%var_type = 'r'
-
-#:if type1 == 'node'
-    call release_ptr(tmp_o)
-#:endif
+    call set_rvalue(res)
   end function
   
 #:endfor
@@ -817,7 +841,7 @@ contains
   function slice_${data}$_${ta[0]}$_${tb[0]}$_${tc[0]}$ &
        (obj, a, b, c) result(res)
     implicit none
-    type(${data}$),target :: obj    
+    type(${data}$), intent(in) :: obj    
     ${ta[1]}$ :: a
     ${tb[1]}$ :: b    
     ${tc[1]}$ :: c
@@ -829,9 +853,9 @@ contains
 
     allocate(res)
 
-    call assert(is_valid(obj), &
-         __FILE__, __LINE__, &
-         'the input tensor/node must has a valid shape')
+    ! call assert(is_valid(obj), &
+    !      __FILE__, __LINE__, &
+    !      'the input tensor/node must has a valid shape')
     
     src_shape = shape(obj)
 
@@ -937,7 +961,8 @@ contains
 
     res%m_shape = (/dim_x, dim_y, dim_z/)
     res%node_type = type_ref
-    res%var_type = 'r'
+    call set_rvalue(res)
+    
   end function
   
 #:endfor
@@ -945,63 +970,92 @@ contains
 #:endfor
 #:endfor  
 
-#:for src_type in [['tensor', 'tensor', 'arr'], &
-  ['node', 'node', 'arr'], ['int', 'integer', 'scalar'], &
-       ['real', 'real', 'scalar'], ['real8', 'real(8)', 'scalar']]
-#:for dst_type in [['tensor', 'tensor'], ['node', 'node']]
-  
-  subroutine set_${dst_type[0]}$_${src_type[0]}$(dst, src)
+#:for src_type in [['tensor', 'tensor', 'tensor'], &
+       ['node', 'node', 'node'], &
+       ['int', 'integer', 'scalar'], &
+       ['real', 'real', 'scalar'], &
+       ['real8', 'real(8)', 'scalar']]
+#:for dst_type in [['tensor', 'tensor'], ['ref', 'node']]
+#:set func_name ='set_{0}_from_{1}'.format(dst_type[0], src_type[0])
+  subroutine ${func_name}$ (dst, src)
     type(${dst_type[1]}$), intent(in) :: dst
-    type(${src_type[1]}$) :: src
+    type(${src_type[1]}$), intent(in) :: src
+    type(${dst_type[1]}$), pointer :: dst_ptr
+    type(${src_type[1]}$), pointer :: src_ptr
     type(ref_info) :: set_ref
 
-#:if src_type[2] == 'scalar' and dst_type[0]=='tensor' 
+    !print*, "calling function ${func_name}$"
+    
+#:if dst_type[0]=='tensor'  and src_type[2] == 'scalar'
     call range_to_ref (set_ref, range_all, range_all, range_all)
-    call data_set_scalar (dst%data, real(src, 8), set_ref)
+    call data_set_scalar (dst, real(src, 8), set_ref)
 #:endif
     
-#:if src_type[2] == 'scalar' and dst_type[0] == 'ref' 
-    call data_set_scalar (dst%data%data, real(src, 8),  dst%ref)
+#:if dst_type[0] == 'ref' and src_type[2] == 'scalar'
+    call data_set_scalar (dst%data, real(src, 8),  dst%ref)
 #:endif
 
-#:if src_type[2] == 'tensor' and dst_type[0] == 'tensor' 
+#:if dst_type[0] == 'tensor' and src_type[2] == 'tensor'
+    call bind_ptr(dst_ptr, dst)
+    call bind_ptr(src_ptr, src)
+    dst_ptr = src_ptr
 #:endif
 
-#:if src_type[2] == 'tensor' and dst_type[0] == 'node'
+#:if dst_type[0] == 'tensor' and src_type[2] == 'node'
+    call bind_ptr(dst_ptr, dst)
+    call bind_ptr(src_ptr, src)
+    dst_ptr = src_ptr
+#:endif
+    
+#:if dst_type[0] == 'ref' and src_type[2] == 'tensor'
     call assert(is_ref(dst), __FILE__, __LINE__,&
          "the target must be a reference.")
-    call set_node_node(dst, slice(src, range_all, range_all, range_all))
+    call set(dst, slice(src, range_all, range_all, range_all))
 #:endif
 
-#:if src_type[1] == 'node' and dst_type[1] == 'node'
+#:if dst_type[0] == 'ref' and src_type[1] == 'node'
     call assert(associated(dst%data), __FILE__, __LINE__,&
          "as lvalue, node%data must be associated.")
 
     call assert(is_ref(dst), __FILE__, __LINE__,&
          "the target must be a reference.")
+
+    call assign_ptr(src_ptr, src)
     
     if(allocated(src%operands) .and. &  !for expression node    
          size(src%operands)>1) then
 
+       print*, "expr_node"
+
        !if the source node is an expression node,
        !evaluate it firt
-       call eval(src%data, src, ierr)
+       call eval(src_ptr%data, src_ptr, ierr)
+
+       call data_set_ref_ref(dst%data, &
+            src%data, dst%ref, src%ref)
        
-       call data_set_ref_ref(dst%data%data, &
-            src%data%data, dst%ref, src%ref)
-       
-    else if(src%node_type == type_data) then !for data node    
+    else if(src%node_type == type_data) then !for data node
+       print*, "data_node"       
        !if the source node is an data node,
        !we have to create reference info using its shape
-       call data_set_ref_ref(dst%data%data, &
-            src%data%data, shape_to_ref(shape(src)), &
-            src%ref)
+       call data_set_ref_ref(dst%data, &
+            src_ptr%data, shape_to_ref(shape(src_ptr)), &
+            src_ptr%ref)
     else
-       call data_set_ref_ref(dst%data%data, &
-            src%data%data, dst%ref, src%ref)
+       ! call disp_info(dst, 'dst = ')
+       ! call disp_info(src, 'src = ')
+       ! call disp_info(dst%data, 'dst%data = ')
+       ! call disp_info(src%data, 'src%data = ')
+
+       call data_set_ref_ref(dst%data, &
+            src_ptr%data, dst%ref, src_ptr%ref)
+       
     end if
+    !call disp_info(src_ptr, 'src_ptr = ')
+    call release_ptr(src_ptr)
 #:endif
-    
+
+    !print*, "finshing calling function ${func_name}$"
   end subroutine
 #:endfor
 #:endfor
@@ -1046,8 +1100,8 @@ contains
        if(get_depth(o) >= 3) then
           call tree_to_string(str, o, SKIP_EW_NODE)
           o%hash = abs(djb_hash(trim(str)))
-          print*, 'o%hash = ', o%hash
-          print*, 'str = ', trim(str)
+          ! print*, 'o%hash = ', o%hash
+          ! print*, 'str = ', trim(str)
        endif
        
        do i = 1, size(o%operands)
@@ -1113,5 +1167,7 @@ contains
             //trim(adjustl(ops_strs(2)))//trim(expr_form(i2+1:)), ")+Y"
     end select
   end subroutine
+
+  
 end module
 

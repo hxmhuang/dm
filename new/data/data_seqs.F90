@@ -16,6 +16,8 @@
     integer :: dof = 1, s = 1
     PetscScalar, pointer :: x1(:), x2(:,:), x3(:,:,:)
 
+    PetscInt :: num_cell_z, num_cell_y, num_cell_x, num_cell
+    
     call PetscLogEventRegister("data_seqs",0, ievent, ierr)
     call PetscLogEventBegin(ievent,ierr)
 
@@ -41,8 +43,7 @@
     ! print*, "m=", m, "n=", n, "k=",k
     ! print*, "xs = ", xs, "ys=", ys, "zs=", zs
     ! print*, "xe = ", xe, "ye=", ye, "ze=", ze
-    
-    !x3(zs:xs+xl-1, ys:ys+yl-1, zs:zs+zl-1) = alpha;
+
 
     do z = zs, ze
        do y = ys, ye
@@ -53,6 +54,25 @@
     end do
 
     call DMDAVecRestoreArrayF90(data_dm, data, x3, ierr)
+
+    ! call DMDAGetNumCells(data_dm, num_cell_x, num_cell_y, &
+    !      num_cell_z, num_cell, ierr)
+
+    ! print*, "cell_x = ", num_cell_x, &
+    !      "cell_y = ", num_cell_y, "cell_z = ", num_cell_z
+    
+
+    ! call VecView(data, PETSC_VIEWER_STDOUT_WORLD, ierr)
+
+    ! call DMDAVecGetArrayF90(data_dm, data, x3, ierr)
+    ! print*, "x3 = ", x3
+    ! call DMDAVecRestoreArrayF90(data_dm, data, x3, ierr)
+
+    ! call VecGetArrayF90(data, x1, ierr)
+    ! print*, "x1 = ", x1
+    ! call VecRestoreArrayF90(data, x1, ierr)
+    
     call DMDestroy(data_dm, ierr)
+    
     call PetscLogEventEnd(ievent,ierr)
   end subroutine

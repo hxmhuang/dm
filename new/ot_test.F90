@@ -12,61 +12,32 @@ contains
     call ot_option_int('-m', m, ierr)
     call ot_option_int('-n', n, ierr)
     call ot_option_int('-k', k, ierr)
+
+    if(get_rank() == 0) &
+         print*, '===========Test expr=========='
     
-    !call write_graph(NB, file="NB.dot")
-    ! D = A + B + C
-    !return
-
-    !CALL disp('A = ', (/1,2,3,4/), orient='row')
-
-    !three-dimensional array
-    !A = ones(2, 2, 2)
-    !E = 1.0/sin(ones(2,2,2) * 3.0)
-    !E = ones(2,2,2) * 3.0
-    !return
-
-    NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 + 1.0 / log(ones(2,2,2) * 3.0)
+    NB = exp(abs(2.0 * ones(2, 2, 2) - 3.5))**2 &
+         + 1.0 / log(ones(2,2,2) * 3.0)
+    
     call write_graph(NB, file="NB.dot")
-    
-    return
-    
-    ! C = ones(2, 2, 2)
-    ! D = ones(2, 2, 2)  
-    ! E = ones(2, 2, 2)
-
-    ! call display(A, "A = ")
-
-    C = 5.0 / (2.0 * ones(2, 2, 2))  
-    call disp(C, "C = ")
-
-    D = 10.0 * sin(ones(2, 2, 2))
-    call disp(D, "D = ")
-
 
     A = ones(2, 2, 2)  
     B = ones(2, 2, 2)  
     C = ones(2, 2, 2)
     D = ones(2, 2, 2)  
 
-    !C = 1.0 + A + B + C * D + E
-    !C = 1.0 + 2. * A + 4.0 / B * C * D
     ND = 1.0 + 2. * A + 4.0 / (B * C * D) + 4 * 5 * C
     call write_graph(ND, file="ND.dot")
 
-    !C = A - B
-    !C = 2.0 + (1.0 / B) + A
-    !C = 2.0 * (A - 0.1) + B  
-    !E = A * B * C + (D)
-
+    !连接2个表达式
     NA = B + sin(cos(exp(D+C)) + A) * 2 - 3
-    NB = 2.0 + (1.0 / B) + A + tan(NA)
+    NC = 2.0 + (1.0 / B) + A + tan(NA)
 
-    call write_graph(NB, file="NB.dot")
+    call write_graph(NC, file="NC.dot")
 
+    !求解表达式
     F = NB
     call disp(F, "F = ")
-
-    !call write_opt_graph(NB, file="opt_graph.dot")
 
   end subroutine
 
@@ -85,12 +56,9 @@ contains
     if(rank == 0) &
          print*, '===========Test seqs=========='
 
-    ! A = seqs(4)
-    ! B = seqs(4, 3)
-    C = seqs(m, n, k)
-    call disp(C, 'C = ')
-    ! call disp(B, 'B = ')
-    ! call disp(C, 'C = ')
+    A = seqs(m, n, k)
+    
+    call disp(A, 'A = ')
 
     ! call destroy(A, ierr)
     ! call destroy(B, ierr)
@@ -118,9 +86,31 @@ contains
     call destroy(C, ierr)
   end subroutine
 
+  subroutine test_rand()
+    implicit none
+    type(tensor) :: A, B, C, D
+    integer :: ierr
+    integer :: rank
+    rank = get_rank()
+    if(rank == 0) &
+         print*, '===========Test rand=========='
+
+    A = rand(4)
+    B = rand(4, 3)
+    C = rand(4, 4, 2)
+    call disp(A, 'A = ')
+    call disp(B, 'B = ')
+    call disp(C, 'C = ')
+
+    call destroy(A, ierr)
+    call destroy(B, ierr)
+    call destroy(C, ierr)
+  end subroutine
+  
   subroutine test_math()
     implicit none
     type(tensor) :: A, B, C, D, E
+    type(node) :: NE
     integer :: m, n, k
     integer :: ierr
     
@@ -128,20 +118,31 @@ contains
     call ot_option_int('-n', n, ierr)
     call ot_option_int('-k', k, ierr)
 
+
+    if(get_rank() == 0) &
+         print*, '===========Test math=========='
+
     
-    A = seqs(m, n, k)
-    B = ones(m, n, k)
+    A = seqs(m, n, k) * 10 + 1
+    B = 1.0 * ones(m, n, k) + 2
     C = ones(m, n, k)
+
     
-    D = A + B + C + sin(A + B + C)
-    return
+    call disp(A, 'A = ')
+    call disp(B, 'B = ')
+    call disp(C, 'C = ')
     
+    ! call destroy(A, ierr)
+    ! return
+
+    D = A + B + C  + sin(A + B + C)
+
     call disp(D, 'D = ')
 
+    call disp(A, 'A = ')
     ! B = A * 3
     
     ! call disp(A * 3, "A * 3 = ")
-    
     ! call disp_info(A, 'A1 = ')
     ! call disp_info(B, 'B1 = ')
     
@@ -152,13 +153,21 @@ contains
 
     ! call write_graph(A * 3, file="A3.dot")
 
-    ! E = exp(abs(2.0 * ones(m, n, k) - 3.5))**2 + &
-    !      1.0 / log(ones(m,n,k) * 3.0) + seqs(m, n, k)
+    E = exp(abs(2.0 * ones(m, n, k) - 3.5))**2 + &
+         1.0 / log(ones(m,n,k) * 3.0) + seqs(m, n, k)
 
-    E = cos(sin(abs(A)))**2 + 1.0 / (B * 2 + 3.0)
+    call disp(E, 'E = ')
+    
+    ! call write_graph(cos(sin(abs(A))) + (B * 2 + 3.0), file="NE.dot")
+    
+    ! E = cos(sin(abs(A)))**2 + 1.0 / (B * 2 + 3.0)
+    !E = cos(sin(abs(A)))**2 + (B * 2 + 3.0)
+    !E = A + (B * 2 + 3.0)    
+
+    
     !call disp_info(rcp(A))
     !E = abs(A)
-    call disp(E, 'E = ')
+    !call disp(E, 'E = ')
     
     ! C = seqs(m, n)
     ! D = C
@@ -171,7 +180,9 @@ contains
     ! call destroy(B, ierr)
 
     call destroy(A, ierr)
-    call destroy(B, ierr)    
+    call destroy(B, ierr)
+    call destroy(C, ierr)
+    call destroy(D, ierr)
     call destroy(E, ierr)
   end subroutine
   
@@ -195,7 +206,7 @@ contains
     call disp(B, 'B = ')
 
     C = seqs(10, 10)
-    D = slice(C, r(1, 5), r(1, 7), 1)
+    D = slice(C, r(1, 5), r(1, 7))
     call disp(D, 'D = ')
 
     E = seqs(10, 10, 3)
@@ -224,56 +235,72 @@ contains
     if(get_rank() == 0) &
          print*, '===========Test set=========='
 
-    ! A = seqs(10)
+    ! A = seqs(m * n * k)
     ! call disp(A, 'A = ')
-    ! call set(slice(A, r(1,3)), 3)
+    
+    ! A = 3
     ! call disp(A, 'A = ')
 
+    ! B = ones(m, n, k)
+    ! call disp(B, 'B = ')
+    
+    ! B = 2.0
+    ! call disp(B, 'B = ')
+
+    ! call set(B, 3.0)
+    ! call disp(B, 'B = ')
+
+    ! C = seqs(m, n, k)
+    
+    ! B = C + 1.0
+    ! call disp(B, 'B = ')
+    
+    ! call set(B, 2.0 * C + 3.0)
+    ! call disp(B, 'B = ')
+    
+    ! call set(slice(A, r(1,3)), 4)
+    ! call disp(A, 'set(slice(A, r(1,3)), 3) = ')
+    
     ! B = seqs(10, 10)
     ! call disp(B, 'B = ')
+    
     ! call set(slice(B, r(1,3), r(1,3)), 2.1)
     ! call disp(B, 'B = ')
 
-    ! C = seqs(5, 5, 2)
-    ! call disp(C, 'C = ')
-    ! call set(slice(C, r(1,3), range_all, 1), 2.1)
-    ! call disp(C, 'C = ')
+    C = seqs(5, 5, 2)
+    ! call set(slice(C, r(1,3), 'A', 1), 2.1)
+    call disp(C, 'C = ')
 
-    ! D = ones(5, 5, 2)
-    ! call set(slice(D, r(1,3),range_all,1), slice(C,r(2,4),range_all,1))
-    ! call disp(D, 'D(1:3,:,1) = C(1:3,:,1)')
-
-    ! call set(slice(D, 1, range_all, 1), slice(D, 2, range_all, 1))
-    ! call disp(D, 'D = ')
-
-    ! call set(slice(D, range_all, range_all, 2), &
-    !      slice(D, range_all, range_all, 1))
-    ! call disp(D, 'D = ')
-
-    E = seqs(4,4,10)
-        
-    !A = slice(E, 1, 'A','A')
-    !B = slice(E, 2,'A','A')
-    call set(slice(E, 1, 'A', 'A'), slice(E, 2, 'A', 'A'))
-    call disp(E, 'E = ')
-    !call disp(B, 'B = ')
+    ! call disp_info(C, 'info(C) = ')
     
-    return
+    D = ones(5, 5, 2)
+    call set(slice(D, r(1,3), 'A',1), slice(C,r(2,4), 'A', 1))
+    call disp(D, 'D(1:3,:,1) = C(2:4,:,1)')
 
-    do i = 1, 3
-       
-       ! call set(slice(E, range_all, range_all, i+1), &
-       !      slice(E, range_all, range_all, i))
-       
-       call set(slice(E, i+1,'A','A'), slice(E, i,'A','A'))
+    ! ! call set(slice(D, 1, 'A', 1), slice(D, 2, 'A', 1))
+    ! ! call disp(D, 'D = ')
 
-           !call MPI_Barrier(MPI_COMM_WORLD, ierr)       
-    end do
-    call disp(E, 'E = ')
+    ! ! call set(slice(D, 'A', 'A', 2),  slice(D, 'A', 'A', 1))
+    ! ! call disp(D, 'D = ')
+
+    ! E = seqs(4, 4, 4)
+    ! call disp(E, 'E = ')    
+    ! do i = 1, 3
+    !   !call set(slice(E, 'A','A', i+1), slice(E, 'A',ROW_ALL,i))       
+    !    call set(slice(E, 'A','A', i+1), slice(E, 'A','A',i))
+    ! end do
+    ! call disp(E, 'E = ')
+
+    ! do i = 1, 3
+    !    call set(slice(E, 'A', 'A', i+1), slice(E, 'A', 'A', i))
+    ! end do
+    ! call disp(E, 'E = ')
     
     call destroy(A, ierr)
     call destroy(B, ierr)
     call destroy(C, ierr)
+    call destroy(D, ierr)
+    call destroy(E, ierr)
   end subroutine
 
   subroutine fun(o)
@@ -330,7 +357,7 @@ contains
     allocate(buf, buf1, buf2)
     
     ! print*, "size(buf) = ", size(buf)
-    ! print*, "data = ", buf_data(buf)
+    ! print*, "data = ", get_data(buf)
     
     call push_back(buf, 1.0)
     print*, "size(buf) = ", size(buf)
@@ -339,7 +366,7 @@ contains
     call push_back(buf, 1.2)
     call push_back(buf, 1.3)
     print*, "size(buf) = ", size(buf)
-    print*, "data = ", buf_data(buf)
+    print*, "data = ", get_data(buf)
 
     call push_back(buf1, 2.1)
     call push_back(buf1, 2.2)
@@ -351,7 +378,51 @@ contains
     call push_back(buf_list, buf1)
     call push_back(buf_list, buf2)
 
-    buf_ptr2 => buf_data(buf_list, 3)
-    print*, "data = ", buf_data(buf_ptr2)
+    buf_ptr2 => get_data(buf_list, 3)
+    print*, "data = ", get_data(buf_ptr2)
+  end subroutine
+
+  subroutine test_box_to_indices()
+    implicit none
+    
+  end subroutine
+
+  subroutine test_find_pos() 
+    implicit none
+    integer :: idx(1000)
+    integer :: i
+    integer :: pos
+    integer :: N
+
+    N = 1000
+    
+    do i = 1,N
+       idx(i) = (i - 1) * 5
+    enddo
+
+    pos = find_pos(4, idx, 1, N - 1)
+    write(*, *) "pos = ", pos
+    pos = find_pos(5, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(6, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(7, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(1, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(44, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(45, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(46, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(1005, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(1000, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(4995, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
+    pos = find_pos(5000, idx, 1, N - 1)
+    write(*, *) "pos = ", pos    
   end subroutine
 end module

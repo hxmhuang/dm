@@ -29,7 +29,11 @@ module ot_type
   type dist_info
      integer, allocatable, dimension(:) :: lx
      integer, allocatable, dimension(:) :: ly
-     integer, allocatable, dimension(:) :: lz     
+     integer, allocatable, dimension(:) :: lz
+     
+     integer, allocatable, dimension(:) :: clx
+     integer, allocatable, dimension(:) :: cly
+     integer, allocatable, dimension(:) :: clz     
   end type dist_info
   
   type ref_info
@@ -73,18 +77,17 @@ module ot_type
 
      ! the node shape inherit from its left/right
      ! expression or the tensor within it
-     !integer :: m_dim = 0
      integer :: m_shape(3) = 0
 
      real(8) :: alpha = 0
      real(8) :: beta  = 1
      real(8) :: scalar = 0
 
-     !the unique id for each node
-     integer :: id
-
+     !number of arguments
+     integer :: num_args = 0
+     
      !arguments for the node
-     real(8) :: args(10) = 0
+     real(8) :: args(8) = 0
 
      !reference counter
      integer :: ref_cnt = 0
@@ -94,6 +97,9 @@ module ot_type
 
      !store its hash
      integer(kind=8) :: hash = 0
+
+     !the unique id for each node
+     integer :: id
   end type node
 
   type tensor
@@ -113,7 +119,7 @@ module ot_type
      !reference counter
      integer :: ref_cnt = 0
 
-     !default is lvalue
+     !default is lvalue, lvalue, rvalue
      character(len=1) :: var_type = 'l'
   end type tensor
 

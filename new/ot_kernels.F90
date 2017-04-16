@@ -3,17 +3,25 @@
 module ot_kernels
   use ot_dict
   use ot_petsc
-
+  use ot_type
+  use ot_tensor
+  use ot_buffer
+  
   interface
      subroutine invoke_kernel(func, A, B, &
-          ops_alpha, ops_beta, args,ierr) &
+          ops_alpha, ops_beta, ops_args, ops_num, args_num, ierr) &
           bind(C, name = 'invoke_kernel')
+       use ot_type
+       use ot_buffer
 #:include "petsc.h"
        C_POINTER :: func
-       Vec :: A
-       Vec :: B(:)
-       real(8) :: ops_alpha(:), ops_beta(:), args(:)
-       integer,intent(out) :: ierr
+       C_POINTER :: A
+       C_POINTER :: B
+       C_POINTER :: ops_alpha, ops_beta
+       C_POINTER :: ops_args
+       C_POINTER :: ops_num
+       C_POINTER :: args_num
+       C_POINTER :: ierr
      end subroutine
   end interface 
   
@@ -62,14 +70,17 @@ contains
 #:set cnt_arg = func.count('B')
 
   !> function ${func}$
-  subroutine kernel_${key}$(A, B, ops_alpha, ops_beta, args, ierr)
+  subroutine kernel_${key}$(A, B, ops_alpha, &
+       ops_beta, ops_args, args_num, ierr)
     implicit none
 #include "petsc.h"
-    Vec, intent(inout) :: A
+    type(tensor), intent(inout) :: A
+    type(tensor_ptr), intent(in) :: B(${cnt}$)
+    PetscScalar, intent(in) :: ops_alpha(${cnt_alpha}$)
+    PetscScalar, intent(in) :: ops_beta(${cnt_beta}$)
+    PetscScalar, intent(in) :: ops_args(args_num)
+    integer, intent(in)  :: args_num
     PetscScalar, pointer :: res(:,:,:)
-    Vec, intent(in) :: B(${cnt}$)
-    PetscScalar, intent(in) :: ops_alpha(${cnt_alpha}$), ops_beta(${cnt_beta}$)
-    PetscScalar, intent(in) :: args(${cnt_arg}$)
     integer :: xs, xe, ys, ye, zs, ze
     integer, intent(out) :: ierr
 #:for c in range(1,cnt+1)
@@ -82,10 +93,10 @@ contains
     ! print*, "hello!!${func}$"
     ! return
     
-    call get_local_arr(A, res)
+    call get_local_arr(A%data, res)
     
 #:for c in range(1,cnt+1)
-    call get_local_arr(B(${c}$), ${'{0}{1}'.format('x', c)}$)
+    call get_local_arr(B(${c}$)%ptr%data, ${'{0}{1}'.format('x', c)}$)
 #:endfor
     
 #:set expr = func    
@@ -102,13 +113,13 @@ contains
 #:endfor
 #!
 #:for c in range(1, cnt_arg+1)
-#:set expr = string.replace(expr, 'B', 'args({0})'.format(c), 1)
+#:set expr = string.replace(expr, 'B', 'ops_args(1)'.format(c), 1)
 #:endfor
 #!
     res(xs:xe,ys:ye,zs:ze) = ${expr}$
 
 #:for c in range(1,cnt+1)
-    call restore_local_arr(B(${c}$), ${'{0}{1}'.format('x', c)}$)
+    call restore_local_arr(B(${c}$)%ptr%data, ${'{0}{1}'.format('x', c)}$)
 #:endfor
   end subroutine
 #!  xxx${key}$xxx${expr}$xxx

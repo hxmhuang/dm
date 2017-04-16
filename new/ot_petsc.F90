@@ -20,11 +20,16 @@ module ot_petsc
   end interface restore_local_arr
 #:endfor
 
-  interface petsc_new3d
-     module procedure petsc_new3d_by_shape
-     module procedure petsc_new3d_by_dm
+  interface petsc_create3d
+     module procedure petsc_create3d_with_shape
+     module procedure petsc_create3d_with_dm
   end interface
 
+  interface petsc_create3d_seq
+     module procedure petsc_create3d_seq_with_shape
+     module procedure petsc_create3d_seq_with_data
+  end interface petsc_create3d_seq
+        
   interface petsc_get_shape
      module procedure petsc_get_shape1
      module procedure petsc_get_shape2
@@ -75,6 +80,22 @@ contains
          PETSC_NULL_INTEGER,ierr)
   end subroutine
 
+  subroutine petsc_get_vec_dist(ranges, x)
+    implicit none
+#include "petsc.h"
+    Vec :: x
+    integer :: vsize
+    integer :: ierr
+    integer, allocatable, intent(out) :: ranges(:)
+    
+    call VecGetSize(x, vsize, ierr)
+    CHKERRQ(ierr)
+    allocate(ranges(vsize))
+    call VecGetOwnershipRanges(x, ranges,ierr)
+    CHKERRQ(ierr)
+  end subroutine
+  
+  !> get distributed mesh
   subroutine petsc_get_dm(data_dm, data)
     implicit none
 #include "petsc.h"
@@ -83,6 +104,17 @@ contains
     integer :: ierr
 
     call VecGetDM(data, data_dm, ierr)
+    CHKERRQ(ierr)
+  end subroutine
+
+  !> destory distributed mesh
+  subroutine petsc_destroy_dm(data_dm)
+    implicit none
+#include "petsc.h"
+    DM, intent(in) :: data_dm
+    integer :: ierr
+
+    call DMDestroy(data_dm, ierr)
     CHKERRQ(ierr)
   end subroutine
   
@@ -110,6 +142,7 @@ contains
     type(dist_info), intent(out) :: dist
     integer :: ierr
     integer :: nx, ny, nz !number of processor in each dimension
+    integer :: i, j, k
     
     call DMDAGetInfo(data_dm, PETSC_NULL_INTEGER, &
          PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
@@ -122,7 +155,35 @@ contains
     allocate(dist%lx(nx), dist%ly(ny), dist%lz(nz))
     
     call DMDAGetOwnershipRanges(data_dm, dist%lx, dist%ly, dist%lz, ierr)
+    
     CHKERRQ(ierr)
+
+    allocate(dist%clx(nx+1), dist%cly(ny+1), dist%clz(nz+1))
+    
+    do i = 1, size(dist%clx)
+       if(i == 1) then
+          dist%clx(i)  = 0
+       else
+          dist%clx(i) = dist%lx(i-1) + dist%clx(i-1)
+       endif
+    end do
+
+    do i = 1, size(dist%cly)
+       if(i == 1) then
+          dist%cly(i)  = 0
+       else
+          dist%cly(i) = dist%ly(i-1) + dist%cly(i-1)
+       endif
+    end do
+
+    do i = 1, size(dist%clz)
+       if(i == 1) then
+          dist%clz(i)  = 0
+       else
+          dist%clz(i) = dist%lz(i-1) + dist%clz(i-1)
+       endif
+    end do
+    
   end subroutine
 
   
@@ -269,15 +330,18 @@ contains
   end subroutine  
 #:endfor
 
-  subroutine petsc_new3d_by_shape(arr, m, n, k, bm, bn, bk)
+  subroutine petsc_create3d_with_shape(arr, comm, &
+       m, n, k, bm, bn, bk, ierr)
     implicit none
 #include "petsc.h"    
     integer :: m, n, k, bm, bn, bk
     Vec, intent(out) :: arr
     DM :: arr_dm
-    integer :: ierr, xs, ys, zs, xl, yl, zl
+    integer, intent(out) :: ierr
+    integer :: xs, ys, zs, xl, yl, zl
+    integer :: comm
     
-    call DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,   &
+    call DMDACreate3d(comm,DM_BOUNDARY_NONE,         &
          DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,          &
          DMDA_STENCIL_STAR, m,n,k, bm, bn, bk,       &
          1, 0,                                       &
@@ -290,7 +354,39 @@ contains
     call DMCreateGlobalVector(arr_dm, arr, ierr)
   end subroutine
 
-  subroutine petsc_new3d_by_dm(arr, arr_dm)
+  subroutine petsc_create3d_seq_with_shape(vec_data, m, n, k, ierr)
+    implicit none
+#include "petsc.h"
+    Vec, intent(out) :: vec_data
+    integer, intent(out) :: ierr    
+    integer :: m, n, k    
+    
+    call petsc_create3d_with_shape(vec_data, &
+         PETSC_COMM_SELF, &
+         m, n, k, PETSC_DECIDE, &
+         PETSC_DECIDE, PETSC_DECIDE, ierr)
+  end subroutine
+
+  subroutine petsc_create3d_seq_with_data(vec_data, m, n, k, data, ierr)
+    implicit none
+#include "petsc.h"
+    Vec, intent(out) :: vec_data
+    integer, intent(out) :: ierr
+    integer :: m, n, k
+    PetscScalar, pointer :: local_arr(:,:,:)
+    PetscScalar :: data(:,:,:)
+    
+    call petsc_create3d_with_shape(vec_data, &
+         PETSC_COMM_SELF, &
+         m, n, k, PETSC_DECIDE, &
+         PETSC_DECIDE, PETSC_DECIDE, ierr)
+
+    call get_local_arr(vec_data, local_arr) 
+    local_arr = data
+    call restore_local_arr(vec_data, local_arr)     
+  end subroutine
+  
+  subroutine petsc_create3d_with_dm(arr, arr_dm)
     implicit none
 #include "petsc.h"    
     integer :: m, n, k, bm, bn, bk
@@ -501,6 +597,76 @@ contains
     call petsc_slice_dm(dst_dm, src_dm, box)
   end subroutine
 
+  subroutine petsc_data_clone(dst, src, ierr)
+    implicit none
+#include "petsc.h"
+    Vec, intent(out) :: dst
+    Vec, intent(in)  :: src
+    ! DM, intent(out)  :: dst_dm
+    ! DM, intent(in)   :: src_dm
+    integer, intent(out) :: ierr
+    
+    !call DMClone(src_dm, dst_dm, ierr)
+    call VecDuplicate(src, dst, ierr)
+    call VecCopy(src, dst, ierr)
+    ! call VecView(src,PETSC_VIEWER_STDOUT_WORLD,ierr)
+    ! call VecView(dst,PETSC_VIEWER_STDOUT_WORLD,ierr)
+  end subroutine 
+
+  subroutine petsc_data_destroy(data, ierr)
+    implicit none
+#include "petsc.h"
+    Vec, intent(inout) :: data
+    DM :: data_dm
+    integer, intent(out) :: ierr
+
+    if(data /= 0) then
+       !call VecGetDM(data, data_dm, ierr)       
+       !call DMRestoreGlobalVector(data_dm, data, ierr)
+       !call DMDestroy(data_dm, ierr)
+       call VecDestroy(data, ierr)
+       data = 0
+    endif
+  end subroutine 
+
+  subroutine petsc_data_duplicate(dst, src, ierr)
+    implicit none
+#include "petsc.h"
+    Vec, intent(out) :: dst
+    Vec, intent(in)  :: src
+    ! DM, intent(out)  :: dst_dm
+    ! DM, intent(in)   :: src_dm
+    integer, intent(out) :: ierr
+    
+    !call DMClone(src_dm, dst_dm, ierr)
+
+    ! write(*, "(A, Z16.16)"), "src=", src
+    ! write(*, "(A, Z16.16)"), "dst=", dst
+    
+    !call VecView(src,PETSC_VIEWER_STDOUT_WORLD,ierr)    
+
+    call VecDuplicate(src, dst, ierr)
+
+    ! call VecView(src,PETSC_VIEWER_STDOUT_WORLD,ierr)
+    ! call VecView(dst,PETSC_VIEWER_STDOUT_WORLD,ierr)
+  end subroutine 
+
+  subroutine init_petsc(ierr)
+    implicit none
+#include "petsc.h"
+    integer, intent(out) :: ierr
+    call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
+
+  end subroutine 
+
+  subroutine finalize_data(ierr)
+    implicit none
+#include "petsc.h"    
+    integer, intent(out) :: ierr
+    
+    call PetscFinalize(ierr)
+  end subroutine 
+
   subroutine petsc_print(global_vec, prefix)
     implicit none
 #include "petsc.h"
@@ -540,7 +706,8 @@ contains
               
        call petsc_get_dm(global_dm, global_vec)
        call petsc_get_dist(dist, global_dm)
-
+       ! call disp(dist, 'dist = ')
+       
        offset = 0;
        accz = 0;
        do pz = 1, size(dist%lz)
@@ -582,30 +749,22 @@ contains
           write(*, "(4X, A)") "data = "
        endif
 
-       do z = 1, k
+       do kk = 1, k
           if(k > 1) &
-               write(*,"(6X, A, I0.1)") "k = ", z
-          do y = 1, n
-             write(*,"(6X, 100g12.5)") &
-                  data3d(:, y, z)
+               write(*,"(6X, A, I0.1)") "k = ", kk
+          do mm = 1, m
+             write(*,"(6X, 100F12.5)") &
+                  data3d(mm, :, kk)
           end do
        end do
        
-       ! do z = 1, k
-       !    if(k > 1) &
-       !         write(*,"(6X, A, I0.1)") "k = ", z
-       !    do y = 1, n
-       !       write(*,"(6X, 100g12.5)") &
-       !            arr((z-1)*m*n+(y-1)*m+1:(z-1)*m*n+(y-1)*m+m)
-       !    end do
-       ! end do
-
        call VecRestoreArrayF90(local_vec, arr, ierr)
     end if
 
     call VecDestroy(local_vec, ierr)
     call VecScatterDestroy(ctx, ierr)
   end subroutine
+
 end module
 
 #undef I1

@@ -5,6 +5,7 @@ module ot_node
   use ot_ref
   use ot_type  
   use ot_tensor
+  use ot_data
   
   interface node_new
      module procedure node_new_from_tensor
@@ -54,10 +55,20 @@ module ot_node
      module procedure assign_node_ptr
   end interface assign_ptr
 
+  !> only bind the pointer and object
+  !> not increace refernce counter
+  interface bind_ptr
+     module procedure bind_node_ptr
+  end interface bind_ptr
+  
   interface release_ptr
      module procedure release_node_ptr
   end interface release_ptr
 
+  interface is_scalar
+     module procedure is_scalar_node
+  end interface is_scalar
+  
 #:set t = 'node'
 #:include "ot_vector.if"
 #:del t
@@ -69,6 +80,8 @@ module ot_node
      character(len=1) :: ntype ! unary/binary
      character(len=1) :: etype ! element-wise type
      character(len=20) :: expr_form !expression form
+     character(len=20) :: kernel !expression form     
+     C_POINTER :: func = 0
   end type op_desc
 
   type(op_desc), dimension(${L[len(L)-1][1]}$) :: op_desc_list
@@ -86,11 +99,21 @@ contains
     
 #:for e in L
     op_names(${e[1]}$) = "${e[3]}$"
-    
     op_desc_list(${e[1]}$)%op_name   = "${e[3]}$"
-    op_desc_list(${e[1]}$)%ntype     = "${e[4]}$"
+    op_desc_list(${e[1]}$)%ntype     = "${e[4]}$" !A, B, C
     op_desc_list(${e[1]}$)%etype     = "${e[5]}$"
-    op_desc_list(${e[1]}$)%expr_form = "${e[6]}$"        
+    op_desc_list(${e[1]}$)%expr_form = "${e[6]}$"
+
+    
+#:if e[0] == 'type_data'    
+    op_desc_list(${e[1]}$)%func = loc(data_uplus)
+    op_desc_list(${e[1]}$)%kernel = 'data_uplus'    
+#:endif
+    
+#:if e[1] >= 50
+    op_desc_list(${e[1]}$)%func = loc(${'data_{0}'.format(e[2])}$)
+    op_desc_list(${e[1]}$)%kernel = "${'data_{0}'.format(e[2])}$"
+#:endif
 #:endfor
 
     ! do i = 1, size(op_desc_list)
@@ -98,6 +121,15 @@ contains
     ! enddo
   end subroutine
 
+  !> plus, minus, multiply, divid
+  function is_pmmd(t) result(res)
+    implicit none
+    integer, intent(in) :: t
+    logical :: res
+    
+    res = (op_desc_list(t)%ntype=='A')
+  end function
+  
   !> is element-wise
   function is_ew(o) result(res)
     type(node), intent(in) :: o
@@ -116,11 +148,20 @@ contains
     cnt = inc_ref_cnt(p)
   end subroutine
 
+  subroutine bind_node_ptr(p, o)
+    implicit none
+    type(node), pointer,intent(out) :: p
+    type(node), target, intent(in)  :: o
+    p => o
+  end subroutine
+  
   !> delete node pointer
   recursive subroutine release_node_ptr(p)
     implicit none
     type(node), pointer,intent(inout) :: p
     integer :: ierr
+
+    if(.not. associated(p)) return
     
     if(dec_ref_cnt(p) <= 0) then
        if(is_rvalue(p)) then
@@ -130,6 +171,7 @@ contains
           ! end if
           call destroy(p, ierr)
           deallocate(p)
+          p => null()
        end if
     endif
   end subroutine
@@ -156,11 +198,12 @@ contains
   !> node constructers
   subroutine node_new_from_tensor(B, A) 
     implicit none
-    type(tensor), intent(in), target :: A
+    type(tensor), intent(in) :: A
     type(node),   intent(out) :: B
 
+    ! print*, 'yyyyyyyyyyyyyyyy'
     !call tensor_ensure_valid(A)
-    TENSOR_ENSURE_VALID(A)
+    ! TENSOR_ENSURE_VALID(A)
     
     B%id = get_global_id()
     B%m_shape = A%m_shape
@@ -194,29 +237,39 @@ contains
   subroutine node_new_op_binary(C, op_type, left, right)
     implicit none
     integer, intent(in) :: op_type
-    type(node), intent(in), pointer :: left, right
+    type(node), intent(inout), pointer :: left, right
     type(node), intent(out), pointer :: C
     real(8) :: x
+    type(tensor), pointer :: scalar_tensor
+    integer :: ierr
 
-    if((.not. is_scalar(left)) .and. &
-         (.not. is_scalar(right))) then
-       call assert(.not. any(left%m_shape /= right%m_shape), &
-            __FILE__, __LINE__, &
-            "shape of the left and right leaf does not match.")
-    endif
-
-    if(is_scalar(left)) then
+    ! call disp_info(left, 'left = ')
+    ! call disp_info(right, 'right = ')
+    
+    ! if((.not. is_scalar(left)) .and. &
+    !      (.not. is_scalar(right))) then
+    !    call assert(.not. any(left%m_shape /= right%m_shape), &
+    !         __FILE__, __LINE__, &
+    !         "shape of the left and right leaf does not match.")
+    ! endif
+    
+    !for '+', '-', '*' and '/', the scalar will be merged
+    !into other nodes for higher evaluation efficiency
+    if(is_scalar(left) .and. is_pmmd(op_type)) then
        x = left % scalar
        select case(op_type)
        case (type_plus) ! x + A
-          call assign_ptr(C, right)
+          !call assign_ptr(C, right)
+          C => right
           C%alpha = x + C%alpha
        case (type_minus) ! x - A
-          call assign_ptr(C, right)          
+          !call assign_ptr(C, right)
+          C => right
           C%alpha = x - C%alpha
           C%beta  = -C%beta
        case (type_mult) ! x .* A
-          call assign_ptr(C, right)          
+          !call assign_ptr(C, right)
+          C => right
           C%alpha = x * C%alpha
           C%beta  = x * C%beta
        case (type_divd) ! x ./ A
@@ -227,9 +280,10 @@ contains
           C%node_type = type_rcp
           call push_back(C%operands, right)
        end select
-    else if(is_scalar(right)) then
+    else if(is_scalar(right) .and. is_pmmd(op_type)) then
        x = right % scalar
-       call assign_ptr(C, left)
+       !call assign_ptr(C, left)
+       C => left
        select case(op_type)
        case (type_plus) ! A + x
           C%alpha = C%alpha + x
@@ -240,6 +294,7 @@ contains
        case (type_mult) ! A .* a
           C%alpha = C%alpha * x
           C%beta  = C%beta  * x
+          !call disp_info(C, 'C = ')
        case (type_divd)
           C%alpha = C%alpha / x
           C%alpha = C%beta  / x
@@ -248,20 +303,32 @@ contains
        allocate(C)
        allocate(C%operands(2))
        
-       call assign_ptr(C%operands(1)%ptr, left)
-       call assign_ptr(C%operands(2)%ptr, right)
-       
        if(is_scalar(left)) then
-          C%m_shape = right%m_shape
-       else
+          allocate(scalar_tensor)
+          call tensor_new_scalar(scalar_tensor, left%scalar, ierr)
+          call assign_ptr(C%data, scalar_tensor)
+          C%m_shape = right%m_shape          
+       else if(is_scalar(right)) then
+          allocate(scalar_tensor)
+          call tensor_new_scalar(scalar_tensor, right%scalar, ierr)
+          call assign_ptr(C%data, scalar_tensor)
           C%m_shape = left%m_shape
-       endif
-       
+       else
+          C%m_shape = right%m_shape                    
+       end if
+
+       call assign_ptr(C%operands(1)%ptr, left) 
+       call assign_ptr(C%operands(2)%ptr, right)
+       ! C%operands(1)%ptr => left
+       ! C%operands(2)%ptr => right
        C%node_type = op_type
-       
+
+       ! print*, "C%node_type = ", C%node_type
+       ! write(*, '(A, Z16.16)'), "loc(C) = ", loc(C)
        !assign new node id
        C%id = get_global_id()
     end if
+
   end subroutine
 
 #:for t in ['integer', 'real', 'real8']
@@ -302,6 +369,7 @@ contains
   subroutine disp_info_node(o, prefix)
     implicit none
     type(node), intent(in) :: o
+    type(node), pointer :: ptr
     character(len=*), optional, intent(in) :: prefix
     integer :: i, dim
     
@@ -320,9 +388,11 @@ contains
        write(*, "(4X, A, Z16.16, A, I3.1)") "data addr :", loc(o%data), &
             ", ref_cnt = ", o%data%ref_cnt
     end if
+    write(*, "(4X, A, A)") "var_type = ", o%var_type
 #endif
     write(*, "(4X, A, A)") "node type : ", op_names(o%node_type)
     call disp_shape(o%m_shape, '4X')
+
     !write(*, "(4X, A)", advance="no") "shape : ["
     ! dim = find_dim(o%m_shape)
     ! if(dim == 0) then
@@ -338,8 +408,11 @@ contains
     write(*, "(4X, A, F8.4)") "alpha : ", o%alpha
     write(*, "(4X, A, F8.4)") "beta  : ", o%beta
     if(is_scalar(o)) write(*, "(A, F0.8)") "scalar  : ", o%scalar
-    write(*, "(4X, A, 10F8.4)") "args : ", o%args(1:5)
 
+    if(o%num_args > 0) then
+       write(*, "(4X, A, 10F8.4)") "args : ", o%args(1:o%num_args)
+    endif
+ 
     if(.not. is_data(o)) then
        write(*, "(4X, A)") "operands : "
        do i = 1, size(o%operands)
@@ -350,9 +423,14 @@ contains
     endif
 
     write(*, "(A)") ""
+
+    ! call assign_ptr(ptr, o)
+    ! call release_ptr(ptr)
+    ! if(is_rvalue(o)) then
+    !    call destroy(o, ierr)
+    ! end if
   end subroutine
 
-  
   function node_dim(o) result(res)
     implicit none
     type(node), intent(in) :: o
@@ -394,7 +472,7 @@ contains
 
   end function
 
-  function is_scalar(A) result(res)
+  function is_scalar_node(A) result(res)
     implicit none
     type(node) :: A
     logical :: res
@@ -533,7 +611,8 @@ contains
     implicit none
     type(node), intent(in) :: o
     integer :: i
-
+    type(node), pointer :: ptr
+    
     if(get_rank() == 0) then
        call disp_info(o)
 
@@ -543,5 +622,8 @@ contains
           call disp_tree(o%operands(i)%ptr)
        end do
     endif
+
+    ! call assign_ptr(ptr, o)    
+    ! call release_ptr(ptr)
   end subroutine
 end module

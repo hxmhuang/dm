@@ -22,12 +22,14 @@ OBJS_DATA = $(addprefix ./data/, data_consts.o data_rand.o )
 OBJS_UTIL = $(addprefix ./utils/,func_ptr.o gettimeofday.o \
 	    ot_display.o )
 
-ABC = $(addprefix ./, ot_petsc.o ot_kernels.o ot_data.o \
-	ot_tensor.o ot_node.o  \
+ABC = $(addprefix ./, ot_petsc.o  ot_tensor.o\
+	ot_kernels.o  ot_data.o \
+	ot_node.o  \
 	ot_expr.o  ot_init.o)
 
-OBJS  = ot_buffer.o ot_print.o ot_common.o ot_dict.o ot_type.o ot_ref.o \
-	ot_geom.o ${OBJS_UTIL}  \
+OBJS  = ot_type.o ot_buffer.o ot_print.o \
+	ot_common.o ot_dict.o ot_type.o  \
+	ot_geom.o ot_ref.o ${OBJS_UTIL}  \
 	${OBJS_DATA} ${ABC} ot_func.o
 
 OBJ_MAIN= ${OBJS} ot_mod.o ot_test.o main.o

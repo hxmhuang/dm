@@ -1,4 +1,4 @@
-#![type_name,   type_id, name_appdx, symbol,  ntype, etype, expr_form]
+#![type_name,   type_id, name_appdx, symbol,  ntype, etype, expr_form, kernel]
 #:set L = &
   [["type_data",    1,	 "data",    "data",      "",  "",   ""],&    
    ["type_scalar",  2,	 "scalar",  "scalar",    "",  "",   ""],&       
@@ -15,7 +15,7 @@
    ["type_ne", 	    59,	 "ne", 	    "/=",  	 "B", "T",  "A/=B"],&      
    ["type_pow",     110, "pow",     "pow", 	 "C", "T",  "A**B"],&      
    ["type_exp",     111, "exp",     "exp", 	 "C", "T",  "exp(A)"],&    
-   ["type_sin",     112, "sin",     "sin", 	 "C", "F",  "sin(A)"],&    
+   ["type_sin",     112, "sin",     "sin", 	 "C", "T",  "sin(A)"],&    
    ["type_tan",     113, "tan",     "tan", 	 "C", "T",  "tan(A)"],&    
    ["type_cos",     114, "cos",     "cos", 	 "C", "T",  "cos(A)"],&    
    ["type_rcp",     115, "rcp",     "rcp", 	 "C", "T",  "1.0/A"],&     

@@ -24,11 +24,21 @@ module ot_ref
      module procedure is_rvalue_node
      module procedure is_rvalue_tensor     
   end interface is_rvalue
-
+  
   interface is_lvalue
      module procedure is_lvalue_node
      module procedure is_lvalue_tensor     
   end interface is_lvalue
+
+  interface set_rvalue
+     module procedure set_rvalue_node
+     module procedure set_rvalue_tensor
+  end interface set_rvalue
+
+  interface set_lvalue
+     module procedure set_lvalue_node
+     module procedure set_lvalue_tensor
+  end interface set_lvalue
   
 contains
 
@@ -67,6 +77,20 @@ contains
     
     res = (o%var_type == 'l')
   end function
+
+  subroutine set_rvalue_${type}$(o)
+    implicit none
+    type(${type}$), intent(inout) :: o
+    
+    o%var_type = 'r'
+  end subroutine
+
+  subroutine set_lvalue_${type}$(o)
+    implicit none
+    type(${type}$), intent(inout) :: o
+    
+    o%var_type = 'l'
+  end subroutine
 #:endfor
   
 end module
