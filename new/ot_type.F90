@@ -21,9 +21,9 @@ module ot_type
      type(node), pointer :: ptr => null()
   end type node_ptr
 
-  type tensor_ptr
-     type(tensor), pointer :: ptr => null()
-  end type tensor_ptr
+  type array_ptr
+     type(array), pointer :: ptr => null()
+  end type array_ptr
 
   !how the array distributed along x,y,z-directions
   type dist_info
@@ -55,14 +55,14 @@ module ot_type
      integer, allocatable, dimension(:) :: iarr_y
      integer, allocatable, dimension(:) :: iarr_z     
 
-     !0 for tensor, 1 for node
+     !0 for array, 1 for node
      integer :: ref_target_type
      ! type(node),  pointer :: ref_node   => null()
-     ! type(tensor),pointer :: ref_tensor => null()
+     ! type(array),pointer :: ref_array => null()
   end type ref_info
   
   type node
-     type(tensor), pointer :: data => null()
+     type(array), pointer :: data => null()
 
      !the operands for a operation, e.g. A + B,, A and B are operands
      !for a binary operator, the number operands is always 2
@@ -76,7 +76,7 @@ module ot_type
      type(ref_info) :: ref
 
      ! the node shape inherit from its left/right
-     ! expression or the tensor within it
+     ! expression or the array within it
      integer :: m_shape(3) = 0
 
      real(8) :: alpha = 0
@@ -102,7 +102,7 @@ module ot_type
      integer :: id
   end type node
 
-  type tensor
+  type array
      !dim and shape should not be specified by user!
      !integer :: m_dim = 0
      integer :: m_shape(3) = (/0,0,0/)
@@ -121,13 +121,13 @@ module ot_type
 
      !default is lvalue, lvalue, rvalue
      character(len=1) :: var_type = 'l'
-  end type tensor
+  end type array
 
   type grid
      character(1) :: grid_type !'B' or 'C'
-     type(tensor), pointer :: dx_3d => null()
-     type(tensor), pointer :: dy_3d => null()
-     type(tensor), pointer :: dz_3d => null()     
+     type(array), pointer :: dx_3d => null()
+     type(array), pointer :: dy_3d => null()
+     type(array), pointer :: dz_3d => null()     
   end type grid
 
   

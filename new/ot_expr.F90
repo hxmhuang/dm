@@ -6,7 +6,7 @@
 
 module ot_expr
   use ot_common
-  use ot_tensor
+  use ot_array
   use dispmodule
   use ot_ref
   use ot_geom
@@ -24,11 +24,11 @@ module ot_expr
   public :: assignment(=)
 
   interface assignment (=)
-     module procedure tensor_assign_tensor
-     module procedure node_assign_tensor
+     module procedure array_assign_array
+     module procedure node_assign_array
      module procedure node_assign_node
 #:for type in ['i4', 'r4', 'r8']
-     module procedure tensor_assign_${type}$
+     module procedure array_assign_${type}$
 #:endfor
   end interface assignment (=)
 
@@ -38,7 +38,7 @@ module ot_expr
 
   interface slice
 #:set slice_idx_type=['int', 'arr','range', 'char']
-#:for data in ['node', 'tensor']
+#:for data in ['node', 'array']
 #:for ta in slice_idx_type
      module procedure slice_${data}$_${ta}$     
 #:for tb in slice_idx_type
@@ -52,8 +52,8 @@ module ot_expr
   end interface slice
 
   interface set
-#:for src_type in ['tensor', 'node', 'int', 'real', 'real8']
-#:for dst_type in ['tensor', 'ref']
+#:for src_type in ['array', 'node', 'int', 'real', 'real8']
+#:for dst_type in ['array', 'ref']
      module procedure set_${dst_type}$_from_${src_type}$
 #:endfor
 #:endfor
@@ -63,8 +63,8 @@ module ot_expr
 #:for op in [['plus','+'], ['minus','-'], ['mult','*'], ['divd','/'], &
   ['gt','>'], ['ge', '>='], ['lt', '<'],['le', '<='],['eq','=='],['ne','/=']]
   interface operator (${op[1]}$)
-#:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
-#:for type2 in ['real(8)', 'real', 'integer', 'tensor', 'node']
+#:for type1 in ['real(8)', 'real', 'integer', 'array', 'node']
+#:for type2 in ['real(8)', 'real', 'integer', 'array', 'node']
 #:if any(type1 in s for s in ['real(8)', 'real', 'integer']) & 
      and any(type2 in s for s in ['real(8)', 'real', 'integer'])
 #:else
@@ -86,7 +86,7 @@ module ot_expr
 #:else
   interface ${e[3]}$
 #:endif
-#:for type1 in ['tensor', 'node']
+#:for type1 in ['array', 'node']
      module procedure expr_${e[2]}$_${type1}$
 #:endfor
   end interface
@@ -95,7 +95,7 @@ module ot_expr
 #:endfor
 
   interface operator (**)
-#:for type1 in ['node', 'tensor']     
+#:for type1 in ['node', 'array']     
 #:for type2 in ['integer', 'real', 'real8']
      module procedure expr_${type1}$_pow_${type2}$
 #:endfor
@@ -107,7 +107,7 @@ module ot_expr
 contains
 
   subroutine init_expr(ierr)
-    use ot_tensor
+    use ot_array
     implicit none
     integer, intent(out) :: ierr
     integer :: out_unit = 10
@@ -136,7 +136,7 @@ contains
     implicit none
     type(node), intent(inout), pointer :: A
     character(len=*),intent(in),optional :: msg
-    type(tensor) :: T    
+    type(array) :: T    
     integer :: ierr
 
     T = A !this will evaluate the node
@@ -175,18 +175,18 @@ contains
     
   end subroutine
   
-  subroutine node_assign_tensor(A, B)
+  subroutine node_assign_array(A, B)
     implicit none
-    type(tensor), intent(inout) :: A
+    type(array), intent(inout) :: A
     type(node), intent(in) :: B
     type(node), pointer :: src
-    type(tensor), pointer :: dst
-    type(tensor) :: res
+    type(array), pointer :: dst
+    type(array) :: res
     integer ierr, cnt
     character(len=MAX_TREESTR_LENGTH) :: str
     integer, parameter :: out_unit = 10
     
-    ! print*, "node assigning to tensor ..."
+    ! print*, "node assigning to array ..."
 
     call assign_ptr(dst, A)
     call assign_ptr(src, B)
@@ -245,15 +245,15 @@ contains
     !call disp_tree(B)
     
     ! call node_destroy(C, ierr)
-    ! call tensor_copy(A, B%data)
+    ! call array_copy(A, B%data)
     
     !if(B%node_type /= type_data) call eval(A)
     ! if(B%node_type == type_data) then
-    !    call tensor_copy(A, B)
+    !    call array_copy(A, B)
     ! else
-    !    call tensor_copy(C, B)
+    !    call array_copy(C, B)
     !    call eval(C)
-    !    call tensor_copy(A, C)
+    !    call array_copy(A, C)
     ! endif
     
     !if(allocated(res)) deallocate(res)    
@@ -288,16 +288,16 @@ contains
   recursive subroutine eval(res, A, ierr, force_eval_arg)
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout), pointer :: res
+    type(array), intent(inout), pointer :: res
     type(node), intent(inout) :: A
     integer :: i, num_oprands
     integer, intent(out) :: ierr
     real(8), allocatable :: ops_alpha(:), ops_beta(:)
-    type(tensor_ptr), allocatable :: ops_tensor(:)
+    type(array_ptr), allocatable :: ops_array(:)
     logical, optional, intent(in) :: force_eval_arg
     logical :: force_eval
     type(node), pointer :: node_ptr
-    type(tensor), pointer :: tmp_res
+    type(array), pointer :: tmp_res
     type(buffer_list_r8) :: buf_list
     type(buffer_r8) :: buf
     C_POINTER :: kernel_addr
@@ -325,7 +325,7 @@ contains
           call eval(A%data, A%operands(1)%ptr, ierr, .false.)
        end if
 
-       call slice_tensor(res, A%data, A%ref)
+       call slice_array(res, A%data, A%ref)
        return
     end if
 
@@ -338,7 +338,7 @@ contains
     if(.not. is_data(A)) then       
        num_oprands = size(A%operands)
 
-       allocate(ops_tensor(num_oprands), &
+       allocate(ops_array(num_oprands), &
             ops_alpha(num_oprands), ops_beta(num_oprands))
        
        !recusively evaluate sub-nodes
@@ -355,15 +355,15 @@ contains
           ! call disp_info(node_ptr, 'NODE')
           ! call disp(node_ptr%data, 'TENSOR = ')
 
-          !call assign_ptr(ops_tensor(i)%ptr, node_ptr%data)
-          ops_tensor(i)%ptr => node_ptr%data
+          !call assign_ptr(ops_array(i)%ptr, node_ptr%data)
+          ops_array(i)%ptr => node_ptr%data
           ops_alpha(i) = node_ptr%alpha
           ops_beta(i)  = node_ptr%beta
        end do
     else
-       allocate(ops_tensor(1), ops_alpha(1), ops_beta(1))
-       !call assign_ptr(ops_tensor(1)%ptr, A%data)
-       ops_tensor(1)%ptr => A%data
+       allocate(ops_array(1), ops_alpha(1), ops_beta(1))
+       !call assign_ptr(ops_array(1)%ptr, A%data)
+       ops_array(1)%ptr => A%data
        ops_alpha(1) = A%alpha
        ops_beta(1)  = A%beta
     endif
@@ -371,9 +371,9 @@ contains
     !call disp_info(A, 'A2 = ')
     
     if(.not. associated(res)) then
-       do i = 1, size(ops_tensor) 
-          if(is_rvalue(ops_tensor(i)%ptr)) then
-             call assign_ptr(res, ops_tensor(i)%ptr)
+       do i = 1, size(ops_array) 
+          if(is_rvalue(ops_array(i)%ptr)) then
+             call assign_ptr(res, ops_array(i)%ptr)
              exit
           endif
        end do
@@ -381,8 +381,8 @@ contains
     
     if(.not. associated(res)) then       
        allocate(tmp_res)
-       !allocate space for result tensor object
-       call tensor_duplicate(tmp_res, ops_tensor(1)%ptr)
+       !allocate space for result array object
+       call array_duplicate(tmp_res, ops_array(1)%ptr)
        call assign_ptr(res, tmp_res)
        !the evaluation result should be a rvalue
        call set_rvalue(res)
@@ -392,7 +392,7 @@ contains
     
     if(associated(res) &
          .and. res%data == 0) then
-       call tensor_duplicate(res, ops_tensor(1)%ptr)
+       call array_duplicate(res, ops_array(1)%ptr)
     endif
 
     ! call push_back(buf, A%args(1))
@@ -403,54 +403,54 @@ contains
     kernel_addr = op_desc_list(A%node_type)%func
     ! write(*, "(A, Z16.16)"), "kernel_addr = ", kernel_addr
     
-    num_oprands = size(ops_tensor)
+    num_oprands = size(ops_array)
 
-    ! call disp_info(ops_tensor(1)%ptr, 'ops_tensor(1)%ptr = ')
-    ! call disp_info(ops_tensor(2)%ptr, 'ops_tensor(2)%ptr = ')
+    ! call disp_info(ops_array(1)%ptr, 'ops_array(1)%ptr = ')
+    ! call disp_info(ops_array(2)%ptr, 'ops_array(2)%ptr = ')
 
     write(*, '(A, A, A, Z16.16)') "invoke kernel of ", &
          trim(op_desc_list(A%node_type)%kernel), &
          "  Addr : ", kernel_addr
     
     call invoke_kernel(kernel_addr, loc(res), &
-         loc(ops_tensor), loc(ops_alpha), &
+         loc(ops_array), loc(ops_alpha), &
          loc(ops_beta), loc(A%args), &
          loc(num_oprands), loc(A%num_args), loc(ierr))
 
     ! call disp(res, 'res = ')
     print*, "evalation of ", trim(op_names(A%node_type)), " is complete."
     
-    ! do i = 1, size(ops_tensor)
-    !     call release_ptr(ops_tensor(i)%ptr)
+    ! do i = 1, size(ops_array)
+    !     call release_ptr(ops_array(i)%ptr)
     ! enddo
        
   end subroutine
   
   !> this function will be called in the following two situations:
-  !> 1) A = B, where A and B are both tensors
-  !> 2) func(A), where A is a tensor and passed to a function as an argument.
+  !> 1) A = B, where A and B are both arrays
+  !> 2) func(A), where A is a array and passed to a function as an argument.
   !> in both case, we do not need a deep copy
-  subroutine tensor_assign_tensor(A, B)
+  subroutine array_assign_array(A, B)
     implicit none
-    type(tensor), intent(inout) :: A
-    type(tensor), intent(in)  :: B
+    type(array), intent(inout) :: A
+    type(array), intent(in)  :: B
     integer :: ierr
     
     ! write(*,'(A, I0.1, A)'), '[', &
     !      get_rank(MPI_COMM_WORLD), '] &
-    !      & called tensor_assign_tensor'
+    !      & called array_assign_array'
 
     if(is_rvalue(B)) then
-       call tensor_copy(A, B)
+       call array_copy(A, B)
     else
-       call tensor_deep_copy(A, B)
+       call array_deep_copy(A, B)
     endif
   end subroutine
 
 #:for type in [['i4', 'integer'],['r4', 'real'],['r8', 'real(8)']]
-  subroutine tensor_assign_${type[0]}$(A, B)
+  subroutine array_assign_${type[0]}$(A, B)
     implicit none
-    type(tensor), intent(inout) :: A
+    type(array), intent(inout) :: A
     type(${type[1]}$), intent(in) :: B
     integer :: ierr
     call set(A, B)
@@ -682,8 +682,8 @@ contains
   end subroutine
 
   !the following code using preprossor to create subroutines  
-#:for type1 in ['real(8)', 'real', 'integer', 'tensor', 'node']
-#:for type2 in ['real(8)', 'real', 'integer', 'tensor', 'node']
+#:for type1 in ['real(8)', 'real', 'integer', 'array', 'node']
+#:for type2 in ['real(8)', 'real', 'integer', 'array', 'node']
 #:for op in ['plus', 'minus', 'mult', 'divd', 'gt', 'ge', 'lt', 'le', 'eq', 'ne']
 #:if any(type1 in s for s in ['real(8)', 'real', 'integer']) & 
      and any(type2 in s for s in ['real(8)', 'real', 'integer'])  
@@ -740,7 +740,7 @@ contains
 
 #:for e in L
 #:if e[1] >= 111
-  #:for type in ['tensor', 'node']
+  #:for type in ['array', 'node']
   !> function ${e[2]}$(${type}$), return a tree node 
   function expr_${e[2]}$_${type}$ (o) result(res)
     implicit none
@@ -770,7 +770,7 @@ contains
 #:endif
 #:endfor
 
-#:for type1 in ['node', 'tensor']
+#:for type1 in ['node', 'array']
 #:for type2 in ['integer', 'real', 'real(8)']
 #:set name2 = re.sub('\(8\)', '8', type2)
   !> power function ${type1}$**${type2}$
@@ -807,7 +807,7 @@ contains
        ['arr', 'integer,dimension(:)'], &
        ['char', 'character(len=1)']]
        
-#:for data in ['node', 'tensor']  
+#:for data in ['node', 'array']  
 #:for ta in itype
    function slice_${data}$_${ta[0]}$ &
         (obj, a) result(res)
@@ -855,7 +855,7 @@ contains
 
     ! call assert(is_valid(obj), &
     !      __FILE__, __LINE__, &
-    !      'the input tensor/node must has a valid shape')
+    !      'the input array/node must has a valid shape')
     
     src_shape = shape(obj)
 
@@ -950,7 +950,7 @@ contains
     res%ref%ref_index_type_z = 1    
 #:endif
     
-#:if data == 'tensor'
+#:if data == 'array'
     !call node_new(res, obj) !create a data node
     call assign_ptr(res%data, obj)
     !call node_add_operand(res, tmp)
@@ -970,12 +970,12 @@ contains
 #:endfor
 #:endfor  
 
-#:for src_type in [['tensor', 'tensor', 'tensor'], &
+#:for src_type in [['array', 'array', 'array'], &
        ['node', 'node', 'node'], &
        ['int', 'integer', 'scalar'], &
        ['real', 'real', 'scalar'], &
        ['real8', 'real(8)', 'scalar']]
-#:for dst_type in [['tensor', 'tensor'], ['ref', 'node']]
+#:for dst_type in [['array', 'array'], ['ref', 'node']]
 #:set func_name ='set_{0}_from_{1}'.format(dst_type[0], src_type[0])
   subroutine ${func_name}$ (dst, src)
     type(${dst_type[1]}$), intent(in) :: dst
@@ -986,7 +986,7 @@ contains
 
     !print*, "calling function ${func_name}$"
     
-#:if dst_type[0]=='tensor'  and src_type[2] == 'scalar'
+#:if dst_type[0]=='array'  and src_type[2] == 'scalar'
     call range_to_ref (set_ref, range_all, range_all, range_all)
     call data_set_scalar (dst, real(src, 8), set_ref)
 #:endif
@@ -995,19 +995,19 @@ contains
     call data_set_scalar (dst%data, real(src, 8),  dst%ref)
 #:endif
 
-#:if dst_type[0] == 'tensor' and src_type[2] == 'tensor'
+#:if dst_type[0] == 'array' and src_type[2] == 'array'
     call bind_ptr(dst_ptr, dst)
     call bind_ptr(src_ptr, src)
     dst_ptr = src_ptr
 #:endif
 
-#:if dst_type[0] == 'tensor' and src_type[2] == 'node'
+#:if dst_type[0] == 'array' and src_type[2] == 'node'
     call bind_ptr(dst_ptr, dst)
     call bind_ptr(src_ptr, src)
     dst_ptr = src_ptr
 #:endif
     
-#:if dst_type[0] == 'ref' and src_type[2] == 'tensor'
+#:if dst_type[0] == 'ref' and src_type[2] == 'array'
     call assert(is_ref(dst), __FILE__, __LINE__,&
          "the target must be a reference.")
     call set(dst, slice(src, range_all, range_all, range_all))

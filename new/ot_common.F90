@@ -196,7 +196,7 @@ contains
     write(*,*) ""
   end subroutine
 
-  !> if tensor shape is [2x3x1], the function returns 2
+  !> if array shape is [2x3x1], the function returns 2
   function find_dim(m_shape) result(dim)
     implicit none
     integer, intent(in) :: m_shape(3)

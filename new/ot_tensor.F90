@@ -4,7 +4,7 @@
 #:include "type_def.fypp"
 #include "type.h"
 
-module ot_tensor
+module ot_array
   use ot_common
   use ot_type  
   use ot_ref
@@ -22,75 +22,75 @@ module ot_tensor
      end subroutine
   end interface
 
-  interface tensor_new
-     module procedure tensor_new_from_data
-  end interface tensor_new
+  interface array_new
+     module procedure array_new_from_data
+  end interface array_new
 
   interface disp
-     module procedure disp_tensor
+     module procedure disp_array
   end interface disp
 
   interface shape
-     module procedure tensor_shape     
+     module procedure array_shape     
   end interface shape
 
   interface box
-     module procedure tensor_box
+     module procedure array_box
   end interface box
 
   interface lbox
-     module procedure tensor_lbox
+     module procedure array_lbox
   end interface lbox
 
   interface is_scalar
-     module procedure is_scalar_tensor
+     module procedure is_scalar_array
   end interface is_scalar
 
   interface is_valid
-     module procedure is_valid_tensor
+     module procedure is_valid_array
   end interface is_valid
 
   interface disp_info
-     module procedure disp_info_tensor
+     module procedure disp_info_array
   end interface disp_info
 
   
-  interface tensor_seq
-     module procedure tensor_new_seq_with_shape1
-     module procedure tensor_new_seq_with_shape2
-     module procedure tensor_new_seq_with_shape3
-     module procedure tensor_new_seq_with_data
-     module procedure tensor_new_scalar     
-  end interface tensor_seq
+  interface array_seq
+     module procedure array_new_seq_with_shape1
+     module procedure array_new_seq_with_shape2
+     module procedure array_new_seq_with_shape3
+     module procedure array_new_seq_with_data
+     module procedure array_new_scalar     
+  end interface array_seq
   
   interface destroy
-     module procedure tensor_destroy
+     module procedure array_destroy
   end interface destroy
 
   interface assign_ptr
-     module procedure assign_tensor_ptr
+     module procedure assign_array_ptr
   end interface assign_ptr
 
   interface bind_ptr
-     module procedure bind_tensor_ptr
+     module procedure bind_array_ptr
   end interface bind_ptr
   
   interface release_ptr
-     module procedure release_tensor_ptr
+     module procedure release_array_ptr
   end interface release_ptr
 
   
-#:set t = 'tensor'
+#:set t = 'array'
 #:include "ot_vector.if"
 #:del t
   
 contains
 
-#:set t = 'tensor'
+#:set t = 'array'
 #:include "ot_vector.inc"
 #:del t
   
-  subroutine init_tensor(ierr)
+  subroutine init_array(ierr)
     implicit none
     integer, intent(out) :: ierr
 
@@ -99,27 +99,27 @@ contains
 
   end subroutine
   
-  subroutine assign_tensor_ptr(p, o)
+  subroutine assign_array_ptr(p, o)
     implicit none
-    type(tensor), pointer,intent(out) :: p
-    type(tensor), target, intent(in)  :: o
+    type(array), pointer,intent(out) :: p
+    type(array), target, intent(in)  :: o
     integer :: cnt
     p => o
     ! add reference counter
     cnt = inc_ref_cnt(p)
   end subroutine
 
-  subroutine bind_tensor_ptr(p, o)
+  subroutine bind_array_ptr(p, o)
     implicit none
-    type(tensor), pointer,intent(out) :: p
-    type(tensor), target, intent(in)  :: o
+    type(array), pointer,intent(out) :: p
+    type(array), target, intent(in)  :: o
     p => o
   end subroutine
   
-  !>delete tensor pointer
-  subroutine release_tensor_ptr(p)
+  !>delete array pointer
+  subroutine release_array_ptr(p)
     implicit none
-    type(tensor), pointer,intent(inout) :: p
+    type(array), pointer,intent(inout) :: p
     integer :: ierr
 
     if(.not. associated(p)) return
@@ -134,70 +134,70 @@ contains
 
   end subroutine
 
-  !>destroy the tensor
-  subroutine tensor_destroy(A, ierr)
+  !>destroy the array
+  subroutine array_destroy(A, ierr)
     implicit none
-    type(tensor), intent(inout) :: A
+    type(array), intent(inout) :: A
     integer, intent(out) :: ierr
     integer :: cnt
 
     call petsc_data_destroy(A%data, ierr)
   end subroutine 
 
-  subroutine tensor_new_from_data(t, data)
+  subroutine array_new_from_data(t, data)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     Vec, intent(in) :: data
 
     call assert(data /= 0, __FILE__, __LINE__, &
          "data can not be null.")
     
-    call tensor_bind_data(t, data)
+    call array_bind_data(t, data)
   end subroutine
 
-  !> overload function of tensor_seq
-  subroutine tensor_new_seq_with_shape1(t, m, ierr)
+  !> overload function of array_seq
+  subroutine array_new_seq_with_shape1(t, m, ierr)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     integer, intent(in)  :: m
     integer, intent(out) :: ierr
     Vec :: vec_data
 
     call petsc_create3d_seq_with_shape(&
          vec_data, m, 1, 1, ierr)
-    call tensor_bind_data(t, vec_data)
+    call array_bind_data(t, vec_data)
   end subroutine
 
-  !> overload function of tensor_seq  
-  subroutine tensor_new_seq_with_shape2(t, m,n, ierr)
+  !> overload function of array_seq  
+  subroutine array_new_seq_with_shape2(t, m,n, ierr)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     integer, intent(in)  :: m, n
     integer, intent(out) :: ierr
     Vec :: vec_data
 
     call petsc_create3d_seq_with_shape(&
          vec_data, m, n, 1, ierr)
-    call tensor_bind_data(t, vec_data)
+    call array_bind_data(t, vec_data)
   end subroutine
 
-  !> overload function of tensor_seq  
-  subroutine tensor_new_seq_with_shape3(t, m,n,k, ierr)
+  !> overload function of array_seq  
+  subroutine array_new_seq_with_shape3(t, m,n,k, ierr)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     integer, intent(in)  :: m, n, k
     integer, intent(out) :: ierr
     Vec :: vec_data
 
     call petsc_create3d_seq_with_shape(&
          vec_data, m, n, k, ierr)
-    call tensor_bind_data(t, vec_data)
+    call array_bind_data(t, vec_data)
   end subroutine
 
-  !> overload function of tensor_seq  
-  subroutine tensor_new_seq_with_data(t, data, ierr)
+  !> overload function of array_seq  
+  subroutine array_new_seq_with_data(t, data, ierr)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     real(8), intent(in)  :: data(:,:,:)
     integer, intent(out) :: ierr
     integer :: s(3)
@@ -210,13 +210,13 @@ contains
     
     call petsc_create3d_seq_with_data(&
          vec_data, s(1), s(2), s(3), data, ierr)
-    call tensor_bind_data(t, vec_data)
+    call array_bind_data(t, vec_data)
   end subroutine
 
-  !> overload function of tensor_seq  
-  subroutine tensor_new_scalar(t, data, ierr)
+  !> overload function of array_seq  
+  subroutine array_new_scalar(t, data, ierr)
     implicit none
-    type(tensor), intent(out) :: t
+    type(array), intent(out) :: t
     real(8), intent(in)  :: data
     real(8) :: data3d(1,1,1)
     integer, intent(out) :: ierr
@@ -226,12 +226,12 @@ contains
     data3d(1,1,1) = data
     call petsc_create3d_seq_with_data &
          (vec_data, 1, 1, 1, data3d, ierr)
-    call tensor_bind_data(t, vec_data)
+    call array_bind_data(t, vec_data)
   end subroutine
 
-  subroutine tensor_bind_data(o, data)
+  subroutine array_bind_data(o, data)
     implicit none
-    type(tensor), intent(inout) :: o
+    type(array), intent(inout) :: o
     Vec, intent(in) :: data
     integer :: d_shape(3)
     integer :: dx, dy, dz
@@ -256,10 +256,10 @@ contains
   
 
   
-  subroutine disp_tensor(objA, prefix)
+  subroutine disp_array(objA, prefix)
 #include "petsc.h"            
-    type(tensor), intent(in),target :: objA
-    type(tensor), pointer :: A
+    type(array), intent(in),target :: objA
+    type(array), pointer :: A
     character(len=*), optional, intent(in) :: prefix
     real(kind=8), pointer :: x1(:), x2(:,:), x3(:,:,:)
     integer :: i, ierr, rank
@@ -290,9 +290,9 @@ contains
     end if
   end subroutine
 
-  subroutine tensor_set_shape(A, m_shape)
+  subroutine array_set_shape(A, m_shape)
     implicit none
-    type(tensor), intent(out) :: A    
+    type(array), intent(out) :: A    
     integer, intent(in) :: m_shape(:)
     
     select case (size(m_shape))
@@ -312,10 +312,10 @@ contains
     
   end subroutine
 
-  subroutine tensor_copy_structure(dst, src)
+  subroutine array_copy_structure(dst, src)
     implicit none
-    type(tensor), intent(inout) :: dst
-    type(tensor), intent(in) :: src
+    type(array), intent(inout) :: dst
+    type(array), intent(in) :: src
 
     dst%m_shape  = src%m_shape
     dst%is_field = src%is_field
@@ -323,72 +323,72 @@ contains
   end subroutine
   
   !> naively copy the data member and pointers from src to dst
-  subroutine tensor_copy(dst, src)
+  subroutine array_copy(dst, src)
     implicit none
-    type(tensor), intent(inout) :: dst
-    type(tensor), intent(in)    :: src
+    type(array), intent(inout) :: dst
+    type(array), intent(in)    :: src
     integer :: ierr
     
-    call tensor_copy_structure(dst, src)
+    call array_copy_structure(dst, src)
     call petsc_data_destroy(dst%data,  ierr)    
-    call tensor_bind_data(dst, src%data)
+    call array_bind_data(dst, src%data)
     
     !dst%data = src%data    
   end subroutine
 
-  !> deep copy tensor, all data are copied from dst to src
-  subroutine tensor_deep_copy(dst, src)
+  !> deep copy array, all data are copied from dst to src
+  subroutine array_deep_copy(dst, src)
     implicit none
-    type(tensor), intent(inout) :: dst
-    type(tensor), intent(in)  :: src
+    type(array), intent(inout) :: dst
+    type(array), intent(in)  :: src
     integer :: ierr
 
-    call tensor_copy_structure(dst, src)
+    call array_copy_structure(dst, src)
     call petsc_data_destroy(dst%data,  ierr) !safe destroy
     call petsc_data_clone(dst%data, src%data, ierr)
   end subroutine 
 
-  !> duplicate tensor structure, the data is allocated but not copied
-  subroutine tensor_duplicate(dst, src)
+  !> duplicate array structure, the data is allocated but not copied
+  subroutine array_duplicate(dst, src)
     implicit none
-    type(tensor), intent(inout) :: dst
-    type(tensor), intent(in), pointer  :: src
+    type(array), intent(inout) :: dst
+    type(array), intent(in), pointer  :: src
     integer :: ierr
 
     !write(*, "(A, Z16.16)"), "src_data=", src%data
     
-    call tensor_copy_structure(dst, src)
+    call array_copy_structure(dst, src)
     call petsc_data_destroy(dst%data,  ierr) !safe destroy
     call petsc_data_duplicate(dst%data,  src%data,  ierr)
   end subroutine 
 
-!   subroutine slice_tensors(dst, src, ref)
+!   subroutine slice_arrays(dst, src, ref)
 !     implicit none
 ! #include "petsc.h"
-!     type(tensor), intent(inout) :: dst
-!     type(tensor), intent(in)    :: src
+!     type(array), intent(inout) :: dst
+!     type(array), intent(in)    :: src
 !     type(ref_info), intent(in)  :: ref
 !     Vec :: dst_data
 !     integer :: ierr
     
 !     !call data_get_sub(dst%data, src%data, box)
 !     call data_get_sub(dst_data, src%data, ref)
-!     call tensor_new(dst, dst_data)
+!     call array_new(dst, dst_data)
 
 !     !call VecView(dst%data, PETSC_VIEWER_STDOUT_WORLD, ierr)
   !   end subroutine
 
 
-    function tensor_shape(o) result(res)
+    function array_shape(o) result(res)
     implicit none
-    type(tensor), intent(in) :: o
+    type(array), intent(in) :: o
     integer :: res(3)
     res = o%m_shape
   end function
   
-  function tensor_box(o) result(res)
+  function array_box(o) result(res)
     implicit none
-    type(tensor), intent(in) :: o
+    type(array), intent(in) :: o
     type(box_info) :: res
     integer :: s(3)
 
@@ -399,18 +399,18 @@ contains
     res%rz = r(0, s(3))    
   end function
 
-  function tensor_lbox(o) result(res)
+  function array_lbox(o) result(res)
     implicit none
-    type(tensor), intent(in) :: o
+    type(array), intent(in) :: o
     type(box_info) :: res
     integer :: xs, ys, zs, xl, yl, zl
 
     call petsc_get_corners(o%data, res)
   end function
 
-  function is_scalar_tensor(o) result(res)
+  function is_scalar_array(o) result(res)
     implicit none
-    type(tensor), intent(in) :: o
+    type(array), intent(in) :: o
     logical :: res
     integer :: s(3)
 
@@ -419,9 +419,9 @@ contains
          s(2)==1 .and. s(3)==1)
   end function
 
-  function is_valid_tensor(t) result(res)
+  function is_valid_array(t) result(res)
     implicit none
-    type(tensor) :: t
+    type(array) :: t
     logical :: res
     
     if(any(shape(t) <= 0) &
@@ -432,9 +432,9 @@ contains
     end if
   end function
 
-  subroutine disp_info_tensor(o, prefix)
+  subroutine disp_info_array(o, prefix)
     implicit none
-    type(tensor), intent(in) :: o
+    type(array), intent(in) :: o
     character(len=*), optional, intent(in) :: prefix
     integer :: i
     integer :: dim

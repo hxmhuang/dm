@@ -4,14 +4,14 @@
 module ot_node
   use ot_ref
   use ot_type  
-  use ot_tensor
+  use ot_array
   use ot_data
   
   interface node_new
-     module procedure node_new_from_tensor
+     module procedure node_new_from_array
      module procedure node_new_from_node
      module procedure node_new_op_binary
-     !module procedure node_new_op_tensor
+     !module procedure node_new_op_array
      module procedure node_new_op_node     
 #:for t in ['integer', 'real', 'real8']
      module procedure node_new_from_${t}$
@@ -196,13 +196,13 @@ contains
   end subroutine
   
   !> node constructers
-  subroutine node_new_from_tensor(B, A) 
+  subroutine node_new_from_array(B, A) 
     implicit none
-    type(tensor), intent(in) :: A
+    type(array), intent(in) :: A
     type(node),   intent(out) :: B
 
     ! print*, 'yyyyyyyyyyyyyyyy'
-    !call tensor_ensure_valid(A)
+    !call array_ensure_valid(A)
     ! TENSOR_ENSURE_VALID(A)
     
     B%id = get_global_id()
@@ -240,7 +240,7 @@ contains
     type(node), intent(inout), pointer :: left, right
     type(node), intent(out), pointer :: C
     real(8) :: x
-    type(tensor), pointer :: scalar_tensor
+    type(array), pointer :: scalar_array
     integer :: ierr
 
     ! call disp_info(left, 'left = ')
@@ -304,14 +304,14 @@ contains
        allocate(C%operands(2))
        
        if(is_scalar(left)) then
-          allocate(scalar_tensor)
-          call tensor_new_scalar(scalar_tensor, left%scalar, ierr)
-          call assign_ptr(C%data, scalar_tensor)
+          allocate(scalar_array)
+          call array_new_scalar(scalar_array, left%scalar, ierr)
+          call assign_ptr(C%data, scalar_array)
           C%m_shape = right%m_shape          
        else if(is_scalar(right)) then
-          allocate(scalar_tensor)
-          call tensor_new_scalar(scalar_tensor, right%scalar, ierr)
-          call assign_ptr(C%data, scalar_tensor)
+          allocate(scalar_array)
+          call array_new_scalar(scalar_array, right%scalar, ierr)
+          call assign_ptr(C%data, scalar_array)
           C%m_shape = left%m_shape
        else
           C%m_shape = right%m_shape                    

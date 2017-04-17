@@ -15,7 +15,7 @@ module ot_data
   use ot_geom
   use ot_type
   use ot_buffer
-  use ot_tensor
+  use ot_array
   
   interface get_local_ptr
      module procedure get_local_ptr1d
@@ -127,8 +127,8 @@ contains
        ops_beta, ops_args, ops_num, args_num, ierr) 
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout)  :: A
-    type(tensor_ptr), intent(in) :: B(2)
+    type(array), intent(inout)  :: A
+    type(array_ptr), intent(in) :: B(2)
     PetscScalar, intent(in) :: ops_alpha(2), ops_beta(2)
     PetscScalar, intent(in) :: ops_args(args_num)
     integer, intent(in) :: ops_num
@@ -205,8 +205,8 @@ contains
        ops_beta, ops_args, ops_num, args_num, ierr) 
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout)  :: A
-    type(tensor_ptr), intent(in) :: B(2)
+    type(array), intent(inout)  :: A
+    type(array_ptr), intent(in) :: B(2)
     PetscScalar :: ops_alpha(2), ops_beta(2) !, alpha, beta
     !this argument won't be used    
     !type(buffer_r8), intent(in), pointer :: ops_args(args_num)
@@ -278,8 +278,8 @@ contains
        ops_beta, ops_args, ops_num, args_num, ierr) 
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout) :: A
-    type(tensor_ptr), intent(in)  :: B(ops_num)
+    type(array), intent(inout) :: A
+    type(array_ptr), intent(in)  :: B(ops_num)
     PetscScalar  :: ops_alpha(ops_num), ops_beta(ops_num) !, alpha, beta
     !type(buffer_r8), intent(in), pointer :: ops_args(args_num)
     PetscScalar, intent(in) :: ops_args(args_num)
@@ -351,11 +351,11 @@ contains
     
   end subroutine
   
-subroutine slice_tensor(dst, src, ref)
+subroutine slice_array(dst, src, ref)
   implicit none
 #include "petsc.h"
-  type(tensor), intent(inout) :: dst   
-  type(tensor), intent(in)  :: src
+  type(array), intent(inout) :: dst   
+  type(array), intent(in)  :: src
   DM :: src_dm, dst_dm
   type(ref_info) :: ref
   type(box_info) :: dst_box
@@ -398,7 +398,7 @@ subroutine slice_tensor(dst, src, ref)
      call petsc_get_dm(src_dm, src%data)
      call petsc_slice_dm(dst_dm, src_dm, dst_box)
      call petsc_create3d(vec_dst, dst_dm)
-     call tensor_bind_data(dst, vec_dst)
+     call array_bind_data(dst, vec_dst)
      
      call petsc_destroy_dm(dst_dm)
      
@@ -507,10 +507,10 @@ end subroutine
 #:endfor
   
  
-  !> set a scalar to tensor in a given range
+  !> set a scalar to array in a given range
   subroutine data_set_scalar(data, val, ref)
     implicit none
-    type(tensor), intent(in) :: data
+    type(array), intent(in) :: data
     real(8) :: val
     type(ref_info) :: ref
     PetscScalar, pointer :: local_arr(:,:,:)
@@ -562,8 +562,8 @@ end subroutine
   subroutine data_set_ref_ref(dst, src, dst_ref, src_ref)
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout) :: dst
-    type(tensor), intent(in) :: src
+    type(array), intent(inout) :: dst
+    type(array), intent(in) :: src
     DM :: src_dm, dst_dm
     type(ref_info), intent(in) :: dst_ref, src_ref
     type(dist_info) :: dst_dist, src_dist, dst_new_dist, src_new_dist

@@ -6,7 +6,7 @@ module ot_vector
 
 #:for op in ['push_back', 'pop', 'remove']  
   interface ${op}$
-#:for t in ['tensor', 'node']
+#:for t in ['array', 'node']
      module procedure ${op}$_${t}$
 #:if op == 'push_back'
      module procedure ${op}$_${t}$_arr
@@ -17,7 +17,7 @@ module ot_vector
 
 contains
 
-#:for t in ['tensor', 'node']
+#:for t in ['array', 'node']
   !> append array of ${t}$ pointers into vector
   subroutine push_back_${t}$_arr(v, a)
     implicit none

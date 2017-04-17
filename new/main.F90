@@ -42,13 +42,13 @@ program main
   
   implicit none
   
-  type(tensor) :: A, B, C, D, E, F, G, H, BB
-  type(tensor) :: U, V, W, X, Y, Z
+  type(array) :: A, B, C, D, E, F, G, H, BB
+  type(array) :: U, V, W, X, Y, Z
   integer, parameter :: NN = 1000
   integer :: ierr
   integer :: pos(2)
   type(obj_ptr), allocatable, dimension(:) :: pp
-  type(tensor_ptr), allocatable, dimension(:) :: tp
+  type(array_ptr), allocatable, dimension(:) :: tp
   
   type(node) :: NA, NB, NC, ND
   integer :: v_shape(3)
@@ -68,10 +68,10 @@ program main
   call test_seqs()
   call test_rand()
   
-  ! call test_expr()  
-  ! call test_math()  
-  ! call test_slice()
-  !call test_set()
+  !call test_expr()  
+  !call test_math()  
+  call test_slice()
+  call test_set()
   !call test_find_pos()
 
   call ot_finalize(ierr)

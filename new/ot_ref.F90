@@ -9,40 +9,40 @@ module ot_ref
   use ot_type
 
   interface inc_ref_cnt
-#:for type in ['node', 'tensor']
+#:for type in ['node', 'array']
      module procedure inc_ref_cnt_${type}$
 #:endfor     
   end interface inc_ref_cnt
   
   interface dec_ref_cnt
-#:for type in ['node', 'tensor']
+#:for type in ['node', 'array']
      module procedure dec_ref_cnt_${type}$
 #:endfor     
   end interface dec_ref_cnt
 
   interface is_rvalue
      module procedure is_rvalue_node
-     module procedure is_rvalue_tensor     
+     module procedure is_rvalue_array     
   end interface is_rvalue
   
   interface is_lvalue
      module procedure is_lvalue_node
-     module procedure is_lvalue_tensor     
+     module procedure is_lvalue_array     
   end interface is_lvalue
 
   interface set_rvalue
      module procedure set_rvalue_node
-     module procedure set_rvalue_tensor
+     module procedure set_rvalue_array
   end interface set_rvalue
 
   interface set_lvalue
      module procedure set_lvalue_node
-     module procedure set_lvalue_tensor
+     module procedure set_lvalue_array
   end interface set_lvalue
   
 contains
 
-#:for type in ['node', 'tensor']
+#:for type in ['node', 'array']
   function inc_ref_cnt_${type}$(o) result(res)
     type(${type}$), intent(inout) :: o
     integer :: res
@@ -61,7 +61,7 @@ contains
   
 #:endfor
 
-#:for type in ['node', 'tensor']
+#:for type in ['node', 'array']
   function is_rvalue_${type}$(o) result(res)
     implicit none
     type(${type}$), intent(in) :: o

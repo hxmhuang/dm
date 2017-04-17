@@ -4,7 +4,7 @@ module ot_kernels
   use ot_dict
   use ot_petsc
   use ot_type
-  use ot_tensor
+  use ot_array
   use ot_buffer
   
   interface
@@ -74,8 +74,8 @@ contains
        ops_beta, ops_args, args_num, ierr)
     implicit none
 #include "petsc.h"
-    type(tensor), intent(inout) :: A
-    type(tensor_ptr), intent(in) :: B(${cnt}$)
+    type(array), intent(inout) :: A
+    type(array_ptr), intent(in) :: B(${cnt}$)
     PetscScalar, intent(in) :: ops_alpha(${cnt_alpha}$)
     PetscScalar, intent(in) :: ops_beta(${cnt_beta}$)
     PetscScalar, intent(in) :: ops_args(args_num)

@@ -1,3 +1,5 @@
+#include "config.h"
+
 module ot_test
   use ot_mod
   use ot_petsc
@@ -5,8 +7,8 @@ module ot_test
 contains
   subroutine test_expr()
     implicit none
-    type(tensor) :: A, B, C, D, E, F, G
-    type(node) :: NA, NB, NC, ND
+    type(array) :: A, B, C, D, E, F, G
+    type(expr) :: NA, NB, NC, ND
     integer :: m, n, k, ierr
     
     call ot_option_int('-m', m, ierr)
@@ -43,7 +45,7 @@ contains
 
   subroutine test_seqs()
     implicit none
-    type(tensor) :: A, B, C, D
+    type(array) :: A, B, C, D
     integer :: ierr
     integer :: rank
     integer :: m, n, k
@@ -67,7 +69,7 @@ contains
 
   subroutine test_ones()
     implicit none
-    type(tensor) :: A, B, C, D
+    type(array) :: A, B, C, D
     integer :: ierr
     integer :: rank
     rank = get_rank()
@@ -88,7 +90,7 @@ contains
 
   subroutine test_rand()
     implicit none
-    type(tensor) :: A, B, C, D
+    type(array) :: A, B, C, D
     integer :: ierr
     integer :: rank
     rank = get_rank()
@@ -109,8 +111,8 @@ contains
   
   subroutine test_math()
     implicit none
-    type(tensor) :: A, B, C, D, E
-    type(node) :: NE
+    type(array) :: A, B, C, D, E
+    type(expr) :: NE
     integer :: m, n, k
     integer :: ierr
     
@@ -188,7 +190,7 @@ contains
   
   subroutine test_slice()
     implicit none
-    type(tensor) :: A, B, C, D, E, F
+    type(array) :: A, B, C, D, E, F
     integer :: rank
     integer :: m, n, k, ierr
     
@@ -223,7 +225,7 @@ contains
 
   subroutine test_set()
     implicit none
-    type(tensor) :: A, B, C, D, E, F
+    type(array) :: A, B, C, D, E, F
     integer :: ierr, i
     integer :: rank
     integer :: m, n, k
@@ -235,47 +237,47 @@ contains
     if(get_rank() == 0) &
          print*, '===========Test set=========='
 
-    ! A = seqs(m * n * k)
-    ! call disp(A, 'A = ')
+    A = seqs(m * n * k)
+    call disp(A, 'A = ')
     
-    ! A = 3
-    ! call disp(A, 'A = ')
+    A = 3
+    call disp(A, 'A = ')
 
-    ! B = ones(m, n, k)
-    ! call disp(B, 'B = ')
+    B = ones(m, n, k)
+    call disp(B, 'B = ')
     
-    ! B = 2.0
-    ! call disp(B, 'B = ')
+    B = 2.0
+    call disp(B, 'B = ')
 
-    ! call set(B, 3.0)
-    ! call disp(B, 'B = ')
+    call set(B, 3.0)
+    call disp(B, 'B = ')
 
-    ! C = seqs(m, n, k)
+    C = seqs(m, n, k)
     
-    ! B = C + 1.0
-    ! call disp(B, 'B = ')
+    B = C + 1.0
+    call disp(B, 'B = ')
     
-    ! call set(B, 2.0 * C + 3.0)
-    ! call disp(B, 'B = ')
+    call set(B, 2.0 * C + 3.0)
+    call disp(B, 'B = ')
     
-    ! call set(slice(A, r(1,3)), 4)
-    ! call disp(A, 'set(slice(A, r(1,3)), 3) = ')
+    call set(slice(A, r(1,3)), 4)
+    call disp(A, 'set(slice(A, r(1,3)), 3) = ')
     
-    ! B = seqs(10, 10)
-    ! call disp(B, 'B = ')
+    B = seqs(10, 10)
+    call disp(B, 'B = ')
     
-    ! call set(slice(B, r(1,3), r(1,3)), 2.1)
-    ! call disp(B, 'B = ')
+    call set(slice(B, r(1,3), r(1,3)), 2.1)
+    call disp(B, 'B = ')
 
     C = seqs(5, 5, 2)
-    ! call set(slice(C, r(1,3), 'A', 1), 2.1)
+    call set(slice(C, r(1,3), 'A', 1), 2.1)
     call disp(C, 'C = ')
 
     ! call disp_info(C, 'info(C) = ')
     
-    D = ones(5, 5, 2)
-    call set(slice(D, r(1,3), 'A',1), slice(C,r(2,4), 'A', 1))
-    call disp(D, 'D(1:3,:,1) = C(2:4,:,1)')
+    ! D = ones(5, 5, 2)
+    ! call set(slice(D, r(1,3), 'A',1), slice(C,r(2,4), 'A', 1))
+    ! call disp(D, 'D(1:3,:,1) = C(2:4,:,1)')
 
     ! ! call set(slice(D, 1, 'A', 1), slice(D, 2, 'A', 1))
     ! ! call disp(D, 'D = ')

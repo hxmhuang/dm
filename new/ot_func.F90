@@ -1,5 +1,5 @@
 module ot_func
-  use ot_tensor
+  use ot_array
   use ot_data
   
   interface consts
@@ -16,7 +16,7 @@ contains
     ${type[1]}$ :: val
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor) :: res
+    type(array) :: res
     integer :: n, k, ierr
 
     n = 1; k = 1;
@@ -24,7 +24,7 @@ contains
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    call tensor_set_shape(res, (/m,n,k/))
+    call array_set_shape(res, (/m,n,k/))
     call data_consts(res%data, real(val,8), res%m_shape, ierr)    
     call set_rvalue(res)
   end function
@@ -36,7 +36,7 @@ contains
 #include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor), pointer :: res
+    type(array), pointer :: res
     integer :: n, k, ierr
     Vec :: data
     
@@ -47,9 +47,9 @@ contains
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    !call tensor_set_shape(res, (/m,n,k/))
+    !call array_set_shape(res, (/m,n,k/))
     call data_consts(data, real(1,8), (/m, n, k/), ierr)
-    call tensor_bind_data(res, data)
+    call array_bind_data(res, data)
     call set_rvalue(res)
   end function
 
@@ -58,7 +58,7 @@ contains
 #include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor), pointer :: res
+    type(array), pointer :: res
     integer :: n, k, ierr
     Vec :: data
     allocate(res)
@@ -68,10 +68,10 @@ contains
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    !call tensor_set_shape(res, (/m,n,k/))
+    !call array_set_shape(res, (/m,n,k/))
     !call data_seqs(res%data, res%m_shape, ierr)
     call data_seqs(data, (/m,n,k/), ierr)
-    call tensor_bind_data(res, data)
+    call array_bind_data(res, data)
     call set_rvalue(res)
   end function
 
@@ -80,7 +80,7 @@ contains
 #include "petsc.h"
     integer, intent(in) :: m
     integer, intent(in), optional :: opt_n, opt_k
-    type(tensor), pointer :: res
+    type(array), pointer :: res
     integer :: n, k, ierr
     Vec :: data
     allocate(res)
@@ -90,10 +90,10 @@ contains
     if(present(opt_n)) n = opt_n
     if(present(opt_k)) k = opt_k
 
-    !call tensor_set_shape(res, (/m,n,k/))
+    !call array_set_shape(res, (/m,n,k/))
     ! call data_rand(res%data, res%m_shape, ierr)
     call data_rand(data, (/m,n,k/), ierr)
-    call tensor_bind_data(res, data)
+    call array_bind_data(res, data)
     call set_rvalue(res)
   end function
   

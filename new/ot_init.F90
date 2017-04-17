@@ -8,7 +8,7 @@ contains
 
     call init_petsc(ierr)
     call init_kernels(ierr)    
-    call init_tensor(ierr)
+    call init_array(ierr)
     call init_node(ierr)
     call init_expr(ierr)
     call init_geom(ierr)
